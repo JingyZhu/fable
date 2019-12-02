@@ -1,0 +1,10 @@
+node_modules/
+*__pycache__*
+.vscode/
+package-lock.json
+.DS_Store
+
+logs/
+*.html
+*.json
+*/json/
