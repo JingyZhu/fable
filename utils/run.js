@@ -1,17 +1,26 @@
+/* 
+    Run the chrome to load the page
+    Usage: node run.js url --filename filename --screenshot
+    filename and screenshot is optional
+    Save the chrome's pid into filename.html for easy killing
+    If screenshot is eanbled, save the screenshot as filename.jpg in Base64!! Require decoding to see
+*/
+
 const CDP = require('chrome-remote-interface');
 const fs = require('fs')
 const parse = require('url').parse
 const chromeLauncher = require('chrome-launcher');
 const assert = require('assert');
+const argv = require('yargs').argv;
 
-async function writeHTML(Runtime) {
+
+
+async function writeHTML(Runtime, filename) {
     const result = await Runtime.evaluate({
         expression: 'document.documentElement.outerHTML'
     });
     const html = result.result.value;
-    let filename = process.argv.length > 3 ? process.argv[3] : 'temp';
-    filename = `${filename}.html`;
-    fs.writeFileSync(filename  , html);
+    fs.writeFileSync(filename , html);
 }
 
 async function startChrome(){
@@ -35,9 +44,12 @@ async function startChrome(){
 
 (async function(){
     const chrome = await startChrome();
-    let filename = process.argv.length > 3 ? process.argv[3] : 'temp';
-    filename = `${filename}.html`;
-    fs.writeFileSync(filename, chrome.pid);
+    let filename = argv.filename != undefined ? argv.filename : "temp"
+    htmlname = `${filename}.html`;
+
+    let screenshot = argv.screenshot; 
+    
+    fs.writeFileSync(htmlname, chrome.pid);
     const client = await CDP({port: chrome.port});
     const { Network, Page, Security, Runtime} = client;
     // console.log(Security);
@@ -53,7 +65,13 @@ async function startChrome(){
 
         await Page.loadEventFired();
 
-        await writeHTML(Runtime);
+        await writeHTML(Runtime, htmlname);
+
+        if (screenshot){
+            const pic = await Page.captureScreenshot({ format: 'jpeg'} );
+            console.log(pic.data.length);
+            fs.writeFileSync(`${filename}.jpg`, pic.data);
+        }
 
     } catch (err) {
         console.error(err);
