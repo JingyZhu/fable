@@ -27,8 +27,8 @@ def chrome_crawl(url, timeout=120, screenshot=False):
     img = open(cur + '.jpg', 'r').read()
     os.remove(cur + '.jpg')
     if screenshot:
-        url_file = url.replace('http:', '')
-        url_file = url_file.replace('https:', '')
+        url_file = url.replace('http://', '')
+        url_file = url_file.replace('https://', '')
         url_file = url_file.replace('/', '-')
         f = open(url_file + '.jpg', 'wb+')
         f.write(base64.b64decode(img))

@@ -9,6 +9,23 @@ from newspaper import Article
 import brotli
 from bs4 import BeautifulSoup
 from dateutil import parser as dparser
+from dateparser.search import search_dates
+import dateparser
+import difflib
+
+def find_complement_string(A, B):
+    A, B = A.split(), B.split()
+    complement = []
+    ida, idb = 0, 0
+    while ida < len(A):
+        if idb < len(B) and A[ida] == B[idb]:
+            ida += 1
+            idb += 1
+        else:
+            complement.append(A[ida])
+            ida += 1
+    return ' '.join(complement)
+
 
 def article_date(html):
     """
@@ -28,16 +45,40 @@ def mine_date(html):
     """
     soup = BeautifulSoup(html, 'html.parser')
     dates = set()
-    tag_list = ['p', 'div'] + ['h{}'.format(i) for i in range(1, 7)]
+    filter_tags = ['script', 'a', 'style']
+    for tag in filter_tags:
+        for certain_tag in soup.findAll(tag):
+            certain_tag.decompose()
+    tag_list = ['div', 'p', 'span', 'b'] + ['h{}'.format(i) for i in range(1, 7)]
     for tag in tag_list:
         for piece in soup.find_all(tag):
+            if len(piece.find_all()) > 1 : # Not leaf node
+                continue
+            # First try dateutils
+            text = piece.text
             try:
-                dt = dparser.parse(piece.text, fuzzy=True)
-            except: 
+                dt, tokens = dparser.parse(text, fuzzy_with_tokens=True)
+            except:
+                continue
+            # Get the date part
+            tokens = ''.join(tokens)
+            date_str = find_complement_string(text, tokens)
+            # Test on dateparser
+            try:
+                dt = dateparser.parse(date_str + ' ', settings={'STRICT_PARSING': True})
+            except:
+                continue
+            if dt is None:
                 continue
             dt = dt.strftime("%Y %m %d")
             dates.add((dt, len(piece.text.split())))
+    for time_tag in soup.find_all('time'):
+        if 'datetime' in time_tag.attrs:
+            dt = time_tag.attrs['datetime']
+            dt = dparser.parse(dt, fuzzy=True).strftime("%Y %m %d")
+            dates.add((dt, 0))
     dates = sorted([o for o in dates], key=lambda x: x[1])
+    print(dates)
     return dates[0][0] if len(dates) > 0 else ""
 
 

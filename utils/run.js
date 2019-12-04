@@ -69,7 +69,6 @@ async function startChrome(){
 
         if (screenshot){
             const pic = await Page.captureScreenshot({ format: 'jpeg'} );
-            console.log(pic.data.length);
             fs.writeFileSync(`${filename}.jpg`, pic.data);
         }
 
