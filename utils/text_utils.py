@@ -32,9 +32,8 @@ def article_date(html):
     Get the publish date of a webpage using article library
     Return datetime.datetime
     """
-    article = Article(url='http://localhost:8080')
-    article.download()
-    article.html = html
+    article = Article(url='')
+    article.set_html(html)
     article.parse()
     return article.publish_date
 
