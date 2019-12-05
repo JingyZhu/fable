@@ -11,7 +11,7 @@ from utils.crawl import chrome_crawl
 from utils.text_utils import extract_date
 
 data = json.load(open('status_200.json', 'r'))
-data = ["http://web.archive.org/web/20040805145902/http://bigpicture.typepad.com/comments/2004/07/micorosft_chasi.html"]
+data = ["http://web.archive.org/web/20080412085724/http://bigpicture.typepad.com/comments/2004/07/micorosft_chasi.html"]
 url_date = {}
 for i, url in enumerate(data):
     print(i, url)
