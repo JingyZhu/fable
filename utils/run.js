@@ -27,14 +27,15 @@ async function startChrome(){
     const os = process.platform;
     assert(os == 'linux' | os == 'darwin')
     const path = os == 'linux' ? '/opt/google/chrome/chrome' : '/Applications/Chromium.app/Contents/MacOS/Chromium'
+    
+    let chromeFlags = [
+        '--disk-cache-size=1', 
+        '-disable-features=IsolateOrigins,site-per-process',
+    ];
+    
+    if (os == 'linux') chromeFlags.push('--headless')
     const chrome = await chromeLauncher.launch({
-        chromeFlags: [
-            // '--headless',
-            // '--disable-gpu', 
-            '--ignore-certificate-errors',
-            '--disk-cache-size=1', 
-            '-disable-features=IsolateOrigins,site-per-process',
-        ],
+        chromeFlags: chromeFlags,
         chromePath: path,
         // userDataDir: '/tmp/nonexistent' + Date.now(), 
     })

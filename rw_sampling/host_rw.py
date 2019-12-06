@@ -17,12 +17,16 @@ sys.path.append('../')
 from utils import crawl
 import random
 
-NUM_PROC = 8
-NUM_HOST = 10000
+NUM_PROC = 2
+NUM_HOST = 100
 NUM_THREADs = 10
 JUMP_RATIO = 0.15
 
+NUM_SEEDS = 5
+CHECKPOINT_INT = 10
+
 counter = mp.Value('i', 0)
+
 def base_host(url):
     hostname = urlparse(url).netloc
     if hostname.split('.')[-2] == 'co': # Assume co.** is the only exception
@@ -89,22 +93,43 @@ def crawl_link(url, d):
     return outlinks
 
 
-def checkpoint(d, Q):
-    if len(d) % 100 == 0:
+def checkpoint(d, d_q):
+    global counter
+    if counter.value % CHECKPOINT_INT == 0:
         json.dump(d.copy(), open('hosts.json', 'w+'))
-        pickle.dump(Q, open('Q.pickle', 'wb+'))
+        json.dump(d_q.copy(), open('Q.json', 'w+'))
 
 
-def process_func(Q_in, d, r_jump):
+def load_checkpoint():
+    """
+    Load the checkpoint (hosts.json and Q.json) if there exists
+    else, just return the init value
+    """
+    proc_d, Q_backup = mp.Manager().dict(), mp.Manager().dict()
+    Q_in = mp.Queue(maxsize=NUM_SEEDS+2*NUM_PROC)
+    if os.path.exists('hosts.json'):
+        urls = json.load(open('hosts.json', 'r'))
+        for url, v in urls.items():
+            proc_d[url] = v
+    if os.path.exists('Q.json'):
+        url_in_Q = json.load(open('Q.json', 'r'))
+        for url, v in url_in_Q.items():
+            if not v:
+                Q_in.put(url)
+                Q_backup[url] = v
+    return proc_d, Q_in, Q_backup
+
+
+def process_func(Q_in, d, r_jump, Q_backup):
     global counter
     while not Q_in.empty():
         counter.value += 1
         url = Q_in.get()
-        print(counter.value, url, len(d))
+        Q_backup[url] = 1
+        print(counter.value, url, len(d), os.getpid())
         hostname = base_host(url)
-        if hostname not in d:
-            d[hostname] = ''
-            checkpoint(d, Q_in)
+        d[hostname] = ''
+        checkpoint(d, Q_backup)
         outlinks = crawl_link(url, d)
         other_host_links = [outlink for outlink in outlinks if base_host(outlink) != hostname]
         # print(other_host_links)
@@ -113,28 +138,30 @@ def process_func(Q_in, d, r_jump):
         elif random.random() < JUMP_RATIO or len(outlinks) < 1:
             next_url = random.sample(r_jump, 1)[0]
             Q_in.put(next_url)
+            Q_backup[next_url] = 0
         else:
             next_url = random.sample(outlinks, 1)[0] if len(other_host_links) == 0 \
                         else random.sample(other_host_links, 1)[0]
             Q_in.put(next_url)
-
+            Q_backup[next_url] = 0
 
 
 def main():
-    proc_d = mp.Manager().dict()
+    proc_d, Q_backup = mp.Manager().dict(), mp.Manager().dict()
     Q_in = mp.Queue()
+    proc_d, Q_in, Q_backup = load_checkpoint()        
     r_jump = json.load(open('url_db_2017.json', 'r'))
     r_jump = [obj['url'] for obj in r_jump]
 
-    # TODO 
-    # Random sample sone of the urls as seeds
-    seeds = random.sample(r_jump, 100)
-    for seed in seeds:
-        Q_in.put(seed)
+    
+    if Q_in.empty(): # If there is no checkpoint before
+        seeds = random.sample(r_jump, NUM_SEEDS)
+        for seed in seeds:
+            Q_in.put(seed)
 
     pools = []
     for _ in range(NUM_PROC):
-        pools.append(mp.Process(target=process_func, args=(Q_in, proc_d, r_jump, )))
+        pools.append(mp.Process(target=process_func, args=(Q_in, proc_d, r_jump, Q_backup)))
         pools[-1].start()
     for i in range(NUM_PROC):
         pools[i].join()
