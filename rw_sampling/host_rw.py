@@ -126,7 +126,7 @@ def process_func(Q_in, d, r_jump, Q_backup):
         counter.value += 1
         url = Q_in.get()
         Q_backup[url] = 1
-        print(counter.value, url, len(d), os.getpid())
+        print(counter.value, url, len(d))
         hostname = base_host(url)
         d[hostname] = ''
         checkpoint(d, Q_backup)

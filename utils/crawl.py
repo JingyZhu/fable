@@ -36,3 +36,33 @@ def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     f.write(base64.b64decode(img))
     f.close()
     return html, url_file + 'jpg'
+
+
+def wayback_index(url, param_dict={}):
+    """
+    Get the wayback machine index of certain url by querying the CDX
+    """
+    wayback_home = 'http://web.archive.org/web/'
+    params = {
+        'output': 'json',
+        'url': url,
+        'from': 19700101,
+        'to': 20191231,
+    }
+    params.update(param_dict)
+    try:
+        r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
+        r = r.json()
+    except Exception as e:
+        print(str(e))
+        return [], str(e)
+    r = [(i[1], i[2]) for i in r[1:]]
+    if len(r) != 0:
+        return r, "Success",
+    else:
+        return [], "Empty"
+    
+
+
+
+    
