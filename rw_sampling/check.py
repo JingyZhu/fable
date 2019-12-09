@@ -5,8 +5,7 @@ import queue
 
 import sys
 sys.path.append('../')
-from utils import crawl
-
+from utils import crawl, plot
 
 
 def hosts_in():
@@ -67,4 +66,7 @@ def check_wayback_contains(filename, NUM_THREADS=10):
     json.dump(host_year, open('hosts_year.json', 'w+'))
 
 
-check_wayback_contains('hosts_10k.json', NUM_THREADS=5)
+# check_wayback_contains('hosts_10k.json', NUM_THREADS=1)
+
+data = json.load(open('hosts_year.json', 'r'))
+plot.plot_CDF([list(data.values())], classname=['check'])
