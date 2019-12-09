@@ -3,6 +3,8 @@ from urllib.parse import urlparse
 import threading
 import queue
 from matplotlib import pyplot as plt
+import random
+import os
 
 import sys
 sys.path.append('../')
@@ -32,8 +34,8 @@ def hosts_in():
 # 139 1016
 
 def check_wayback_contains(filename, NUM_THREADS=10):
-    # TODO implement this function
     """
+    Check the year of when wayback machien first crawl this domain given the filename
     filename is a KV pair with key as the hostname
     """
     data = json.load(open(filename, 'r'))
@@ -47,6 +49,8 @@ def check_wayback_contains(filename, NUM_THREADS=10):
         }
         while not q_in.empty():
             hostname = q_in.get()
+            if 'http' in hostname:
+                hostname = urlparse(hostname).netloc
             print(hostname)
             url_list, rval = crawl.wayback_index('*.{}/*'.format(hostname), param_dict=param_dict)
             if rval != "Success":
@@ -73,9 +77,26 @@ def check_wayback_contains(filename, NUM_THREADS=10):
 # plot.plot_CDF([list(data.values())], classname=['check'])
 
 
-differences = [[2634994, 456636, 1119435], 
-        [2248809, 232753, 620360], 
-        [1673987, 3466160, 2579478]
-]
-years = ['2011', '2013', '2017']
+def sample_diff_check(years):
+    results = []
+    for year in years:
+        data = json.load(open('diff/diff_{}.json'.format(year), 'r'))
+        new_urls = data['gain']
+        sample = random.sample(new_urls, 1000)
+        sample = {k: "" for k in sample}
+        json.dump(sample, open('temp.json', 'w+'))
+        check_wayback_contains('temp.json', 1)
+        os.remove('temp.json')
+        result = json.load(open('hosts_year.json', 'r'))
+        result = {k: int(v) for k, v in result.items()}
+        results.append(result.values())
+    plot.plot_CDF(results, classname=years)
 
+# differences = [[2634994, 456636, 1119435], 
+#         [2248809, 232753, 620360], 
+#         [1673987, 3466160, 2579478]
+# ]
+# years = ['2011', '2013', '2017']
+# plot.plot_bargroup(differences, years, ['lost', 'gain', 'shared'])
+
+sample_diff_check(['2011', '2013', '2017'])
