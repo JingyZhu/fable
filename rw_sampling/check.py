@@ -2,6 +2,7 @@ import json
 from urllib.parse import urlparse
 import threading
 import queue
+from matplotlib import pyplot as plt
 
 import sys
 sys.path.append('../')
@@ -68,5 +69,13 @@ def check_wayback_contains(filename, NUM_THREADS=10):
 
 # check_wayback_contains('hosts_10k.json', NUM_THREADS=1)
 
-data = json.load(open('hosts_year.json', 'r'))
-plot.plot_CDF([list(data.values())], classname=['check'])
+# data = json.load(open('hosts_year.json', 'r'))
+# plot.plot_CDF([list(data.values())], classname=['check'])
+
+
+differences = [[2634994, 456636, 1119435], 
+        [2248809, 232753, 620360], 
+        [1673987, 3466160, 2579478]
+]
+years = ['2011', '2013', '2017']
+
