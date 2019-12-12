@@ -26,10 +26,10 @@ def plot_CDF(data, classname=[], savefig='', show=True):
         plt.show()
 
 
-def plot_bargroup(data, xname, classname, savefig='', show=True):
+def plot_bargroup(data, xname, barname, savefig='', show=True):
     """
     Plot grouped barplot
-    data should be a N*K array. N: xname, K: classname
+    data should be a N*K array. N: number of barnanme, K: number of x labels
     xname: name of xaxis categories (put together one)
     classname: name of groups 
     """
@@ -42,8 +42,8 @@ def plot_bargroup(data, xname, classname, savefig='', show=True):
     r3 = [x + barWidth for x in r2]
     
     rs = [ list(map( lambda x: x + i * barWidth, list(range(length)))) for i, datus in enumerate(data) ]
-    for r, datus, cn in zip(rs, data, classname):
-        plt.bar(r, datus, width=barWidth, label=cn)
+    for r, datus, bn in zip(rs, data, barname):
+        plt.bar(r, datus, width=barWidth, label=bn)
     
     # Add xticks on the middle of the group bars
     plt.xlabel('years', fontweight='bold')
