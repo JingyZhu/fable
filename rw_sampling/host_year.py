@@ -18,7 +18,7 @@ db.url_year.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING
 
 metadata = json.load(open('hosts_year_10k.json', 'r'))
 
-def get_links(interval=2):
+def get_links(interval=1):
     keys = list(metadata.keys())
     size = len(keys)
     index = hosts.index(socket.gethostname())
