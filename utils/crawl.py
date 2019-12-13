@@ -65,11 +65,10 @@ def wayback_index(url, param_dict={}):
         return [], "Empty"
 
 
-
 def wayback_year_links(prefix, years, NUM_THREADS=10):
     """
     Get the result of links in certain years
-    prefix: some string of url
+    prefix: some string of url e.g: *.a.b.com/*
     years: list of years which would be query
 
     Should be add in try catch. In case of connection error

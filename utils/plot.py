@@ -31,7 +31,7 @@ def plot_bargroup(data, xname, barname, savefig='', show=True):
     Plot grouped barplot
     data should be a N*K array. N: number of barnanme, K: number of x labels
     xname: name of xaxis categories (put together one)
-    classname: name of groups 
+    barname: name of groups 
     """
     barWidth = 1/ (len(data) + 1)
     # Set position of bar on X axis
