@@ -96,7 +96,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
         r = r.json()
         
         r = [u[2] for u in r[1:]]
-        assert(len(r) < 100000 )
+        assert(len(r) < 200000 )
         l.acquire()
         for url in r:
             total_r[year].add(url)
