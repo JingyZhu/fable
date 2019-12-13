@@ -10,7 +10,7 @@ import socket
 sys.path.append('../')
 from utils import crawl
 
-hosts = ['lions', 'piston', 'wolverines', 'redwings']
+hosts = ['lions', 'pistons', 'wolverines', 'redwings']
 db = MongoClient('lions.eecs.umich.edu').web_decay
 
 # Prevent same obj being insert multiple times
