@@ -74,11 +74,12 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
     Should be add in try catch. In case of connection error
     """
     total_r = {}
+    cur_limit = 100000
     wayback_home = 'http://web.archive.org/web/'
     params = {
         'output': 'json',
         'url': prefix,
-        "limit": '200000',
+        "limit": str(cur_limit),
         'collapse': 'urlkey',
         'filter': ['statuscode:200', 'mimetype:text/html'],
     }
@@ -92,11 +93,21 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
             # 'collapse': 'timestamp:4',
         })
         
-        r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
-        r = r.json()
-        
-        r = [u[2] for u in r[1:]]
-        assert(len(r) < 200000 )
+        while True:
+            try:
+                r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
+                r = r.json()
+                r = [u[2] for u in r[1:]]
+            except:
+                time.sleep(10)
+                continue
+            try:
+                assert(len(r) < cur_limit )
+                break
+            except:
+                cur_limit += 50000
+                params.update({'limit': str(cur_limit)})
+                continue
         l.acquire()
         for url in r:
             total_r[year].add(url)
