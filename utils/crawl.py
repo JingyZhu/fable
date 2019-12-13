@@ -83,12 +83,12 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
         'filter': ['statuscode:200', 'mimetype:text/html'],
     }
     l = threading.Lock()
-    def get_half_links(year, half):
+    def get_year_links(year):
         nonlocal total_r
         total_r.setdefault(year, set())
         params.update({
-            "from": "{}{}01".format(year, str(half*6).zfill(2)),
-            "to": "{}{}31".format(year, str(half*6+6).zfill(2))
+            "from": "{}0101".format(year),
+            "to": "{}1231".format(year)
             # 'collapse': 'timestamp:4',
         })
         
@@ -102,16 +102,15 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
             total_r[year].add(url)
         l.release()
     t = []
-    year_half_orig = list(itertools.product(years, [0, 1]))
-    year_half = []
-    for begin in range(0, len(year_half_orig), NUM_THREADS):
-        end = begin + NUM_THREADS  if begin + NUM_THREADS < len(year_half_orig) else len(year_half_orig) 
-        year_half.append(year_half_orig[begin:end])
-    for shot in year_half:
+    batch = []
+    for begin in range(0, len(years), NUM_THREADS):
+        end = begin + NUM_THREADS  if begin + NUM_THREADS < len(years) else len(years) 
+        batch.append(years[begin:end])
+    for shot in batch:
         print(shot)
         t = []
-        for year, month in shot:
-            t.append(threading.Thread(target=get_half_links, args=(year, month)))
+        for year in shot:
+            t.append(threading.Thread(target=get_year_links, args=(year,)))
             t[-1].start()
         for ti in t:
             ti.join()
