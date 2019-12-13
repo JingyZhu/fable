@@ -78,7 +78,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
     params = {
         'output': 'json',
         'url': prefix,
-        "limit": '100000',
+        "limit": '200000',
         'collapse': 'urlkey',
         'filter': ['statuscode:200', 'mimetype:text/html'],
     }
