@@ -100,7 +100,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
                 r = [u[2] for u in r[1:]]
             except Exception as e:
                 print('1', str(e))
-                time.sleep(10)
+                time.sleep(20)
                 continue
             try:
                 assert(len(r) < cur_limit )
