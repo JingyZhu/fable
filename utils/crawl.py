@@ -120,7 +120,6 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
         end = begin + NUM_THREADS  if begin + NUM_THREADS < len(years) else len(years) 
         batch.append(years[begin:end])
     for shot in batch:
-        print(shot)
         t = []
         for year in shot:
             t.append(threading.Thread(target=get_year_links, args=(year,)))

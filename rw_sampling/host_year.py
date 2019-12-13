@@ -29,7 +29,7 @@ def get_links(interval=1):
         early_year =int(metadata[hostname])
         for year in range(early_year, 2020, interval):
             data = crawl.wayback_year_links('*.{}/*'.format(hostname), [y for y in range(year, year + interval) if y < 2020])
-            print([len(v) for v in data.values()])
+            print([(k, len(v)) for k, v in data.items()])
             objs = []
             for year, urls in data.items():
                 for url in urls:
