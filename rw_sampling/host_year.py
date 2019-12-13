@@ -23,7 +23,7 @@ def get_links(interval=4):
     size = len(keys)
     index = hosts.index(socket.gethostname())
     key_shards = sorted(keys)[int(index/4 * size): int((index + 1)/4 * size)]
-    key_shards = sorted(keys[:100])
+    # key_shards = sorted(keys[:100])
     for i, hostname in enumerate(key_shards):
         print(i, hostname)
         early_year =int(metadata[hostname])

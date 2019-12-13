@@ -85,7 +85,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
     }
     l = threading.Lock()
     def get_year_links(year):
-        nonlocal total_r
+        nonlocal total_r, cur_limit
         total_r.setdefault(year, set())
         params.update({
             "from": "{}0101".format(year),
@@ -98,13 +98,15 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
                 r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
                 r = r.json()
                 r = [u[2] for u in r[1:]]
-            except:
+            except Exception as e:
+                print('1', str(e))
                 time.sleep(10)
                 continue
             try:
                 assert(len(r) < cur_limit )
                 break
-            except:
+            except Exception as e:
+                print('2', str(e))
                 cur_limit += 50000
                 params.update({'limit': str(cur_limit)})
                 continue
