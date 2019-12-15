@@ -53,7 +53,7 @@ def get_links(interval=1):
 
 def links_added_by_year():
     db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
-    for hostname, start_year in metadata.items():
+    for i, hostname, start_year in enumerate(metadata.items()):
         existed_url = set()
         for year in range(int(start_year), 2020):
             new_url = 0
