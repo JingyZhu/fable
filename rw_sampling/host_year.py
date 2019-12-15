@@ -55,26 +55,37 @@ def get_links(interval=1):
 
 
 def links_added_by_year(thread_num=10):
+    db.url_year_added.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     def thread_func(q_in):
         while not q_in.empty():
             i, hostname, start_year = q_in.get()
-            existed_url = set()
-            for year in range(int(start_year), 2020):
-                start = time.time()
-                new_url = 0
-                for obj in db.url_year.find({'hostname': hostname, 'year': year}):
-                    url = obj['url']
-                    if url not in existed_url:
-                        existed_url.add(url)
-                        new_url += 1
+            if int(start_year) > 2019:
+                print(i, hostname, 'pass')
+                continue
+            url_match = {}
+            year_count = {}
+            start = time.time()
+            for obj in db.url_year.find({'hostname': hostname}):
+                url, year = obj['url'], int(obj['url'])
+                if url not in url_match or url_match[url] > year:
+                    url_match[url] = year
+            for url, year in url_match.items():
+                db.url_year_added.insert_one({
+                    'url': url,
+                    'hostname': hostname,
+                    'year': year
+                })
+                year_count.setdefault(year, 0)
+                year_count[year] += 1
+            for year, count in year_count.items():
                 db.added_links.insert_one({
                     'hostname': hostname,
                     'year': year,
-                    'added_links': new_url
+                    'added_links': count
                 })
-                end = time.time()
-                print(i, hostname, year, end - start)
+            end = time.time()
+            print(i, hostname, year, end - start)
     
     q_in = queue.Queue()
     for i, (hostname, start_year) in enumerate(metadata.items()):
@@ -85,7 +96,6 @@ def links_added_by_year(thread_num=10):
         pools[-1].start()
     for t in pools:
         t.join()
-    
 
 
 
