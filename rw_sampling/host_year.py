@@ -6,6 +6,7 @@ import sys
 from pymongo import MongoClient
 import pymongo
 import socket
+import gc
 
 sys.path.append('../')
 from utils import crawl
@@ -13,12 +14,17 @@ from utils import crawl
 hosts = ['lions', 'pistons', 'wolverines', 'redwings']
 db = MongoClient('lions.eecs.umich.edu').web_decay
 
-# Prevent same obj being insert multiple times
-db.url_year.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+
 
 metadata = json.load(open('hosts_year_10k.json', 'r'))
 
 def get_links(interval=1):
+    """
+    Get links by calling CDX API 
+    Keys is sharded in hostname
+    """
+    # Prevent same obj being insert multiple times
+    db.url_year.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     keys = list(metadata.keys())
     size = len(keys)
     index = hosts.index(socket.gethostname())
@@ -44,4 +50,24 @@ def get_links(interval=1):
                 except:
                     pass
 
-get_links()
+
+def links_added_by_year():
+    db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    for hostname, start_year in metadata.items():
+        existed_url = set()
+        for year in range(int(start_year), 2020):
+            new_url = 0
+            for obj in db.url_year.find_all({'hostname': hostname, 'year': year}):
+                url = obj['url']
+                if url not in existed_url:
+                    existed_url.add(url)
+                    new_url += 1
+            db.added_links.insert_one({
+                'hostname': hostname,
+                'year': year,
+                'added_links': new_url
+            })
+
+
+if __name__ == '__main__':
+    links_added_by_year()
