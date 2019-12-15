@@ -8,6 +8,8 @@ import pymongo
 import socket
 import gc
 import time
+import threading
+import queue
 
 sys.path.append('../')
 from utils import crawl
@@ -52,25 +54,39 @@ def get_links(interval=1):
                     pass
 
 
-def links_added_by_year():
+def links_added_by_year(thread_num=10):
     db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    def thread_func(q_in):
+        while not q_in.empty():
+            i, hostname, start_year = q_in.get()
+            existed_url = set()
+            for year in range(int(start_year), 2020):
+                start = time.time()
+                new_url = 0
+                for obj in db.url_year.find({'hostname': hostname, 'year': year}):
+                    url = obj['url']
+                    if url not in existed_url:
+                        existed_url.add(url)
+                        new_url += 1
+                db.added_links.insert_one({
+                    'hostname': hostname,
+                    'year': year,
+                    'added_links': new_url
+                })
+                end = time.time()
+                print(i, hostname, year, end - start)
+    
+    q_in = queue.Queue()
     for i, (hostname, start_year) in enumerate(metadata.items()):
-        existed_url = set()
-        for year in range(int(start_year), 2020):
-            start = time.time()
-            new_url = 0
-            for obj in db.url_year.find({'hostname': hostname, 'year': year}):
-                url = obj['url']
-                if url not in existed_url:
-                    existed_url.add(url)
-                    new_url += 1
-            db.added_links.insert_one({
-                'hostname': hostname,
-                'year': year,
-                'added_links': new_url
-            })
-            end = time.time()
-            print(i, hostname, year, end - start)
+        q_in.put((i, hostname, start_year))
+    pools = []
+    for _ in range(thread_num):
+        pools.append(threading.Thread(target=thread_func, args=(q_in, )))
+        pools[-1].start()
+    for t in pools:
+        t.join()
+    
+
 
 
 if __name__ == '__main__':
