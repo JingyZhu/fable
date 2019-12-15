@@ -67,7 +67,7 @@ def links_added_by_year(thread_num=10):
             year_count = {}
             start = time.time()
             for obj in db.url_year.find({'hostname': hostname}):
-                url, year = obj['url'], int(obj['url'])
+                url, year = obj['url'], int(obj['year'])
                 if url not in url_match or url_match[url] > year:
                     url_match[url] = year
             for url, year in url_match.items():
@@ -100,4 +100,4 @@ def links_added_by_year(thread_num=10):
 
 
 if __name__ == '__main__':
-    links_added_by_year()
+    links_added_by_year(30)
