@@ -7,12 +7,13 @@ from pymongo import MongoClient
 import pymongo
 import socket
 import gc
+import time
 
 sys.path.append('../')
 from utils import crawl
 
 hosts = ['lions', 'pistons', 'wolverines', 'redwings']
-db = MongoClient('lions.eecs.umich.edu').web_decay
+db = MongoClient().web_decay
 
 
 
@@ -53,11 +54,12 @@ def get_links(interval=1):
 
 def links_added_by_year():
     db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
-    for i, hostname, start_year in enumerate(metadata.items()):
+    for i, (hostname, start_year) in enumerate(metadata.items()):
         existed_url = set()
         for year in range(int(start_year), 2020):
+            start = time.time()
             new_url = 0
-            for obj in db.url_year.find_all({'hostname': hostname, 'year': year}):
+            for obj in db.url_year.find({'hostname': hostname, 'year': year}):
                 url = obj['url']
                 if url not in existed_url:
                     existed_url.add(url)
@@ -67,6 +69,8 @@ def links_added_by_year():
                 'year': year,
                 'added_links': new_url
             })
+            end = time.time()
+            print(i, hostname, year, end - start)
 
 
 if __name__ == '__main__':
