@@ -104,7 +104,7 @@ def links_added_by_year(shards=40):
     Process the url_year data, deduplicate the obj based on years
     Only new added links in certain years will be shown
     Sharded the data into multiple scans
-    Expected average memory usage of 1.5GB per scan
+    Expected average memory usage of 4.5GB per scan
     """
     db.url_year_added.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
@@ -112,7 +112,7 @@ def links_added_by_year(shards=40):
     size = len(keys)
     for i in range(shards):
         begin = time.time()
-        keys_shard = keys[int(i * size / shards), int((i+1) * size / shards)]
+        keys_shard = keys[int(i * size / shards): int((i+1) * size / shards)]
         keys_dict = {k: {} for k in keys_shard}
         keys_years = {k: {} for k in keys_dict}
         for obj in db.url_year.find():
@@ -122,6 +122,7 @@ def links_added_by_year(shards=40):
             keys_dict[hostname].setdefault(url, year)
             if year < keys_dict[hostname][url]:
                 keys_dicts[hostname][url] = year
+        mid = time.time()
         for hostname, values in keys_dict.items():
             for url, year in values.items():
                 db.url_year_added.insert_one({
@@ -139,7 +140,7 @@ def links_added_by_year(shards=40):
                     'added_links': count
                 })
         end = time.time()
-        print(i, "Scans", end - begin)
+        print(i, "Scans", mid - begin, end - begin)
     
         
 
