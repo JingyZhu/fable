@@ -123,28 +123,50 @@ def links_added_by_year(thread_num=3):
                     keys_dicts[hostname][url] = year
             mid = time.time()
             keys_years = {}
+            batch = []
             for hostname, values in keys_dict.items():
                 keys_years.setdefault(hostname, {})
                 for url, year in values.items():
-                    db.url_year_added.insert_one({
+                    batch.append({
                         'url': url,
                         'hostname': hostname,
                         'year': year
                     })
+                    # db.url_year_added.insert_one({
+                    #     'url': url,
+                    #     'hostname': hostname,
+                    #     'year': year
+                    # })
                     keys_years[hostname].setdefault(year, 0)
                     keys_years[hostname][year] += 1
+            if len(batch) > 0:
+                try:
+                    db.url_year_added.insert_many(batch, ordered=False)
+                except:
+                    pass
+            batch = []
             for hostname, values in keys_years.items():
                 for year, count in values.items():
-                    db.added_links.insert_one({
+                    batch.append({
                         'hostname': hostname,
                         'year': year,
                         'added_links': count
                     })
+                    # db.added_links.insert_one({
+                    #     'hostname': hostname,
+                    #     'year': year,
+                    #     'added_links': count
+                    # })
+            if len(batch) > 0:
+                try:
+                    db.url_year_added.insert_many(batch, ordered=False)
+                except:
+                    pass
             end = time.time()
             print(i, "Scans", mid - begin, end - begin)
     q_in = queue.Queue()
     for p in patterns:
-        q_in.put(q)
+        q_in.put(p)
     pools = []
     for _ in range(thread_num):
         pools.append(threading.Thread(target=thread_func, args=(q_in, )))
