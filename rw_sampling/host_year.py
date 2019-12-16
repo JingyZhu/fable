@@ -132,11 +132,6 @@ def links_added_by_year(thread_num=3):
                         'hostname': hostname,
                         'year': year
                     })
-                    # db.url_year_added.insert_one({
-                    #     'url': url,
-                    #     'hostname': hostname,
-                    #     'year': year
-                    # })
                     keys_years[hostname].setdefault(year, 0)
                     keys_years[hostname][year] += 1
             if len(batch) > 0:
@@ -152,14 +147,9 @@ def links_added_by_year(thread_num=3):
                         'year': year,
                         'added_links': count
                     })
-                    # db.added_links.insert_one({
-                    #     'hostname': hostname,
-                    #     'year': year,
-                    #     'added_links': count
-                    # })
             if len(batch) > 0:
                 try:
-                    db.url_year_added.insert_many(batch, ordered=False)
+                    db.added_links.insert_many(batch, ordered=False)
                 except:
                     pass
             end = time.time()
@@ -175,9 +165,61 @@ def links_added_by_year(thread_num=3):
         t.join()
         
     
-        
+
+def fix(thread_num=3):
+    """
+    Process the url_year data, deduplicate the obj based on years
+    Only new added links in certain years will be shown
+    Sharded the data into multiple scans (0-9, a-z)
+    Expected average memory usage of 5GB per scan
+    """
+    db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    patterns = [c for c in string.ascii_lowercase] + ['0-9']
+    def thread_func(q_in):
+        while not q_in.empty():
+            p = q_in.get()
+            begin = time.time()
+            match = re.compile('^[{}]'.format(p), re.IGNORECASE)
+            keys_dict = {}
+            for i, obj in enumerate(db.url_year_added.find({'hostname': match})):
+                hostname, url, year = obj['hostname'], obj['url'], int(obj['year'])
+                keys_dict.setdefault(hostname, {})
+                keys_dict[hostname].setdefault(url, year)
+                if year < keys_dict[hostname][url]:
+                    keys_dicts[hostname][url] = year
+            mid = time.time()
+            keys_years = {}
+            for hostname, values in keys_dict.items():
+                keys_years.setdefault(hostname, {})
+                for url, year in values.items():
+                    keys_years[hostname].setdefault(year, 0)
+                    keys_years[hostname][year] += 1
+            batch = []
+            for hostname, values in keys_years.items():
+                for year, count in values.items():
+                    batch.append({
+                        'hostname': hostname,
+                        'year': year,
+                        'added_links': count
+                    })
+            if len(batch) > 0:
+                try:
+                    db.added_links.insert_many(batch, ordered=False)
+                except:
+                    pass
+            end = time.time()
+            print(i, "Scans", mid - begin, end - begin)
+    q_in = queue.Queue()
+    for p in patterns:
+        q_in.put(p)
+    pools = []
+    for _ in range(thread_num):
+        pools.append(threading.Thread(target=thread_func, args=(q_in, )))
+        pools[-1].start()
+    for t in pools:
+        t.join()
 
 
 
 if __name__ == '__main__':
-    links_added_by_year()
+    fix()
