@@ -99,7 +99,7 @@ def links_added_by_year_backup(thread_num=10):
         t.join()
 
 
-def links_added_by_year(shards=40):
+def links_added_by_year(shards=20):
     """
     Process the url_year data, deduplicate the obj based on years
     Only new added links in certain years will be shown
@@ -115,13 +115,15 @@ def links_added_by_year(shards=40):
         keys_shard = keys[int(i * size / shards): int((i+1) * size / shards)]
         keys_dict = {k: {} for k in keys_shard}
         keys_years = {k: {} for k in keys_dict}
-        for obj in db.url_year.find():
+        for i, obj in enumerate(db.url_year.find()):
             if obj['hostname'] not in keys_dict:
                 continue
             hostname, url, year = obj['hostname'], obj['url'], int(obj['year'])
             keys_dict[hostname].setdefault(url, year)
             if year < keys_dict[hostname][url]:
                 keys_dicts[hostname][url] = year
+            if i % 10000000 == 0:
+                print(i / 10000000)
         mid = time.time()
         for hostname, values in keys_dict.items():
             for url, year in values.items():
