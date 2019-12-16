@@ -10,6 +10,7 @@ import gc
 import time
 import threading
 import queue
+import re
 
 sys.path.append('../')
 from utils import crawl
@@ -54,7 +55,7 @@ def get_links(interval=1):
                     pass
 
 
-def links_added_by_year(thread_num=10):
+def links_added_by_year_backup(thread_num=10):
     db.url_year_added.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     def thread_func(q_in):
@@ -98,6 +99,51 @@ def links_added_by_year(thread_num=10):
         t.join()
 
 
+def links_added_by_year(shards=40):
+    """
+    Process the url_year data, deduplicate the obj based on years
+    Only new added links in certain years will be shown
+    Sharded the data into multiple scans
+    Expected average memory usage of 1.5GB per scan
+    """
+    db.url_year_added.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    keys = sorted(list(metadata.keys()))
+    size = len(keys)
+    for i in range(shards):
+        begin = time.time()
+        keys_shard = keys[int(i * size / shards), int((i+1) * size / shards)]
+        keys_dict = {k: {} for k in keys_shard}
+        keys_years = {k: {} for k in keys_dict}
+        for obj in db.url_year.find():
+            if obj['hostname'] not in keys_dict:
+                continue
+            hostname, url, year = obj['hostname'], obj['url'], int(obj['year'])
+            keys_dict[hostname].setdefault(url, year)
+            if year < keys_dict[hostname][url]:
+                keys_dicts[hostname][url] = year
+        for hostname, values in keys_dict.items():
+            for url, year in values.items():
+                db.url_year_added.insert_one({
+                    'url': url,
+                    'hostname': hostname,
+                    'year': year
+                })
+                keys_years[hostname].setdefault(year, 0)
+                keys_years[hostname][year] += 1
+        for hostname, values in keys_years.items():
+            for year, count in values.items():
+                db.added_links.insert_one({
+                    'hostname': hostname,
+                    'year': year,
+                    'added_links': count
+                })
+        end = time.time()
+        print(i, "Scans", end - begin)
+    
+        
+
+
 
 if __name__ == '__main__':
-    links_added_by_year(30)
+    links_added_by_year()
