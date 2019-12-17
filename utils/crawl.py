@@ -65,16 +65,18 @@ def wayback_index(url, param_dict={}):
         return [], "Empty"
 
 
-def wayback_year_links(prefix, years, NUM_THREADS=10):
+def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param={}):
     """
     Get the result of links in certain years
     prefix: some string of url e.g: *.a.b.com/*
     years: list of years which would be query
+    max_limit: Maximum #records in one retrieval
+    params: Any customized params, except time range
 
     Should be add in try catch. In case of connection error
     """
     total_r = {}
-    cur_limit = 100000
+    cur_limit = 100000 if max_limit == 0 else max_limit
     wayback_home = 'http://web.archive.org/web/'
     params = {
         'output': 'json',
@@ -83,9 +85,10 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
         'collapse': 'urlkey',
         'filter': ['statuscode:200', 'mimetype:text/html'],
     }
+    params.update(param)
     l = threading.Lock()
     def get_year_links(year):
-        nonlocal total_r, cur_limit
+        nonlocal total_r, cur_limit, max_limit
         total_r.setdefault(year, set())
         params.update({
             "from": "{}0101".format(year),
@@ -103,11 +106,11 @@ def wayback_year_links(prefix, years, NUM_THREADS=10):
                 time.sleep(20)
                 continue
             try:
-                assert(len(r) < cur_limit )
+                assert(len(r) < cur_limit or cur_limit >= max_limit)
                 break
             except Exception as e:
                 print('2', str(e))
-                cur_limit += 50000
+                cur_limit *= 2
                 params.update({'limit': str(cur_limit)})
                 continue
         l.acquire()

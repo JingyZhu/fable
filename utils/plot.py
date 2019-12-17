@@ -11,7 +11,6 @@ def plot_CDF(data, classname=[], savefig='', show=True):
     data should be a 2-dimensional list with each row a label
     """
     data = [sorted(datus) for datus in data]
-    print(data)
     if len(classname) != len(data):
         classname = [ str(i + 1) for i in range(len(data))]
     for datus, cn in zip(data, classname):
