@@ -11,9 +11,11 @@ import time
 import threading
 import queue
 import re
+import math
+import matplotlib.pyplot as plt
 
 sys.path.append('../')
-from utils import crawl
+from utils import crawl, plot
 
 hosts = ['lions', 'pistons', 'wolverines', 'redwings']
 db = MongoClient().web_decay
@@ -220,6 +222,40 @@ def fix(thread_num=3):
         t.join()
 
 
+def plot_add_links():
+    more = [{}, {}, {}, {}] #more than 10, 100, 1k and 10k
+    exact = []
+    for obj in db.added_links.find():
+        hostname, year, added_links = obj['hostname'], int(obj['year']), int(obj['added_links'])
+        end_idx = int(math.log(added_links)) if int(math.log(added_links)) <= 4 else 4
+        for i in range(0, end_idx):
+            more[i].setdefault(year, set())
+            more[i][year].add(hostname)
+        exact.append(added_links)
+    years = []
+    for i in range(4):
+        years += list(more[i].keys())
+    years = sorted(list(set(years)))
+    data = [[] for _ in range(4)]
+    for year in years:
+        for i in range(4):
+            num_links = len(more[i][year]) if year in more[i] else 0
+            data[i].append(num_links)
+    plot.plot_bargroup(data, years, ['10', '100', '1k', '10k'], show=False)
+    plt.ylabel('#hosts')
+    plt.title('#Hosts with more than #added links in certain year')
+    plt.show()
+    sanity = list(filter(lambda x: x > 10e4, exact))
+    print(len(sanity) / len(exact))
+    plot.plot_CDF([exact], show=False)
+    plt.xscale('log')
+    plt.title('{Year, Host} #added links')
+    plt.xlabel('#added links')
+    plt.ylabel('CDF {year, host}')
+    plt.show()
+
+
+
 
 if __name__ == '__main__':
-    fix()
+    plot_add_links()
