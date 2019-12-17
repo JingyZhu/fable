@@ -57,50 +57,6 @@ def get_links(interval=1):
                     pass
 
 
-def links_added_by_year_backup(thread_num=10):
-    db.url_year_added.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
-    db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
-    def thread_func(q_in):
-        while not q_in.empty():
-            i, hostname, start_year = q_in.get()
-            if int(start_year) > 2019:
-                print(i, hostname, 'pass')
-                continue
-            url_match = {}
-            year_count = {}
-            start = time.time()
-            for obj in db.url_year.find({'hostname': hostname}):
-                url, year = obj['url'], int(obj['year'])
-                if url not in url_match or url_match[url] > year:
-                    url_match[url] = year
-            for url, year in url_match.items():
-                db.url_year_added.insert_one({
-                    'url': url,
-                    'hostname': hostname,
-                    'year': year
-                })
-                year_count.setdefault(year, 0)
-                year_count[year] += 1
-            for year, count in year_count.items():
-                db.added_links.insert_one({
-                    'hostname': hostname,
-                    'year': year,
-                    'added_links': count
-                })
-            end = time.time()
-            print(i, hostname, year, end - start)
-    
-    q_in = queue.Queue()
-    for i, (hostname, start_year) in enumerate(metadata.items()):
-        q_in.put((i, hostname, start_year))
-    pools = []
-    for _ in range(thread_num):
-        pools.append(threading.Thread(target=thread_func, args=(q_in, )))
-        pools[-1].start()
-    for t in pools:
-        t.join()
-
-
 def links_added_by_year(thread_num=3):
     """
     Process the url_year data, deduplicate the obj based on years
@@ -108,7 +64,7 @@ def links_added_by_year(thread_num=3):
     Sharded the data into multiple scans (0-9, a-z)
     Expected average memory usage of 5GB per scan
     """
-    db.url_year_added.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    db.url_year_added.create_index([('url', pymongo.ASCENDING)], unique=True)
     db.added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     patterns = [c for c in string.ascii_lowercase] + ['0-9']
     def thread_func(q_in):
@@ -256,4 +212,4 @@ def plot_add_links():
 
 
 if __name__ == '__main__':
-    plot_add_links()
+    links_added_by_year()
