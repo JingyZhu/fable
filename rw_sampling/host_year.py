@@ -227,7 +227,7 @@ def plot_add_links():
     exact = []
     for obj in db.added_links.find():
         hostname, year, added_links = obj['hostname'], int(obj['year']), int(obj['added_links'])
-        end_idx = int(math.log(added_links)) if int(math.log(added_links)) <= 4 else 4
+        end_idx = int(math.log10(added_links)) if int(math.log10(added_links)) <= 4 else 4
         for i in range(0, end_idx):
             more[i].setdefault(year, set())
             more[i][year].add(hostname)
@@ -245,8 +245,6 @@ def plot_add_links():
     plt.ylabel('#hosts')
     plt.title('#Hosts with more than #added links in certain year')
     plt.show()
-    sanity = list(filter(lambda x: x > 10e4, exact))
-    print(len(sanity) / len(exact))
     plot.plot_CDF([exact], show=False)
     plt.xscale('log')
     plt.title('{Year, Host} #added links')
