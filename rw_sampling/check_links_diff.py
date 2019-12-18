@@ -48,7 +48,12 @@ def load_and_diff(url, ID=''):
     Shoud be called in a try-catch
     """
     html1 = crawl.chrome_crawl(url, timeout=240, ID=ID)
-    r = requests.get(url)
+    while True:
+        try:
+            r = requests.get(url)
+            break
+        except:
+            time.sleep(20)
     html2 = r.text
     outhosts1 = get_outhosts(html1)
     outhost2 = get_outhosts(html2)
