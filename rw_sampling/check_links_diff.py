@@ -12,7 +12,7 @@ import os
 import json
 import sys
 from urllib.parse import urlparse
-import threading
+import threading, queue
 import time
 
 sys.path.append('../')
@@ -39,12 +39,12 @@ def get_outhosts(html):
     return set(outhost_list)
 
 
-def chrome_load(url):
+def chrome_load(url, ID=''):
     """
     Load a page using chrome
     return a url list 
     """
-    html = crawl.chrome_crawl(url)
+    html = crawl.chrome_crawl(url, timeout=240, ID=ID)
     outhosts = get_outhosts(html)
     return outhosts
 
@@ -63,13 +63,15 @@ def requests_load(url):
     return outhosts
 
 
-def main():
+def construct_wayback_url():
+    """
+    Construct wayback machine url for loading by querying the CDX server
+    """
     data = json.load(open('status_200.json', 'r'))
     params = {'limit': 3}
     url_list = []
     for i, obj in enumerate(data):
         url, year = obj['url'], obj['year']
-        print(i, url)
         params.update({
             'from': str(year) + '0101',
             'to': str(year) + '1231',
@@ -84,16 +86,40 @@ def main():
                 url = 'http://web.archive.org/web/' + rval[0][0] + '/' + rval[0][1]
                 url_list.append(url)
             break
+        print(i, url, len(url_list))
     json.dump(url_list, open('sample_load_list.json', 'w+'))
 
 
-    # diff_dict = {}
-    # for i, url in enumerate(data):
-    #     print(i, url)
-    #     outlink1 = chrome_load(url)
-    #     outlink2 = requests_load(url)
-    #     diff_dict[url] = len(outlink1) - len(outlink2)
-    # print(list(diff_dict.values()))
+def main(thread_num=8):
+    data = json.load(open('sample_load_list.json', 'r'))
+    data = data[:100]
+    diff_dict = {}
+    def thread_func(i, q_in):
+        nonlocal diff_dict
+        while not q_in.empty():
+            url = q_in.get()
+            print(i, url)
+            outhost1 = chrome_load(url, ID=str(i))
+            outhost2 = requests_load(url)
+            diff = abs(len(outhost1) + len(outhost2) - 2* len(outhost1.intersection(outhost2)) )
+            union = len(outhost1) + len(outhost2) - len(outhost1.intersection(outhost2))
+            diff_dict[url] = {
+                "Chrome load": len(outhost1),
+                "Requests": len(outhost2),
+                "Diff": diff,
+                "Union": union
+            }
+    q_in = queue.Queue()
+    for url in data:
+        q_in.put(url)
+    pools = []
+    for i in range(thread_num):
+        pools.append(threading.Thread(target=thread_func, args=(i, q_in,)))
+        pools[-1].start()
+    for t in pools:
+        t.join()
+    json.dump(diff_dict, open('links_diff.json', 'w+'))
+
 
 if __name__== "__main__":
     main()
