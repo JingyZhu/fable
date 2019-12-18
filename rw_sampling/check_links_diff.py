@@ -52,7 +52,8 @@ def load_and_diff(url, ID=''):
         try:
             r = requests.get(url)
             break
-        except:
+        except Exception as e:
+            print(str(e))
             time.sleep(20)
     html2 = r.text
     outhosts1 = get_outhosts(html1)
