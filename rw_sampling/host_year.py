@@ -76,7 +76,7 @@ def get_latest_year(interval=1):
         for year in range(2019, early_year-1, -interval):
             can_break = False
             data = crawl.wayback_year_links('*.{}/*'.format(hostname), [y for y in range(year, year - interval, -1) if y >= early_year], \
-                                            max_limit=1, param={'filter': ['!statuscode:400', 'mimetype:text/html']})
+                                            max_limit=1, param_dict={'filter': ['!statuscode:400', 'mimetype:text/html']})
             print([(k, len(v)) for k, v in data.items()])
             for year in sorted(data.keys(), reverse=True):
                 if len(data[year]) > 0:

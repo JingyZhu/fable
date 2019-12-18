@@ -11,6 +11,10 @@ import threading
 import itertools
 
 def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
+    """
+    Use chrome to load the page. Directly return the HTML text
+    ID: If multi-threaded, should give ID for each thread to differentiate temp file
+    """
     try:
         cur = str(int(time.time())) + '_' + str(os.getpid()) + ID
         file = cur + '.html'
@@ -43,6 +47,8 @@ def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
 def wayback_index(url, param_dict={}):
     """
     Get the wayback machine index of certain url by querying the CDX
+
+    return: ( [(timestamp, url)], SUCCESS/EMPTY/ERROR_MSG)
     """
     wayback_home = 'http://web.archive.org/web/'
     params = {
@@ -65,7 +71,7 @@ def wayback_index(url, param_dict={}):
         return [], "Empty"
 
 
-def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param={}):
+def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param_dict={}):
     """
     Get the result of links in certain years
     prefix: some string of url e.g: *.a.b.com/*
@@ -85,7 +91,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param={}):
         'collapse': 'urlkey',
         'filter': ['statuscode:200', 'mimetype:text/html'],
     }
-    params.update(param)
+    params.update(param_dict)
     l = threading.Lock()
     def get_year_links(year):
         nonlocal total_r, cur_limit, max_limit
@@ -132,5 +138,3 @@ def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param={}):
 
     return {k: list(v) for k, v in total_r.items()}
 
-
-    
