@@ -83,6 +83,7 @@ def main():
                 url = 'http://web.archive.org/web/' + rval[0][0] + '/' + rval[0][1]
                 url_list.append(url)
             break
+    json.dump(url_list, open('sample_load_list.json', 'w+'))
 
 
     # diff_dict = {}
