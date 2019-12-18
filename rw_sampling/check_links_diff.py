@@ -39,28 +39,20 @@ def get_outhosts(html):
     return set(outhost_list)
 
 
-def chrome_load(url, ID=''):
+def load_and_diff(url, ID=''):
     """
-    Load a page using chrome
-    return a url list 
-    """
-    html = crawl.chrome_crawl(url, timeout=240, ID=ID)
-    outhosts = get_outhosts(html)
-    return outhosts
+    Chrome load and request load a page
+    Diff on hosts
+    If bs can't break, ignore this case
 
-
-
-def requests_load(url):
+    Shoud be called in a try-catch
     """
-    request.get a page
-    """
-    try:
-        r = requests.get(url)
-    except:
-        return []
-    html = r.text
-    outhosts = get_outhosts(html)
-    return outhosts
+    html1 = crawl.chrome_crawl(url, timeout=240, ID=ID)
+    r = requests.get(url)
+    html2 = r.text
+    outhosts1 = get_outhosts(html1)
+    outhost2 = get_outhosts(html2)
+    return outhosts1, outhost2
 
 
 def construct_wayback_url():
@@ -99,8 +91,11 @@ def main(thread_num=8):
         while not q_in.empty():
             url = q_in.get()
             print(i, url)
-            outhost1 = chrome_load(url, ID=str(i))
-            outhost2 = requests_load(url)
+            try:
+                outhost1, outhost2 = load_and_diff(url, ID=str(i))
+            except Exception as e:
+                print(str(e))
+                continue
             diff = abs(len(outhost1) + len(outhost2) - 2* len(outhost1.intersection(outhost2)) )
             union = len(outhost1) + len(outhost2) - len(outhost1.intersection(outhost2))
             diff_dict[url] = {
