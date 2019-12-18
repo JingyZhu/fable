@@ -105,8 +105,8 @@ def check_diff(thread_num=8):
                 'url': url,
                 "chrome": outhost1,
                 "requests": outhost2,
-                "c-r": outhost1 - outhost2,
-                "r-c": outhost2 - outhost1
+                "c-r": list(outhost1 - outhost2),
+                "r-c": list(outhost2 - outhost1)
             })
     q_in = queue.Queue()
     for url in data:
