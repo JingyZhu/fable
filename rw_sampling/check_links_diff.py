@@ -20,7 +20,7 @@ from utils import crawl, url_utils
 import config
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-host_extractor = crawl.HostExtractor()
+host_extractor = url_utils.HostExtractor()
 
 
 def get_outhosts(html):
