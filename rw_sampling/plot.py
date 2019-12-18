@@ -75,6 +75,22 @@ def plot_latest_year():
     plt.show()
 
 
+def plot_chrome_request_diff():
+    db = MongoClient().web_decay
+    data = [[], [], []]
+    for obj in db.chrome_request_diff.find():
+        c_r = len(obj['c-r'])
+        r_c = len(obj['r-c'])
+        union = len(obj['union'])
+        data[0].append(c_r)
+        data[1].append(r_c)
+        data[2].append(union)
+    plot.plot_CDF(data, classname=['C-R', 'R-C', 'Union'], cut=0.99, show=False)
+    plt.xlabel('#Host for outgoing links')
+    plt.ylabel('CDF across links')
+    plt.title("Chrome requests load #hosts difference")
+    plt.show()
+
 if __name__ == '__main__':
     default_func = 'plot_diff_union'
     calling_dict = {name: var for name, var in locals().items() if inspect.isfunction(var)}
