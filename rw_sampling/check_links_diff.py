@@ -71,8 +71,8 @@ def main():
         url, year = obj['url'], obj['year']
         print(i, url)
         params.update({
-            'from': year + '0101',
-            'to': year + '1231',
+            'from': str(year) + '0101',
+            'to': str(year) + '1231',
             'filter': ['statuscode:200']
         })
         while True:
