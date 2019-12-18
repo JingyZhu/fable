@@ -16,7 +16,7 @@ class HostExtractor:
             last_http = url.rfind('http://')
             idx = max(last_http, last_https)
             url = url[idx:]
-        if 'http://' not in url or 'https://' not in url:
+        if 'http://' not in url and 'https://' not in url:
             url = 'http://' + url
         return self.psl.get_public_suffix(urlparse(url).netloc)
 

@@ -24,7 +24,7 @@ db = MongoClient(config.MONGO_HOSTNAME).web_decay
 host_extractor = url_utils.HostExtractor()
 
 
-def get_outhosts(html):
+def get_outhosts(html, hostname):
     """
     Input: html text
     Output: All the outlinks' public hosts
@@ -36,7 +36,10 @@ def get_outhosts(html):
             link = atag['href']
         except:
             continue
-        outhost_list.append(host_extractor.extract(link, wayback='web.archive.org' in link))
+        if urlparse(link).netloc == '': # Relative links
+            outhost_list.append(hostname)
+        else:
+            outhost_list.append(host_extractor.extract(link, wayback='/web.archive.org/' in link))
     return set(outhost_list)
 
 
@@ -49,6 +52,7 @@ def load_and_diff(url, ID=''):
     Shoud be called in a try-catch
     """
     html1 = crawl.chrome_crawl(url, timeout=240, ID=ID)
+    hostname = host_extractor.extract(url, wayback=True)
     while True:
         try:
             r = requests.get(url)
@@ -57,8 +61,8 @@ def load_and_diff(url, ID=''):
             print(str(e))
             time.sleep(20)
     html2 = r.text
-    outhosts1 = get_outhosts(html1)
-    outhost2 = get_outhosts(html2)
+    outhosts1 = get_outhosts(html1, hostname)
+    outhost2 = get_outhosts(html2, hostname)
     return outhosts1, outhost2
 
 
@@ -103,10 +107,11 @@ def check_diff(thread_num=8):
                 continue
             db.chrome_request_diff.insert_one({
                 'url': url,
-                "chrome": outhost1,
-                "requests": outhost2,
+                "chrome": list(outhost1),
+                "requests": list(outhost2),
                 "c-r": list(outhost1 - outhost2),
-                "r-c": list(outhost2 - outhost1)
+                "r-c": list(outhost2 - outhost1),
+                "union": list(outhost1.union(outhost2))
             })
     q_in = queue.Queue()
     for url in data:
