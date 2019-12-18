@@ -5,12 +5,15 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 
-def plot_CDF(data, classname=[], savefig='', show=True):
+def plot_CDF(data, classname=[], savefig='', show=True, cut=1):
     """
     Plot the CDF for different class
     data should be a 2-dimensional list with each row a label
+    cut: Percent of CDF to show 1 means all
     """
     data = [sorted(datus) for datus in data]
+    size = [len(datus) for datus in data]
+    data = [datus[: int(s*cut)] for datus, s in zip(data, size)]
     if len(classname) != len(data):
         classname = [ str(i + 1) for i in range(len(data))]
     for datus, cn in zip(data, classname):

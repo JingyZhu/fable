@@ -7,6 +7,7 @@ Currently only support all links. TODO: Only extract text/html as outlinks. Is t
 import requests
 from subprocess import call
 from pymongo import MongoClient
+import pymongo
 from bs4 import BeautifulSoup
 import os
 import json
@@ -16,7 +17,7 @@ import threading, queue
 import time
 
 sys.path.append('../')
-from utils import crawl, url_utils
+from utils import crawl, url_utils, plot
 import config
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
@@ -88,12 +89,10 @@ def construct_wayback_url():
     json.dump(url_list, open('sample_load_list.json', 'w+'))
 
 
-def main(thread_num=8):
+def check_diff(thread_num=8):
     data = json.load(open('sample_load_list.json', 'r'))
-    data = data[:100]
-    diff_dict = {}
+    db.chrome_request_diff.create_index([('url', pymongo.ASCENDING)], unique=True)
     def thread_func(i, q_in):
-        nonlocal diff_dict
         while not q_in.empty():
             url = q_in.get()
             print(i, url)
@@ -102,14 +101,13 @@ def main(thread_num=8):
             except Exception as e:
                 print(str(e))
                 continue
-            diff = abs(len(outhost1) + len(outhost2) - 2* len(outhost1.intersection(outhost2)) )
-            union = len(outhost1) + len(outhost2) - len(outhost1.intersection(outhost2))
-            diff_dict[url] = {
-                "Chrome load": len(outhost1),
-                "Requests": len(outhost2),
-                "Diff": diff,
-                "Union": union
-            }
+            db.chrome_request_diff.insert_one({
+                'url': url,
+                "chrome": outhost1,
+                "requests": outhost2,
+                "c-r": outhost1 - outhost2,
+                "r-c": outhost2 - outhost1
+            })
     q_in = queue.Queue()
     for url in data:
         q_in.put(url)
@@ -119,8 +117,7 @@ def main(thread_num=8):
         pools[-1].start()
     for t in pools:
         t.join()
-    json.dump(diff_dict, open('links_diff.json', 'w+'))
 
 
 if __name__== "__main__":
-    main()
+    check_diff()
