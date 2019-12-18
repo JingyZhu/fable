@@ -67,8 +67,9 @@ def main():
     data = json.load(open('status_200.json', 'r'))
     params = {'limit': 3}
     url_list = []
-    for obj in data:
+    for i, obj in enumerate(data):
         url, year = obj['url'], obj['year']
+        print(i, url)
         params.update({
             'from': year + '0101',
             'to': year + '1231',

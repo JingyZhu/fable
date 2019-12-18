@@ -10,7 +10,7 @@ class HostExtractor:
     def extract(self, url, wayback=False):
         """
         Wayback: Whether the url is got from wayback
-        """"
+        """
         if wayback:
             last_https = url.rfind('https://')
             last_http = url.rfind('http://')
