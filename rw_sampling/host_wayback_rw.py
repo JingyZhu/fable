@@ -5,7 +5,6 @@ Collect new hosts as many as possible
 import json
 import os
 import sys
-import multiprocessing as mp
 from bs4 import BeautifulSoup
 import requests
 from urllib.parse import urlparse, urljoin
@@ -17,15 +16,14 @@ sys.path.append('../')
 from utils import crawl, url_utils
 import random
 
-NUM_PROC = 2
 NUM_HOST = 100
-NUM_THREADs = 10
+NUM_THREAD = 10
 JUMP_RATIO = 0.1
 
 NUM_SEEDS = 5
 CHECKPOINT_INT = 10
 
-counter = mp.Value('i', 0)
+counter = 0
 host_extractor = url_utils.HostExtractor()
 
 def base_host(url):
@@ -107,7 +105,7 @@ def load_checkpoint():
     else, just return the init value
     """
     proc_d, Q_backup = mp.Manager().dict(), mp.Manager().dict()
-    Q_in = mp.Queue(maxsize=NUM_SEEDS+2*NUM_PROC)
+    Q_in = queue.Queue(maxsize=NUM_SEEDS+2*NUM_THREAD)
     if os.path.exists('hosts.json'):
         urls = json.load(open('hosts.json', 'r'))
         for url, v in urls.items():
@@ -121,8 +119,7 @@ def load_checkpoint():
     return proc_d, Q_in, Q_backup
 
 
-def process_func(Q_in, d, r_jump, Q_backup):
-    global counter
+def thread_func(Q_in, d, r_jump, Q_backup):
     while not Q_in.empty():
         counter.value += 1
         url = Q_in.get()
@@ -148,8 +145,8 @@ def process_func(Q_in, d, r_jump, Q_backup):
 
 
 def main():
-    proc_d, Q_backup = mp.Manager().dict(), mp.Manager().dict()
-    Q_in = mp.Queue()
+    proc_d, Q_backup = {}, {}
+    Q_in = queue.Queue()
     proc_d, Q_in, Q_backup = load_checkpoint()        
     r_jump = json.load(open('url_db_2017.json', 'r'))
     r_jump = [obj['url'] for obj in r_jump]
@@ -161,8 +158,8 @@ def main():
             Q_in.put(seed)
 
     pools = []
-    for _ in range(NUM_PROC):
-        pools.append(mp.Process(target=process_func, args=(Q_in, proc_d, r_jump, Q_backup)))
+    for _ in range(NUM_THREAD):
+        pools.append(threading.Thread(target=thread_func, args=(Q_in, proc_d, r_jump, Q_backup)))
         pools[-1].start()
     for i in range(NUM_PROC):
         pools[i].join()
