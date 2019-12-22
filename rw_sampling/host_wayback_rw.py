@@ -67,7 +67,9 @@ def keep_sampling(pools, year, wayback=True):
             key = min(indexed_urls.keys(), key=lambda x: abs(x-int(ts)))
         else:
             key = sorted(indexed_urls.keys())[int(len(indexed_urls)/2)]
+        print("Sampled:", indexed_urls[key])
         return indexed_urls[key]
+    print("Sampled None")
     return None
 
 
