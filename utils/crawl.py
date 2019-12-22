@@ -138,3 +138,28 @@ def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param_dict={}
 
     return {k: list(v) for k, v in total_r.items()}
 
+
+def requests_crawl(url, timeout=20, sleep=True, html=True):
+    """
+    Use requests to get the page
+    Return None if fails to get the content
+    html: Only return html if set to true
+    sleep: Will sleep if get block
+    """
+    while True:
+        try:
+            begin = time.time()
+            r = requests.get(url, timeout=timeout)
+            end = time.time()
+            break
+        except:
+            if end-begin >= timeout: #timeout
+                break
+            time.sleep(10)
+    if r.status_code >= 400:
+        return
+    headers = {k.lower(): v for k, v in r.headers.items()}
+    content_type = headers['content-type']
+    if html and 'html' not in content_type:
+        return
+    return r.text
