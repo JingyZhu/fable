@@ -56,6 +56,7 @@ def keep_sampling(pools, year, wayback=True):
             idx = max(last_http, last_https)
             ts = url[idx-15:idx-1] # Extract the ts for url
             url = url[idx:]
+        print(url)
         indexed_urls, _ = crawl.wayback_index(url,\
                     param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
                     'filter': ['!statuscode:400']}, total_link=True)
@@ -177,6 +178,7 @@ def main():
     q_in = queue.Queue()
     proc_d, q_in, q_backup = load_checkpoint()        
     r_jump = list(db.seeds.find({}, {"_id": False, "url": True}))
+    r_jump = [u['url'] for u in r_jump]
     
     if q_in.empty(): # If there is no checkpoint before
         seeds = []
