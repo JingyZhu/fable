@@ -11,24 +11,26 @@ from urllib.parse import urlparse, urljoin
 import threading
 import queue
 import pickle
+from pymongo import MongoClient
+import pymongo
 
 sys.path.append('../')
 from utils import crawl, url_utils
 import random
 
-NUM_HOST = 100
+NUM_HOST = 1000
 NUM_THREAD = 10
 JUMP_RATIO = 0.1
 
-NUM_SEEDS = 5
+NUM_SEEDS = 100
 CHECKPOINT_INT = 10
-year = 1999
 
+year = 1999
 counter = 0
 host_extractor = url_utils.HostExtractor()
-
 rw_stats = [] # Depth and new host_exploration stats for each walk.
 
+db = MongoClient().web_decay
 
 def base_host(url):
     # TODO Could be modified due to real web random walking
@@ -41,8 +43,12 @@ def keep_sampling(pools, year, wayback=True):
     Return None on all url in pools
     Wayback: If urls in pool are from wayback machine
     """
-    while True:
-        url = random.sample(pools, 1)[0]
+    blocked = set()
+    while len(blocked) < len(pools):
+        idx = random.randint(0, len(pools))
+        while idx in blocked:
+            idx = random.randint(0, len(pools))
+        url = pools[idx]
         ts = str(year) + '1231235959'
         if wayback:
             last_https = url.rfind('https://')
@@ -51,8 +57,10 @@ def keep_sampling(pools, year, wayback=True):
             url = url[idx:]
             ts = url[idx-15:idx-1] # Extract the ts for url
         indexed_urls, _ = crawl.wayback_index(url,\
-                    param_dict={'from': str(year) + '0101', 'to': str(year) + '1231'})
+                    param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
+                    'filter': ['!statuscode:400']}, total_link=True)
         if len(indexed_urls) == 0:
+            blocked.add(idx)
             continue
         indexed_urls = {int(u[0]): u[1] for u in indexed_urls}
         if wayback:
@@ -98,7 +106,7 @@ def load_checkpoint():
     Load the checkpoint (hosts.json and Q.json) if there exists
     else, just return the init value
     """
-    proc_d, q_backup = mp.Manager().dict(), mp.Manager().dict()
+    proc_d, q_backup = {}, {}
     q_in = queue.Queue(maxsize=NUM_SEEDS+2*NUM_THREAD)
     if os.path.exists('hosts.json'):
         urls = json.load(open('hosts.json', 'r'))
@@ -108,8 +116,8 @@ def load_checkpoint():
         url_in_Q = json.load(open('Q.json', 'r'))
         for url, v in url_in_Q.items():
             if not v:
-                q_in.put(url)
-                q_backup[url] = v
+                q_in.put(tuple([url] + v))
+                q_backup[url] = tuple([url] + v)
     return proc_d, q_in, q_backup
 
 
@@ -126,14 +134,14 @@ def thread_func(q_in, d, r_jump, q_backup, year):
         q_backup[url] = 1
         print(counter, url, len(d), depth, len(collected_hosts))
         hostname = base_host(url)
-        d[hostname] = ''
+        d[hostname] = year
         checkpoint(d, q_backup)
         outlinks = crawl_link(url, d)
         for outlink in outlinks:
             hostname = base_host(outlinks)
             collected_hosts.add(hostname)
             if hostname not in d:
-                d[hostname] = ''
+                d[hostname] = year
         other_host_links = [outlink for outlink in outlinks if base_host(outlink) != hostname]
         # print(other_host_links)
         if len(d) > NUM_HOST:
@@ -160,14 +168,16 @@ def thread_func(q_in, d, r_jump, q_backup, year):
 
 
 def main():
+    db.hosts_meta.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     proc_d, q_backup = {}, {}
     q_in = queue.Queue()
     proc_d, q_in, q_backup = load_checkpoint()        
-    r_jump = json.load(open('url_db_2017.json', 'r'))
-    r_jump = [obj['url'] for obj in r_jump]
+    r_jump = list(db.seeds.find({}, {"_id": False, "url": True}))
     
     if q_in.empty(): # If there is no checkpoint before
-        seeds = random.sample(r_jump, NUM_SEEDS)
+        seeds = []
+        for _ in range(NUM_SEEDS):
+            seeds.append(keep_sampling(r_jump, year=year, wayback=False))
         for seed in seeds:
             q_in.put((seed, 0, set()))
 
@@ -178,7 +188,12 @@ def main():
     for t in pools:
         t.join()
 
-    json.dump(proc_d.copy(), open('hosts.json', 'w+'))
+    json.dump(rw_stats, open('rw_stats.json', 'w+'))
+    objs = [{
+        "hostname": hostname,
+        "year": year
+    } for hostname, year in proc_d.items()]
+    db.hosts_meta.insert_many(objs, ordered=False)
 
 
 if __name__ == '__main__':

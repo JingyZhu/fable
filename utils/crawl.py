@@ -44,9 +44,11 @@ def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     return html, url_file + 'jpg'
 
 
-def wayback_index(url, param_dict={}, wait=True):
+def wayback_index(url, param_dict={}, wait=True, total_link=False):
     """
     Get the wayback machine index of certain url by querying the CDX
+    wait: wait unitl not getting block
+    total_link: Returned url are in full links
 
     return: ( [(timestamp, url)], SUCCESS/EMPTY/ERROR_MSG)
     """
@@ -68,7 +70,10 @@ def wayback_index(url, param_dict={}, wait=True):
             if not wait:
                 break
             time.sleep(10)
-    r = [(i[1], i[2]) for i in r[1:]]
+    if total_link:
+        r = [(i[1], "{}{}/{}".format(wayback_home, i[1], i[2])) for i in r[1:]]
+    else:
+        r = [(i[1], i[2]) for i in r[1:]]
     if len(r) != 0:
         return r, "Success",
     else:

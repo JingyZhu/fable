@@ -13,3 +13,9 @@ def CopyCollections(database_src, collection_src, database_dst, collection_dst):
     for obj in db_src.find():
         db_dst.insert_one(obj)
 
+
+def RandomSample(db, sample_size):
+    """
+    Random sampling some obj from db
+    """
+    return list(db.aggregate([{'$sample': {'$size': sample_size}}, {'$project': {'_id': False}}]))
