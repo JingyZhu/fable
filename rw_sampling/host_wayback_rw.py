@@ -54,8 +54,9 @@ def keep_sampling(pools, year, wayback=True):
             last_https = url.rfind('https://')
             last_http = url.rfind('http://')
             idx = max(last_http, last_https)
-            url = url[idx:]
             ts = url[idx-15:idx-1] # Extract the ts for url
+            url = url[idx:]
+        print(url, ts)
         indexed_urls, _ = crawl.wayback_index(url,\
                     param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
                     'filter': ['!statuscode:400']}, total_link=True)
@@ -77,7 +78,7 @@ def crawl_link(url, d):
     Extract the links and get all the html with urls 
     have difference hostname with original
     """
-    outlinks = []
+    outlinks = set()
     home = urlparse(url).scheme + '://' + urlparse(url).netloc
     html = crawl.requests_crawl(url)
     try:
@@ -88,10 +89,12 @@ def crawl_link(url, d):
         if 'href' not in a_tag.attrs:
             continue
         link = a_tag.attrs['href']
+        if link[0] == '#': #Anchor ignore
+            continue
         if urlparse(link).netloc == '': #Relative urls
             link = home + link
-        outlinks.append(link)
-    return outlinks
+        outlinks.add(link)
+    return list(outlinks)
 
 
 def checkpoint(d, d_q):
