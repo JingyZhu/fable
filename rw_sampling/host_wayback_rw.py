@@ -22,15 +22,46 @@ JUMP_RATIO = 0.1
 
 NUM_SEEDS = 5
 CHECKPOINT_INT = 10
+year = 1999
 
 counter = 0
 host_extractor = url_utils.HostExtractor()
+
+rw_stats = [] # Depth and new host_exploration stats for each walk.
 
 
 def base_host(url):
     # TODO Could be modified due to real web random walking
     return host_extractor.extract(urlparse(url).netloc, wayback=True)
-        
+
+
+def keep_sampling(pools, year, wayback=True):
+    """
+    Keep uniform sampling until getting a url has copy in wayback machine
+    Return None on all url in pools
+    Wayback: If urls in pool are from wayback machine
+    """
+    while True:
+        url = random.sample(pools, 1)[0]
+        ts = str(year) + '1231235959'
+        if wayback:
+            last_https = url.rfind('https://')
+            last_http = url.rfind('http://')
+            idx = max(last_http, last_https)
+            url = url[idx:]
+            ts = url[idx-15:idx-1] # Extract the ts for url
+        indexed_urls, _ = crawl.wayback_index(url,\
+                    param_dict={'from': str(year) + '0101', 'to': str(year) + '1231'})
+        if len(indexed_urls) == 0:
+            continue
+        indexed_urls = {int(u[0]): u[1] for u in indexed_urls}
+        if wayback:
+            key = min(indexed_urls.keys(), key=lambda x: abs(x-int(ts)))
+        else:
+            key = sorted(indexed_urls.keys())[int(len(indexed_urls)/2)]
+        return indexed_urls[key]
+    return None
+
 
 def crawl_link(url, d):
     """
@@ -52,14 +83,6 @@ def crawl_link(url, d):
         if urlparse(link).netloc == '': #Relative urls
             link = home + link
         outlinks.append(link)
-    for outlink in outlinks:
-
-    while not q_out.empty():
-        outlink = q_out.get()
-        hostname =  base_host(outlink)
-        if hostname not in d:
-            d[hostname] = ''
-        outlinks.append(outlink)
     return outlinks
 
 
@@ -90,35 +113,50 @@ def load_checkpoint():
     return proc_d, q_in, q_backup
 
 
-def thread_func(q_in, d, r_jump, q_backup):
+def thread_func(q_in, d, r_jump, q_backup, year):
     """
     q_in: Input Queue for threads to consume
             (url, depth, collected_hosts)
     d: Collected host dict {hostname: value} 
     """
-    global counter
+    global counter, rw_stats
     while not q_in.empty():
         counter += 1
         url, depth, collected_hosts = q_in.get()
         q_backup[url] = 1
-        print(counter, url, len(d))
+        print(counter, url, len(d), depth, len(collected_hosts))
         hostname = base_host(url)
         d[hostname] = ''
         checkpoint(d, q_backup)
         outlinks = crawl_link(url, d)
+        for outlink in outlinks:
+            hostname = base_host(outlinks)
+            collected_hosts.add(hostname)
+            if hostname not in d:
+                d[hostname] = ''
         other_host_links = [outlink for outlink in outlinks if base_host(outlink) != hostname]
         # print(other_host_links)
         if len(d) > NUM_HOST:
             continue
-        elif random.random() < JUMP_RATIO or len(outlinks) < 1:
-            next_url = random.sample(r_jump, 1)[0]
-            q_in.put(next_url)
-            q_backup[next_url] = 0
+        elif random.random() < JUMP_RATIO or len(outlinks) < 1: #Random Jump
+            next_url = keep_sampling(r_jump, year=year, wayback=False)
+            rw_stats.append((depth, len(collected_hosts)))
+            q_in.put((next_url, 0, set()))
+            q_backup[next_url] = (0, [])
         else:
-            next_url = random.sample(outlinks, 1)[0] if len(other_host_links) == 0 \
-                        else random.sample(other_host_links, 1)[0]
-            q_in.put(next_url)
-            q_backup[next_url] = 0
+            if len(other_host_links) > 0:
+                next_url = keep_sampling(other_host_links, year=year)
+                next_url = next_url if next_url is not None else keep_sampling(outlinks, year=year)
+            else:
+                next_url = keep_sampling(outlinks, year=year)
+            if next_url is None:
+                next_url = keep_sampling(r_jump, year=year, wayback=False)
+                rw_stats.append((depth, len(collected_hosts)))
+                q_in.put((next_url, 0, set()))
+                q_backup[next_url] = (0, [])
+            else:
+                q_in.put((next_url, depth+1, collected_hosts))
+                q_backup[next_url] = (depth+1, list(collected_hosts))
 
 
 def main():
@@ -135,7 +173,7 @@ def main():
 
     pools = []
     for _ in range(NUM_THREAD):
-        pools.append(threading.Thread(target=thread_func, args=(q_in, proc_d, r_jump, q_backup)))
+        pools.append(threading.Thread(target=thread_func, args=(q_in, proc_d, r_jump, q_backup, year)))
         pools[-1].start()
     for t in pools:
         t.join()

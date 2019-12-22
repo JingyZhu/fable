@@ -44,7 +44,7 @@ def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     return html, url_file + 'jpg'
 
 
-def wayback_index(url, param_dict={}):
+def wayback_index(url, param_dict={}, wait=True):
     """
     Get the wayback machine index of certain url by querying the CDX
 
@@ -58,12 +58,16 @@ def wayback_index(url, param_dict={}):
         'to': 20191231,
     }
     params.update(param_dict)
-    try:
-        r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
-        r = r.json()
-    except Exception as e:
-        print(str(e))
-        return [], str(e)
+    while True:
+        try:
+            r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
+            r = r.json()
+            break
+        except Exception as e:
+            print(str(e))
+            if not wait:
+                break
+            time.sleep(10)
     r = [(i[1], i[2]) for i in r[1:]]
     if len(r) != 0:
         return r, "Success",
