@@ -19,7 +19,7 @@ from utils import crawl, url_utils
 import random
 
 NUM_HOST = 1000
-NUM_THREAD = 10
+NUM_THREAD = 1
 JUMP_RATIO = 0.1
 
 NUM_SEEDS = 100
@@ -56,7 +56,6 @@ def keep_sampling(pools, year, wayback=True):
             idx = max(last_http, last_https)
             ts = url[idx-15:idx-1] # Extract the ts for url
             url = url[idx:]
-        print(url, ts)
         indexed_urls, _ = crawl.wayback_index(url,\
                     param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
                     'filter': ['!statuscode:400']}, total_link=True)
