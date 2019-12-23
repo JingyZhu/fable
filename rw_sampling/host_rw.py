@@ -190,11 +190,11 @@ def main():
         t.join()
 
     json.dump(rw_stats, open('rw_stats.json', 'w+'))
-    objs = [{
-        "hostname": hostname,
-        "year": year
-    } for hostname, year in proc_d.items()]
-    db.hosts_meta.insert_many(objs, ordered=False)
+    # objs = [{
+    #     "hostname": hostname,
+    #     "year": year
+    # } for hostname, year in proc_d.items()]
+    # db.hosts_meta.insert_many(objs, ordered=False)
 
 
 if __name__ == '__main__':
