@@ -2,6 +2,7 @@ import json
 from pymongo import MongoClient
 import sys
 import matplotlib.pyplot as plt
+import matplotlib
 import inspect
 
 sys.path.append('../')
@@ -90,6 +91,31 @@ def plot_chrome_request_diff():
     plt.ylabel('CDF across links')
     plt.title("Chrome requests load #hosts difference")
     plt.show()
+
+
+def plot_rw_stats():
+    fontsize = 20
+    font = {'size'   : 16}
+    matplotlib.rc('font', **font)
+    years = [1999, 2004, 2009, 2014, 2019]
+    depth = [[] for _ in years]
+    collected_hosts = [[] for _ in years]
+    for i, year in enumerate(years):
+        data = json.load(open('rw_stats/rw_stats_{}.json'.format(year), 'r'))
+        for d, ch in data:
+            depth[i].append(d)
+            collected_hosts[i].append(ch)
+    plot.plot_CDF(depth, classname=years, show=False)
+    plt.xlabel('Depth', fontsize=fontsize)
+    plt.ylabel('CDF across walks', fontsize=fontsize)
+    plt.title('Depth of each Random Walk', fontsize=fontsize)
+    plt.show()
+    plot.plot_CDF(collected_hosts, classname=years, show=False, cut=0.99)
+    plt.xlabel('Collected (foreign) hosts', fontsize=fontsize)
+    plt.ylabel('CDF across walks', fontsize=fontsize)
+    plt.title('Collected (foreign) hosts of each Random Walk', fontsize=fontsize)
+    plt.show()
+
 
 if __name__ == '__main__':
     default_func = 'plot_diff_union'

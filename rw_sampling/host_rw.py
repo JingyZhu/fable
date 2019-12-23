@@ -5,59 +5,65 @@ Collect new hosts as many as possible
 import json
 import os
 import sys
-import multiprocessing as mp
 from bs4 import BeautifulSoup
 import requests
 from urllib.parse import urlparse, urljoin
 import threading
 import queue
 import pickle
+from pymongo import MongoClient
+import pymongo
 
 sys.path.append('../')
 from utils import crawl, url_utils
 import random
+import config
 
-NUM_PROC = 2
-NUM_HOST = 100
-NUM_THREADs = 10
+NUM_HOST = 1000
+NUM_THREAD = 1
 JUMP_RATIO = 0.1
 
-NUM_SEEDS = 5
+NUM_SEEDS = 10
 CHECKPOINT_INT = 10
 
-counter = mp.Value('i', 0)
+year = 1999
+counter = 0
 host_extractor = url_utils.HostExtractor()
+rw_stats = [] # Depth and new host_exploration stats for each walk.
+
+db = MongoClient(config.MONGO_HOSTNAME).web_decay
+rj_blocked = set() # Random jump blocked for faster sampling the seeds
 
 def base_host(url):
-    hostname = urlparse(url).netloc
-    if hostname.split('.')[-2] == 'co': # Assume co.** is the only exception
-        hostname = hostname.split('.')[-3:]
-    else:
-        hostname = hostname.split('.')[-2:]
-    hostname = '.'.join(hostname)
-    return hostname
+    # TODO Could be modified due to real web random walking
+    return host_extractor.extract(url, wayback=False)
 
 
-def request_mime(q_in, q_out, home):
+def keep_sampling(pools, rj=False):
     """
-    Multi-threading requests url to check the mimetype
+    Keep uniform sampling until getting a url has content-type include html
+    Return None on all url in pools
     """
-    while not q_in.empty():
-        url = q_in.get()
-        if urlparse(url).netloc == '':
-            url = urljoin(home, url)
+    blocked = set() if not rj else rj_blocked
+    while len(blocked) < len(pools):
+        idx = random.randint(0, len(pools)-1)
+        while idx in blocked:
+            idx = random.randint(0, len(pools)-1)
+        url = pools[idx]
         try:
             r = requests.get(url, timeout=10)
-            if r.status_code >= 400:
-                continue
-            headers = {k.lower(): v for k, v in r.headers.items()}
-            content_type = headers['content-type']
-            if 'html' in content_type:
-                q_out.put(url)
-        except Exception as e:
-            # print(str(e))
+        except:
+            blocked.add(idx)
             continue
-        
+        headers = {k.lower(): v for k, v in r.headers.items()}
+        if 'content-type' not in headers or 'html' not in headers['content-type']:
+            blocked.add(idx)
+            continue
+        print("Sampled:", url)
+        return url
+    print("Sampled None")
+    return None
+
 
 def crawl_link(url, d):
     """
@@ -65,40 +71,30 @@ def crawl_link(url, d):
     Extract the links and get all the html with urls 
     have difference hostname with original
     """
-    outlinks = []
-    home = urlparse(url).scheme + '://' + urlparse(url).netloc
-    html = crawl.chrome_crawl(url, timeout=60)
+    outlinks = set()
+    # home = urlparse(url).scheme + '://' + urlparse(url).netloc + '/'
+    html = crawl.requests_crawl(url)
     try:
         soup = BeautifulSoup(html, 'html.parser')
     except:
         return []
-    q_in = queue.Queue()
-    q_out = queue.Queue()
     for a_tag in soup.find_all('a'):
         if 'href' not in a_tag.attrs:
             continue
         link = a_tag.attrs['href']
-        q_in.put(link)
-    threads = []
-    for _ in range(NUM_THREADs):
-        threads.append(threading.Thread(target=request_mime, args=(q_in, q_out, home,)))
-        threads[-1].start()
-    for i in range(NUM_THREADs):
-        threads[i].join()
-    while not q_out.empty():
-        outlink = q_out.get()
-        hostname =  base_host(outlink)
-        if hostname not in d:
-            d[hostname] = ''
-        outlinks.append(outlink)
-    return outlinks
+        if len(link) == 0 or link[0] == '#': #Anchor ignore
+            continue
+        link = urljoin(url, link)
+        outlinks.add(link)
+    return list(outlinks)
 
 
 def checkpoint(d, d_q):
     global counter
-    if counter.value % CHECKPOINT_INT == 0:
-        json.dump(d.copy(), open('hosts.json', 'w+'))
-        json.dump(d_q.copy(), open('Q.json', 'w+'))
+    if counter % CHECKPOINT_INT == 0:
+        json.dump(d, open('hosts.json', 'w+'))
+        json.dump(d_q, open('Q.json', 'w+'))
+        json.dump(rw_stats, open('rw_stats.json', 'w+'))
 
 
 def load_checkpoint():
@@ -106,8 +102,9 @@ def load_checkpoint():
     Load the checkpoint (hosts.json and Q.json) if there exists
     else, just return the init value
     """
-    proc_d, Q_backup = mp.Manager().dict(), mp.Manager().dict()
-    Q_in = mp.Queue(maxsize=NUM_SEEDS+2*NUM_PROC)
+    global rw_stats
+    proc_d, q_backup = {}, {}
+    q_in = queue.Queue(maxsize=NUM_SEEDS+2*NUM_THREAD)
     if os.path.exists('hosts.json'):
         urls = json.load(open('hosts.json', 'r'))
         for url, v in urls.items():
@@ -115,59 +112,89 @@ def load_checkpoint():
     if os.path.exists('Q.json'):
         url_in_Q = json.load(open('Q.json', 'r'))
         for url, v in url_in_Q.items():
-            if not v:
-                Q_in.put(url)
-                Q_backup[url] = v
-    return proc_d, Q_in, Q_backup
+            if v:
+                q_in.put( (url,v[0], set(v[1])) )
+                q_backup[url] = v
+    if os.path.exists('rw_stats.json'):
+        rw_stats = json.load(open('rw_stats.json', 'r'))
+    return proc_d, q_in, q_backup
 
 
-def process_func(Q_in, d, r_jump, Q_backup):
-    global counter
-    while not Q_in.empty():
-        counter.value += 1
-        url = Q_in.get()
-        Q_backup[url] = 1
-        print(counter.value, url, len(d))
+def thread_func(q_in, d, r_jump, q_backup, year):
+    """
+    q_in: Input Queue for threads to consume
+            (url, depth, collected_hosts)
+    d: Collected host dict {hostname: value} 
+    """
+    global counter, rw_stats
+    while not q_in.empty():
+        counter += 1
+        url, depth, collected_hosts = q_in.get()
+        q_backup[url] = False
+        print(counter, url, len(d), depth, len(collected_hosts))
         hostname = base_host(url)
-        d[hostname] = ''
-        checkpoint(d, Q_backup)
+        d[hostname] = year
+        checkpoint(d, q_backup)
         outlinks = crawl_link(url, d)
+        for outlink in outlinks:
+            hostname = base_host(outlink)
+            collected_hosts.add(hostname)
+            if hostname not in d:
+                d[hostname] = year
         other_host_links = [outlink for outlink in outlinks if base_host(outlink) != hostname]
         # print(other_host_links)
         if len(d) > NUM_HOST:
+            rw_stats.append((depth, len(collected_hosts)))
             continue
-        elif random.random() < JUMP_RATIO or len(outlinks) < 1:
-            next_url = random.sample(r_jump, 1)[0]
-            Q_in.put(next_url)
-            Q_backup[next_url] = 0
+        elif random.random() < JUMP_RATIO or len(outlinks) < 1: #Random Jump
+            next_url = keep_sampling(r_jump, rj=True)
+            rw_stats.append((depth, len(collected_hosts)))
+            q_in.put((next_url, 0, set()))
+            q_backup[next_url] = (0, [])
         else:
-            next_url = random.sample(outlinks, 1)[0] if len(other_host_links) == 0 \
-                        else random.sample(other_host_links, 1)[0]
-            Q_in.put(next_url)
-            Q_backup[next_url] = 0
+            if len(other_host_links) > 0:
+                next_url = keep_sampling(other_host_links)
+                next_url = next_url if next_url is not None else keep_sampling(outlinks)
+            else:
+                next_url = keep_sampling(outlinks)
+            if next_url is None:
+                next_url = keep_sampling(r_jump, rj=True)
+                rw_stats.append((depth, len(collected_hosts)))
+                q_in.put((next_url, 0, set()))
+                q_backup[next_url] = (0, [])
+            else:
+                q_in.put((next_url, depth+1, collected_hosts))
+                q_backup[next_url] = (depth+1, list(collected_hosts))
 
 
 def main():
-    proc_d, Q_backup = mp.Manager().dict(), mp.Manager().dict()
-    Q_in = mp.Queue()
-    proc_d, Q_in, Q_backup = load_checkpoint()        
-    r_jump = json.load(open('url_db_2017.json', 'r'))
-    r_jump = [obj['url'] for obj in r_jump]
-
+    db.hosts_meta.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    proc_d, q_backup = {}, {}
+    q_in = queue.Queue()
+    proc_d, q_in, q_backup = load_checkpoint()        
+    r_jump = list(db.seeds.find({}, {"_id": False, "url": True}))
+    r_jump = [u['url'] for u in r_jump]
     
-    if Q_in.empty(): # If there is no checkpoint before
-        seeds = random.sample(r_jump, NUM_SEEDS)
+    if q_in.empty(): # If there is no checkpoint before
+        seeds = []
+        for _ in range(NUM_SEEDS):
+            seeds.append(keep_sampling(r_jump, rj=True))
         for seed in seeds:
-            Q_in.put(seed)
+            q_in.put((seed, 0, set()))
 
     pools = []
-    for _ in range(NUM_PROC):
-        pools.append(mp.Process(target=process_func, args=(Q_in, proc_d, r_jump, Q_backup)))
+    for _ in range(NUM_THREAD):
+        pools.append(threading.Thread(target=thread_func, args=(q_in, proc_d, r_jump, q_backup, year)))
         pools[-1].start()
-    for i in range(NUM_PROC):
-        pools[i].join()
+    for t in pools:
+        t.join()
 
-    json.dump(proc_d.copy(), open('hosts.json', 'w+'))
+    json.dump(rw_stats, open('rw_stats.json', 'w+'))
+    objs = [{
+        "hostname": hostname,
+        "year": year
+    } for hostname, year in proc_d.items()]
+    db.hosts_meta.insert_many(objs, ordered=False)
 
 
 if __name__ == '__main__':
