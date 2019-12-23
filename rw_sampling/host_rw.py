@@ -26,7 +26,6 @@ JUMP_RATIO = 0.1
 NUM_SEEDS = 10
 CHECKPOINT_INT = 10
 
-year = 1999
 counter = 0
 host_extractor = url_utils.HostExtractor()
 rw_stats = [] # Depth and new host_exploration stats for each walk.
@@ -120,7 +119,7 @@ def load_checkpoint():
     return proc_d, q_in, q_backup
 
 
-def thread_func(q_in, d, r_jump, q_backup, year):
+def thread_func(q_in, d, r_jump, q_backup):
     """
     q_in: Input Queue for threads to consume
             (url, depth, collected_hosts)
@@ -133,14 +132,14 @@ def thread_func(q_in, d, r_jump, q_backup, year):
         q_backup[url] = False
         print(counter, url, len(d), depth, len(collected_hosts))
         hostname = base_host(url)
-        d[hostname] = year
+        d[hostname] = ''
         checkpoint(d, q_backup)
         outlinks = crawl_link(url, d)
         for outlink in outlinks:
             hostname = base_host(outlink)
             collected_hosts.add(hostname)
             if hostname not in d:
-                d[hostname] = year
+                d[hostname] = ''
         other_host_links = [outlink for outlink in outlinks if base_host(outlink) != hostname]
         # print(other_host_links)
         if len(d) > NUM_HOST:
@@ -168,7 +167,7 @@ def thread_func(q_in, d, r_jump, q_backup, year):
 
 
 def main():
-    db.hosts_meta.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    # db.hosts_meta.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     proc_d, q_backup = {}, {}
     q_in = queue.Queue()
     proc_d, q_in, q_backup = load_checkpoint()        
@@ -184,7 +183,7 @@ def main():
 
     pools = []
     for _ in range(NUM_THREAD):
-        pools.append(threading.Thread(target=thread_func, args=(q_in, proc_d, r_jump, q_backup, year)))
+        pools.append(threading.Thread(target=thread_func, args=(q_in, proc_d, r_jump, q_backup)))
         pools[-1].start()
     for t in pools:
         t.join()
