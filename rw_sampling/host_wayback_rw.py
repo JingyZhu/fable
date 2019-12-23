@@ -35,7 +35,7 @@ rj_blocked = set() # Random jump blocked for faster sampling the seeds
 
 def base_host(url):
     # TODO Could be modified due to real web random walking
-    return host_extractor.extract(urlparse(url).netloc, wayback=True)
+    return host_extractor.extract(url, wayback=True)
 
 
 def wayback_join(url, link):

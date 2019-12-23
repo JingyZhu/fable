@@ -12,10 +12,10 @@ class HostExtractor:
         Wayback: Whether the url is got from wayback
         """
         if wayback:
-            last_https = url.rfind('https://')
-            last_http = url.rfind('http://')
-            idx = max(last_http, last_https)
-            url = url[idx:]
+            url = url.replace('http://web.archive.org/web/', '')
+            url = url.replace('https://web.archive.org/web/', '')
+            slash = url.find('/')
+            url = url[slash + 1:]
         if 'http://' not in url and 'https://' not in url:
             url = 'http://' + url
         return self.psl.get_public_suffix(urlparse(url).netloc)
