@@ -54,10 +54,10 @@ def keep_sampling(pools, year, wayback=True):
         if wayback:
             last_https = url.rfind('https://')
             last_http = url.rfind('http://')
-            idx = max(last_http, last_https)
-            ts = url[idx-15:idx-1] # Extract the ts for url
-            url = url[idx:]
-        # print(url)
+            scheme_idx = max(last_http, last_https)
+            ts = url[scheme_idx-15:scheme_idx-1] # Extract the ts for url
+            url = url[scheme_idx:]
+        print(url)
         indexed_urls, _ = crawl.wayback_index(url,\
                     param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
                     'filter': ['!statuscode:400']}, total_link=True)
