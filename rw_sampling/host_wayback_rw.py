@@ -20,7 +20,7 @@ import random
 import config
 
 NUM_HOST = 100000
-NUM_THREAD = 10
+NUM_THREAD = 3
 JUMP_RATIO = 0.1
 
 NUM_SEEDS = 1000
@@ -32,6 +32,7 @@ host_extractor = url_utils.HostExtractor()
 rw_stats = [] # Depth and new host_exploration stats for each walk.
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
+proxies = config.PROXIES[0] # Get its proxy ip
 rj_blocked = set() # Random jump blocked for faster sampling the seeds
 
 def base_host(url):
@@ -67,7 +68,6 @@ def keep_sampling(pools, year, wayback=True):
             slash = url.find('/')
             ts = ts[: slash] # Extract the ts for url
             url = url[slash + 1:]
-        print(url, ts)
         indexed_urls, _ = crawl.wayback_index(url,\
                     param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
                     'filter': ['!statuscode:400', 'mimetype:text/html']}, total_link=True)

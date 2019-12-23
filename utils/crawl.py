@@ -44,7 +44,7 @@ def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     return html, url_file + 'jpg'
 
 
-def wayback_index(url, param_dict={}, wait=True, total_link=False):
+def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     """
     Get the wayback machine index of certain url by querying the CDX
     wait: wait unitl not getting block
@@ -62,7 +62,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False):
     params.update(param_dict)
     while True:
         try:
-            r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
+            r = requests.get('http://web.archive.org/cdx/search/cdx', params=params, proxies=proxies)
             r = r.json()
             break
         except Exception as e:
@@ -80,7 +80,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False):
         return [], "Empty"
 
 
-def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param_dict={}):
+def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param_dict={}, proxies={}):
     """
     Get the result of links in certain years
     prefix: some string of url e.g: *.a.b.com/*
@@ -113,7 +113,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param_dict={}
         
         while True:
             try:
-                r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
+                r = requests.get('http://web.archive.org/cdx/search/cdx', params=params, proxies=proxies)
                 r = r.json()
                 r = [u[2] for u in r[1:]]
             except Exception as e:
@@ -148,7 +148,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param_dict={}
     return {k: list(v) for k, v in total_r.items()}
 
 
-def requests_crawl(url, timeout=20, sleep=True, html=True):
+def requests_crawl(url, timeout=20, sleep=True, html=True, proxies={}):
     """
     Use requests to get the page
     Return None if fails to get the content
@@ -157,7 +157,7 @@ def requests_crawl(url, timeout=20, sleep=True, html=True):
     """
     while True:
         try:
-            r = requests.get(url, timeout=timeout)
+            r = requests.get(url, timeout=timeout, proxies=proxies)
             if r.status_code == 429:  # Requests limit
                 time.sleep(20)
                 continue
