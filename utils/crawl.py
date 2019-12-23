@@ -67,7 +67,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False):
             break
         except Exception as e:
             print(str(e))
-            if not wait:
+            if not wait and r.status_code != 429:
                 break
             time.sleep(20)
     if total_link:
