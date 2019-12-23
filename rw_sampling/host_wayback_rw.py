@@ -69,7 +69,7 @@ def keep_sampling(pools, year, wayback=True):
         print(url, ts)
         indexed_urls, _ = crawl.wayback_index(url,\
                     param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
-                    'filter': ['!statuscode:400']}, total_link=True)
+                    'filter': ['!statuscode:400', 'mimetype:text/html']}, total_link=True)
         if len(indexed_urls) == 0:
             blocked.add(idx)
             continue

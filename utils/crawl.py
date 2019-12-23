@@ -168,7 +168,7 @@ def requests_crawl(url, timeout=20, sleep=True, html=True):
     if r.status_code >= 400:
         return
     headers = {k.lower(): v for k, v in r.headers.items()}
-    content_type = headers['content-type']
+    content_type = headers['content-type'] if 'content-type' in headers else ''
     if html and 'html' not in content_type:
         return
     return r.text
