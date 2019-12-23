@@ -69,7 +69,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False):
             print(str(e))
             if not wait:
                 break
-            time.sleep(10)
+            time.sleep(20)
     if total_link:
         r = [(i[1], "{}{}/{}".format(wayback_home, i[1], i[2])) for i in r[1:]]
     else:

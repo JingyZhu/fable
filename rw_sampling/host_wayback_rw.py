@@ -31,6 +31,7 @@ host_extractor = url_utils.HostExtractor()
 rw_stats = [] # Depth and new host_exploration stats for each walk.
 
 db = MongoClient().web_decay
+rj_blocked = set() # Random jump blocked for faster sampling the seeds
 
 def base_host(url):
     # TODO Could be modified due to real web random walking
@@ -43,7 +44,7 @@ def keep_sampling(pools, year, wayback=True):
     Return None on all url in pools
     Wayback: If urls in pool are from wayback machine
     """
-    blocked = set()
+    blocked = set() if wayback else rj_blocked
     while len(blocked) < len(pools):
         idx = random.randint(0, len(pools))
         while idx in blocked:
