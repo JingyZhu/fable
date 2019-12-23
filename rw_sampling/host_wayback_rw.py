@@ -17,6 +17,7 @@ import pymongo
 sys.path.append('../')
 from utils import crawl, url_utils
 import random
+import config
 
 NUM_HOST = 1000
 NUM_THREAD = 1
@@ -30,7 +31,7 @@ counter = 0
 host_extractor = url_utils.HostExtractor()
 rw_stats = [] # Depth and new host_exploration stats for each walk.
 
-db = MongoClient().web_decay
+db = MongoClient(config.MONGO_HOSTNAME).web_decay
 rj_blocked = set() # Random jump blocked for faster sampling the seeds
 
 def base_host(url):
@@ -187,7 +188,7 @@ def thread_func(q_in, d, r_jump, q_backup, year):
 
 
 def main():
-    db.hosts_meta.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    db.hosts_meta.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     proc_d, q_backup = {}, {}
     q_in = queue.Queue()
     proc_d, q_in, q_backup = load_checkpoint()        
