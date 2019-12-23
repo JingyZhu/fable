@@ -18,7 +18,8 @@ class HostExtractor:
             url = url[slash + 1:]
         if 'http://' not in url and 'https://' not in url:
             url = 'http://' + url
-        return self.psl.get_public_suffix(urlparse(url).netloc)
+        hostname = urlparse(url).netloc.split(':')[0]
+        return self.psl.get_public_suffix(hostname)
 
 
 def filter_separator(string):

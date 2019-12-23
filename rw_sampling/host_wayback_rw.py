@@ -129,9 +129,9 @@ def load_checkpoint():
     if os.path.exists('Q.json'):
         url_in_Q = json.load(open('Q.json', 'r'))
         for url, v in url_in_Q.items():
-            if not v:
+            if v:
                 q_in.put(tuple([url] + v))
-                q_backup[url] = tuple([url] + v)
+                q_backup[url] = v
     return proc_d, q_in, q_backup
 
 
@@ -145,7 +145,7 @@ def thread_func(q_in, d, r_jump, q_backup, year):
     while not q_in.empty():
         counter += 1
         url, depth, collected_hosts = q_in.get()
-        q_backup[url] = 1
+        q_backup[url] = False
         print(counter, url, len(d), depth, len(collected_hosts))
         hostname = base_host(url)
         d[hostname] = year
