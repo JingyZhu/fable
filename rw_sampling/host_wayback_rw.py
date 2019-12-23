@@ -38,6 +38,15 @@ def base_host(url):
     return host_extractor.extract(urlparse(url).netloc, wayback=True)
 
 
+def wayback_join(url, link):
+    link = urljoin(url, link)
+    link = link.replace('http:/', 'http://')
+    link = link.replace('http:///', 'http://')
+    link = link.replace('https:/', 'https://')
+    link = link.replace('https:///', 'https://')
+    return link
+
+
 def keep_sampling(pools, year, wayback=True):
     """
     Keep uniform sampling until getting a url has copy in wayback machine
@@ -52,12 +61,12 @@ def keep_sampling(pools, year, wayback=True):
         url = pools[idx]
         ts = str(year) + '1231235959'
         if wayback:
-            last_https = url.rfind('https://')
-            last_http = url.rfind('http://')
-            scheme_idx = max(last_http, last_https)
-            ts = url[scheme_idx-15:scheme_idx-1] # Extract the ts for url
-            url = url[scheme_idx:]
-        print(url)
+            url = url.replace('http://web.archive.org/web/', '')
+            url = url.replace('https://web.archive.org/web/', '')
+            slash = url.find('/')
+            ts = ts[: slash] # Extract the ts for url
+            url = url[slash + 1:]
+        print(url, ts)
         indexed_urls, _ = crawl.wayback_index(url,\
                     param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
                     'filter': ['!statuscode:400']}, total_link=True)
@@ -92,9 +101,9 @@ def crawl_link(url, d):
         if 'href' not in a_tag.attrs:
             continue
         link = a_tag.attrs['href']
-        if link[0] == '#': #Anchor ignore
+        if len(link) == 0 or link[0] == '#': #Anchor ignore
             continue
-        link = urljoin(url, link)
+        link = wayback_join(url, link)
         outlinks.add(link)
     return list(outlinks)
 
