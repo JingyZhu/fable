@@ -158,12 +158,12 @@ def requests_crawl(url, timeout=20, sleep=True, html=True):
     while True:
         try:
             r = requests.get(url, timeout=timeout)
-            break
-        except:
             if r.status_code == 429:  # Requests limit
                 time.sleep(20)
-            else:
-                return
+                continue
+            break
+        except:
+            return
     if r.status_code >= 400:
         return
     headers = {k.lower(): v for k, v in r.headers.items()}
