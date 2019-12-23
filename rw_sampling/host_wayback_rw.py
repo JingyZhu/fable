@@ -130,7 +130,7 @@ def load_checkpoint():
         url_in_Q = json.load(open('Q.json', 'r'))
         for url, v in url_in_Q.items():
             if v:
-                q_in.put(tuple([url] + v))
+                q_in.put( (url,v[0], set(v[1])) )
                 q_backup[url] = v
     return proc_d, q_in, q_backup
 

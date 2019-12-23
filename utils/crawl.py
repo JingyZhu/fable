@@ -159,10 +159,10 @@ def requests_crawl(url, timeout=20, sleep=True, html=True):
         try:
             begin = time.time()
             r = requests.get(url, timeout=timeout)
-            end = time.time()
             break
         except:
-            if end-begin >= timeout: #timeout
+            end = time.time()
+            if end - begin >= timeout: #timeout
                 break
             time.sleep(10)
     if r.status_code >= 400:
