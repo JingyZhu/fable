@@ -19,12 +19,12 @@ from utils import crawl, url_utils
 import random
 import config
 
-NUM_HOST = 1000
-NUM_THREAD = 1
+NUM_HOST = 100000
+NUM_THREAD = 10
 JUMP_RATIO = 0.1
 
-NUM_SEEDS = 10
-CHECKPOINT_INT = 10
+NUM_SEEDS = 1000
+CHECKPOINT_INT = 1000
 
 year = 1999
 counter = 0
@@ -109,34 +109,34 @@ def crawl_link(url, d):
     return list(outlinks)
 
 
-def checkpoint(d, d_q):
+def checkpoint(d, d_q, year):
     global counter
     if counter % CHECKPOINT_INT == 0:
-        json.dump(d, open('hosts.json', 'w+'))
-        json.dump(d_q, open('Q.json', 'w+'))
-        json.dump(rw_stats, open('rw_stats.json', 'w+'))
+        json.dump(d, open('checkpoints/hosts_{}.json'.format(year), 'w+'))
+        json.dump(d_q, open('checkpoints/Q_{}.json'.format(year), 'w+'))
+        # json.dump(rw_stats, open('rw_stats.json', 'w+'))
 
 
-def load_checkpoint():
+def load_checkpoint(year):
     """
     Load the checkpoint (hosts.json and Q.json) if there exists
     else, just return the init value
     """
-    global rw_stats
+    # global rw_stats
     proc_d, q_backup = {}, {}
     q_in = queue.Queue(maxsize=NUM_SEEDS+2*NUM_THREAD)
-    if os.path.exists('hosts.json'):
-        urls = json.load(open('hosts.json', 'r'))
+    if os.path.exists('checkpoints/hosts_{}.json'.format(year)):
+        urls = json.load(open('checkpoints/hosts_{}.json'.format(year), 'r'))
         for url, v in urls.items():
             proc_d[url] = v
-    if os.path.exists('Q.json'):
-        url_in_Q = json.load(open('Q.json', 'r'))
+    if os.path.exists('checkpoints/Q_{}.json'.format(year)):
+        url_in_Q = json.load(open('checkpoints/Q_{}.json'.format(year).format(year), 'r'))
         for url, v in url_in_Q.items():
             if v:
                 q_in.put( (url,v[0], set(v[1])) )
                 q_backup[url] = v
-    if os.path.exists('rw_stats.json'):
-        rw_stats = json.load(open('rw_stats.json', 'r'))
+    # if os.path.exists('rw_stats.json'):
+    #     rw_stats = json.load(open('rw_stats.json', 'r'))
     return proc_d, q_in, q_backup
 
 
@@ -146,15 +146,15 @@ def thread_func(q_in, d, r_jump, q_backup, year):
             (url, depth, collected_hosts)
     d: Collected host dict {hostname: value} 
     """
-    global counter, rw_stats
+    global counter
     while not q_in.empty():
         counter += 1
         url, depth, collected_hosts = q_in.get()
         q_backup[url] = False
-        print(counter, url, len(d), depth, len(collected_hosts))
+        print(counter, url, len(d))
         hostname = base_host(url)
         d[hostname] = year
-        checkpoint(d, q_backup)
+        checkpoint(d, q_backup, year)
         outlinks = crawl_link(url, d)
         for outlink in outlinks:
             hostname = base_host(outlink)
@@ -164,11 +164,11 @@ def thread_func(q_in, d, r_jump, q_backup, year):
         other_host_links = [outlink for outlink in outlinks if base_host(outlink) != hostname]
         # print(other_host_links)
         if len(d) > NUM_HOST:
-            rw_stats.append((depth, len(collected_hosts)))
+            # rw_stats.append((depth, len(collected_hosts)))
             continue
         elif random.random() < JUMP_RATIO or len(outlinks) < 1: #Random Jump
             next_url = keep_sampling(r_jump, year=year, wayback=False)
-            rw_stats.append((depth, len(collected_hosts)))
+            # rw_stats.append((depth, len(collected_hosts)))
             q_in.put((next_url, 0, set()))
             q_backup[next_url] = (0, [])
         else:
@@ -179,7 +179,7 @@ def thread_func(q_in, d, r_jump, q_backup, year):
                 next_url = keep_sampling(outlinks, year=year)
             if next_url is None:
                 next_url = keep_sampling(r_jump, year=year, wayback=False)
-                rw_stats.append((depth, len(collected_hosts)))
+                # rw_stats.append((depth, len(collected_hosts)))
                 q_in.put((next_url, 0, set()))
                 q_backup[next_url] = (0, [])
             else:
@@ -191,7 +191,7 @@ def main():
     db.hosts_meta.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
     proc_d, q_backup = {}, {}
     q_in = queue.Queue()
-    proc_d, q_in, q_backup = load_checkpoint()        
+    proc_d, q_in, q_backup = load_checkpoint(year)        
     r_jump = list(db.seeds.find({}, {"_id": False, "url": True}))
     r_jump = [u['url'] for u in r_jump]
     
@@ -209,7 +209,7 @@ def main():
     for t in pools:
         t.join()
 
-    json.dump(rw_stats, open('rw_stats.json', 'w+'))
+    # json.dump(rw_stats, open('rw_stats.json', 'w+'))
     objs = [{
         "hostname": hostname,
         "year": year

@@ -97,7 +97,7 @@ def plot_rw_stats():
     fontsize = 20
     font = {'size'   : 16}
     matplotlib.rc('font', **font)
-    years = [1999, 2004, 2009, 2014, 2019]
+    years = [1999, 2004, 2009, 2014, 2019, 'real']
     depth = [[] for _ in years]
     collected_hosts = [[] for _ in years]
     for i, year in enumerate(years):
