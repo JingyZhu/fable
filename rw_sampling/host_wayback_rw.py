@@ -22,7 +22,7 @@ NUM_HOST = 1000
 NUM_THREAD = 1
 JUMP_RATIO = 0.1
 
-NUM_SEEDS = 100
+NUM_SEEDS = 10
 CHECKPOINT_INT = 10
 
 year = 1999
@@ -46,9 +46,9 @@ def keep_sampling(pools, year, wayback=True):
     """
     blocked = set() if wayback else rj_blocked
     while len(blocked) < len(pools):
-        idx = random.randint(0, len(pools))
+        idx = random.randint(0, len(pools)-1)
         while idx in blocked:
-            idx = random.randint(0, len(pools))
+            idx = random.randint(0, len(pools)-1)
         url = pools[idx]
         ts = str(year) + '1231235959'
         if wayback:
@@ -82,7 +82,7 @@ def crawl_link(url, d):
     have difference hostname with original
     """
     outlinks = set()
-    home = urlparse(url).scheme + '://' + urlparse(url).netloc
+    # home = urlparse(url).scheme + '://' + urlparse(url).netloc + '/'
     html = crawl.requests_crawl(url)
     try:
         soup = BeautifulSoup(html, 'html.parser')
@@ -94,8 +94,7 @@ def crawl_link(url, d):
         link = a_tag.attrs['href']
         if link[0] == '#': #Anchor ignore
             continue
-        if urlparse(link).netloc == '': #Relative urls
-            link = home + link
+        link = urljoin(url, link)
         outlinks.add(link)
     return list(outlinks)
 
@@ -144,7 +143,7 @@ def thread_func(q_in, d, r_jump, q_backup, year):
         checkpoint(d, q_backup)
         outlinks = crawl_link(url, d)
         for outlink in outlinks:
-            hostname = base_host(outlinks)
+            hostname = base_host(outlink)
             collected_hosts.add(hostname)
             if hostname not in d:
                 d[hostname] = year
