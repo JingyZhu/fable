@@ -113,6 +113,7 @@ def checkpoint(d, d_q):
     if counter % CHECKPOINT_INT == 0:
         json.dump(d, open('hosts.json', 'w+'))
         json.dump(d_q, open('Q.json', 'w+'))
+        json.dump(rw_stats, open('rw_stats.json', 'w+'))
 
 
 def load_checkpoint():
@@ -120,6 +121,7 @@ def load_checkpoint():
     Load the checkpoint (hosts.json and Q.json) if there exists
     else, just return the init value
     """
+    global rw_stats
     proc_d, q_backup = {}, {}
     q_in = queue.Queue(maxsize=NUM_SEEDS+2*NUM_THREAD)
     if os.path.exists('hosts.json'):
@@ -132,6 +134,8 @@ def load_checkpoint():
             if v:
                 q_in.put( (url,v[0], set(v[1])) )
                 q_backup[url] = v
+    if os.path.exists('rw_stats.json'):
+        rw_stats = json.load(open('rw_stats.json', 'r'))
     return proc_d, q_in, q_backup
 
 
@@ -159,6 +163,7 @@ def thread_func(q_in, d, r_jump, q_backup, year):
         other_host_links = [outlink for outlink in outlinks if base_host(outlink) != hostname]
         # print(other_host_links)
         if len(d) > NUM_HOST:
+            rw_stats.append((depth, len(collected_hosts)))
             continue
         elif random.random() < JUMP_RATIO or len(outlinks) < 1: #Random Jump
             next_url = keep_sampling(r_jump, year=year, wayback=False)
