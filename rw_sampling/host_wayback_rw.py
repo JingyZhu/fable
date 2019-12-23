@@ -20,7 +20,7 @@ import random
 import config
 
 NUM_HOST = 100000
-NUM_THREAD = 3
+NUM_THREAD = 2
 JUMP_RATIO = 0.1
 
 NUM_SEEDS = 1000
@@ -70,7 +70,7 @@ def keep_sampling(pools, year, wayback=True):
             url = url[slash + 1:]
         indexed_urls, _ = crawl.wayback_index(url,\
                     param_dict={'from': str(year) + '0101', 'to': str(year) + '1231', 
-                    'filter': ['!statuscode:400', 'mimetype:text/html']}, total_link=True)
+                    'filter': ['!statuscode:400', 'mimetype:text/html']}, total_link=True, proxies=proxies)
         if len(indexed_urls) == 0:
             blocked.add(idx)
             continue
@@ -93,7 +93,7 @@ def crawl_link(url, d):
     """
     outlinks = set()
     # home = urlparse(url).scheme + '://' + urlparse(url).netloc + '/'
-    html = crawl.requests_crawl(url)
+    html = crawl.requests_crawl(url, proxies=proxies)
     try:
         soup = BeautifulSoup(html, 'html.parser')
     except:
