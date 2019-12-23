@@ -65,8 +65,8 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False):
             r = requests.get('http://web.archive.org/cdx/search/cdx', params=params)
             r = r.json()
             break
-        except Exception as e:
-            print(str(e))
+        except:
+            print(r.text)
             if not wait and r.status_code != 429:
                 break
             time.sleep(20)
