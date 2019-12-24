@@ -214,7 +214,10 @@ def main():
         "hostname": hostname,
         "year": year
     } for hostname, year in proc_d.items()]
-    db.hosts_meta.insert_many(objs, ordered=False)
+    try:
+        db.hosts_meta.insert_many(objs, ordered=False)
+    except:
+        pass
 
 
 if __name__ == '__main__':
