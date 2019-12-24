@@ -66,7 +66,10 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             r = r.json()
             break
         except Exception as e:
-            print(r.text.split('\n')[0])
+            try:
+                print(r.text.split('\n')[0])
+            except:
+                return [], str(e)
             if not wait or r.status_code != 429:
                 return [], str(e)
             time.sleep(20)
