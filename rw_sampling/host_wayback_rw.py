@@ -26,13 +26,13 @@ JUMP_RATIO = 0.1
 NUM_SEEDS = 1000
 CHECKPOINT_INT = 100
 
-year = 2009
+year = 2004
 counter = 0
 host_extractor = url_utils.HostExtractor()
 rw_stats = [] # Depth and new host_exploration stats for each walk.
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-proxies = config.PROXIES[3] # Get its proxy ip
+proxies = config.PROXIES[1] # Get its proxy ip
 rj_blocked = set() # Random jump blocked for faster sampling the seeds
 
 def base_host(url):

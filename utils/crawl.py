@@ -60,6 +60,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
         'to': 20191231,
     }
     params.update(param_dict)
+    count = 0
     while True:
         try:
             r = requests.get('http://web.archive.org/cdx/search/cdx', params=params, proxies=proxies)
@@ -69,6 +70,10 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             try:
                 print(r.text.split('\n')[0])
             except:
+                count += 1
+                if count < 3:
+                    time.sleep(5)
+                    continue 
                 return [], str(e)
             if not wait or r.status_code != 429:
                 return [], str(e)
