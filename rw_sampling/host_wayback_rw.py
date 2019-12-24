@@ -19,14 +19,14 @@ from utils import crawl, url_utils
 import random
 import config
 
-NUM_HOST = 100000
-NUM_THREAD = 2
+NUM_HOST = 1000
+NUM_THREAD = 3
 JUMP_RATIO = 0.1
 
-NUM_SEEDS = 1000
+NUM_SEEDS = 10
 CHECKPOINT_INT = 1000
 
-year = 1999
+year = 2014
 counter = 0
 host_extractor = url_utils.HostExtractor()
 rw_stats = [] # Depth and new host_exploration stats for each walk.
