@@ -29,6 +29,7 @@ CHECKPOINT_INT = 100
 year = 2004
 counter = 0
 host_extractor = url_utils.HostExtractor()
+
 rw_stats = [] # Depth and new host_exploration stats for each walk.
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay

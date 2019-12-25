@@ -88,7 +88,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
         return [], "Empty"
 
 
-def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param_dict={}, proxies={}):
+def wayback_year_links(prefix, years, NUM_THREADS=5, max_limit=0, param_dict={}, proxies={}):
     """
     Get the result of links in certain years
     prefix: some string of url e.g: *.a.b.com/*
@@ -136,6 +136,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=10, max_limit=0, param_dict={}
                 cur_limit *= 2
                 params.update({'limit': str(cur_limit)})
                 continue
+        print( (year, len(r)) )
         l.acquire()
         for url in r:
             total_r[year].add(url)

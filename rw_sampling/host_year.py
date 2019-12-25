@@ -22,41 +22,79 @@ import config
 hosts = ['lions', 'pistons', 'wolverines', 'redwings']
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 
+proxies = {}
+year = 1999
 
 
-metadata = json.load(open('hosts_year_10k.json', 'r'))
+# metadata = json.load(open('hosts_year_10k.json', 'r'))
 
-def get_links(interval=1):
+def wayback_earliest_year(hostname):
+    """
+    Get the earliest year this hostname has crawl in wayback machine
+    """
+    url = "*.{}/*".format(hostname)
+    params = {
+        "limit": 10,
+        "collapse": 'timestamp:4'
+    }
+    rval, _ = crawl.wayback_index(url, param_dict=params, proxies=proxies)
+    if len(rval) > 0:
+        return int(rval[0][0][:4])
+    else:
+        return 2020
+
+
+def get_links():
     """
     Get links by calling CDX API 
-    Keys is sharded in hostname
+    Only newly crawled links will be consider links created in that year
     """
     # Prevent same obj being insert multiple times
-    db.url_year.create_index([('url', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
-    keys = list(metadata.keys())
-    size = len(keys)
-    index = hosts.index(socket.gethostname())
-    key_shards = sorted(keys)[int(index/4 * size): int((index + 1)/4 * size)]
+    db.url_year_added.create_index('hostname')
+    db.url_population.create_index('hostname')
+    db.hosts_added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
+    keys = list(db.hosts_meta.find({'year': year}, {'_id': False, 'hostname': True}))
+    keys = list([k['hostname'] for k in keys])
+    # index = hosts.index(socket.gethostname())
+    # key_shards = sorted(keys)[int(index/4 * size): int((index + 1)/4 * size)]
     # key_shards = sorted(keys[:100])
-    for i, hostname in enumerate(key_shards):
+    for i, hostname in enumerate(keys):
         print(i, hostname)
-        early_year =int(metadata[hostname])
-        for year in range(early_year, 2020, interval):
-            data = crawl.wayback_year_links('*.{}/*'.format(hostname), [y for y in range(year, year + interval) if y < 2020])
-            print([(k, len(v)) for k, v in data.items()])
-            objs = []
-            for year, urls in data.items():
-                for url in urls:
+        crawled_hosts = list(db.hosts_added_links.find({'hostname': hostname}))
+        if crawled_hosts is not None:
+            early_year = max([c['year'] for c in crawled_hosts]) + 1
+            existed_urls = set([u['url'] for u in list(db.url_year_added.find({'hostname': hostname}))])
+        else:
+            existed_urls = set()
+            early_year = wayback_earliest_year(hostname)
+        data = crawl.wayback_year_links('*.{}/*'.format(hostname), list(range(early_year, year + 1)))
+        objs = []
+        for y in sorted(data.keys()):
+            urls = data[y]
+            for url in urls:
+                if url not in existed_urls:
                     objs.append({
                         "url": url,
                         "hostname": hostname,
                         "year": year
                     })
+                    existed_urls.add(url)
             if len(objs) > 0:
                 try:
-                    db.url_year.insert_many(objs, ordered=False)
+                    db.hosts_added_links.insert_one({
+                        "hostname": hostname,
+                        "year": year,
+                        "added_links": len(objs)
+                    })
+                    db.url_year_added.insert_many(objs, ordered=False)
                 except:
                     pass
+            if y == year and len(objs) >= 100: # The year for sampling
+                try:
+                    db.url_population.insert_many(objs, ordered=False)
+                except:
+                    pass
+            objs = []
 
 
 def get_latest_year(interval=1):
