@@ -21,12 +21,10 @@ import config
 
 hosts = ['lions', 'pistons', 'wolverines', 'redwings']
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-
-proxies = {}
+proxies = config.PROXIES[3]
 year = 1999
 
-
-# metadata = json.load(open('hosts_year_10k.json', 'r'))
+metadata = json.load(open('hosts_year_10k.json', 'r'))
 
 def wayback_earliest_year(hostname):
     """
@@ -53,7 +51,7 @@ def get_links():
     db.url_year_added.create_index('hostname')
     db.url_population.create_index('hostname')
     db.hosts_added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
-    keys = list(db.hosts_meta.find({'year': year}, {'_id': False, 'hostname': True}))
+    keys = list(db.hosts_meta.find({'year': year}))
     keys = list([k['hostname'] for k in keys])
     # index = hosts.index(socket.gethostname())
     # key_shards = sorted(keys)[int(index/4 * size): int((index + 1)/4 * size)]
@@ -61,7 +59,7 @@ def get_links():
     for i, hostname in enumerate(keys):
         print(i, hostname)
         crawled_hosts = list(db.hosts_added_links.find({'hostname': hostname}))
-        if crawled_hosts is not None:
+        if len(crawled_hosts) > 0:
             early_year = max([c['year'] for c in crawled_hosts]) + 1
             existed_urls = set([u['url'] for u in list(db.url_year_added.find({'hostname': hostname}))])
         else:
@@ -76,19 +74,19 @@ def get_links():
                     objs.append({
                         "url": url,
                         "hostname": hostname,
-                        "year": year
+                        "year": y
                     })
                     existed_urls.add(url)
             if len(objs) > 0:
                 try:
                     db.hosts_added_links.insert_one({
                         "hostname": hostname,
-                        "year": year,
+                        "year": y,
                         "added_links": len(objs)
                     })
                     db.url_year_added.insert_many(objs, ordered=False)
-                except:
-                    pass
+                except Exception as e:
+                    print(str(e))
             if y == year and len(objs) >= 100: # The year for sampling
                 try:
                     db.url_population.insert_many(objs, ordered=False)
@@ -296,7 +294,7 @@ def plot_add_links():
 
 
 if __name__ == '__main__':
-    default_func = 'plot_add_links'
+    default_func = 'get_links'
     calling_dict = {name: var for name, var in locals().items() if inspect.isfunction(var)}
     func = default_func if len(sys.argv) < 2 else sys.argv[1]
     calling_dict[func]()
