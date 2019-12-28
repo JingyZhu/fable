@@ -1,7 +1,7 @@
 import json
 from pymongo import MongoClient
 
-year = 1999
+year = 2019
 data = json.load(open('checkpoints/hosts_{}.json'.format(year)))
 db = MongoClient().web_decay
 

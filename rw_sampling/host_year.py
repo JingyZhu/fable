@@ -21,8 +21,8 @@ import config
 
 hosts = ['lions', 'pistons', 'wolverines', 'redwings']
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-proxies = config.PROXIES[3]
-year = 1999
+proxies = config.PROXIES[2]
+year = 2014
 
 metadata = json.load(open('hosts_year_10k.json', 'r'))
 
