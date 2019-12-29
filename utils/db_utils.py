@@ -18,4 +18,4 @@ def RandomSample(db, sample_size):
     """
     Random sampling some obj from db
     """
-    return list(db.aggregate([{'$sample': {'$size': sample_size}}, {'$project': {'_id': False}}]))
+    return list(db.aggregate([{'$sample': {'size': sample_size}}, {'$project': {'_id': False}}]))
