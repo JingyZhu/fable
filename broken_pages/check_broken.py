@@ -124,12 +124,12 @@ def test_links(q_in):
             "status": status,
             "detail": detail
         })
-    if len(objs) >= 100:
-        try:
-            db.url_status.insert_many(objs, ordered=False)
-        except:
-            pass
-        objs = []
+        if len(objs) >= 100:
+            try:
+                db.url_status.insert_many(objs, ordered=False)
+            except Exception as e:
+                print(str(e))
+            objs = []
     try:
         db.url_status.insert_many(objs, ordered=False)
     except:
