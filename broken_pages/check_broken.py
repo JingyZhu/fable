@@ -147,7 +147,7 @@ def sample_urls():
     # Filter out later years' crawled hostname but has copies in this year
     for valid_host in valid_hosts:
         hostname = valid_host['hostname']
-        if db.hosts_added_links.find_one({'hostname': hostname, 'year': {'$gt': year}}):
+        if not db.hosts_meta.find_one({'hostname': hostname, 'year': year}):
             continue
         valid_hosts_in_year.append(hostname)
         valid_hosts_in_year = list(filter(lambda x: '\n' not in x, valid_hosts_in_year))
