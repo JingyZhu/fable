@@ -12,6 +12,7 @@ import threading
 import queue
 import json
 import socket
+import random
 # from collections import defaultdict
 
 sys.path.append('../')
@@ -142,7 +143,7 @@ def sample_urls():
     Put the sampled record into db.url_sample
     """
     db.url_sample.create_index([("hostname", pymongo.ASCENDING), ("year", pymongo.ASCENDING)])
-    valid_hosts = list(db.hosts_added_links.find({'year': year, 'added_links': {'$gte': 500}}, {"hostname": True}))
+    valid_hosts = list(db.hosts_added_links.find({'year': year, 'added_links': {'$gte': 100}}, {"hostname": True}))
     valid_hosts_in_year = []
     # Filter out later years' crawled hostname but has copies in this year
     for valid_host in valid_hosts:
@@ -167,11 +168,19 @@ def collect_status():
     """
     db.url_status.create_index([("hostname", pymongo.ASCENDING), ("year", pymongo.ASCENDING)])
     q_in = queue.Queue()
-    hostnames = list(db.url_sample.aggregate([{'$group': {"_id": "$hostname"}}]))
-    hostnames = sorted([obj['_id'] for obj in hostnames])
+    ## Temp code
+    sample_hosts = json.load(open('1khosts.json', 'r'))
+    hostnames = sorted(sample_hosts)
+    ###
+    ### Temp comment
+    # hostnames = list(db.url_sample.aggregate([{'$group': {"_id": "$hostname"}}]))
+    # hostnames = sorted([obj['_id'] for obj in hostnames])
     idx, length = config.HOSTS.index(socket.gethostname()), len(hostnames)
     host_shards = hostnames[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     for hostname in host_shards:
+        # Temp code
+        if db.url_status.find_one({'hostname': hostname}): continue
+        ###
         urls_list = db.url_sample.find({'hostname': hostname, 'year': year})
         for obj in urls_list:
             q_in.put((obj['url'], hostname))

@@ -5,12 +5,14 @@ from pymongo import MongoClient
 import pymongo
 import sys
 import re
+import json
 
 sys.path.append('../')
 import config
 from utils import plot
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME).test
 year = 1999
 
 def create_status_by_host():
@@ -34,7 +36,7 @@ def create_status_by_host():
             continue
 
 
-def status_breakdown():
+def status_breakdown_host():
     total_host = db.host_status.aggregate([
         {"$match": {"year": year}},
         {"$group": {"_id": "$hostname"}},
@@ -80,5 +82,45 @@ def status_breakdown():
     print(error_host/total_host, no_redirection_host/total_host, home_redirction_host/total_host,\
             nonhome_redirction_host/total_host, dns_host/total_host, other_host/total_host)
 
-status_breakdown()
 
+def status_breakdown_links():
+    total_links = db.url_status.aggregate([
+        {"$match": {"year": year}},
+        {"$count": "count"}
+    ])
+    total_links = list(total_links)[0]['count']
+    error_links = db.url_status.aggregate([
+        {"$match": {"year": year, "status": re.compile('^[45]')}},
+        {"$count": "count"}
+    ])
+    error_links = list(error_links)[0]['count']
+    no_redirection_links = db.url_status.aggregate([
+        {"$match": {"year": year, "detail": "no redirection"}},
+        {"$count": "count"}
+    ])
+    no_redirection_links = list(no_redirection_links)[0]['count']
+    home_redirction_links = db.url_status.aggregate([
+        {"$match": {"year": year, "detail": "homepage redirection"}},
+        {"$count": "count"}
+    ])
+    home_redirction_links = list(home_redirction_links)[0]['count']
+    nonhome_redirction_links = db.url_status.aggregate([
+        {"$match": {"year": year, "detail": "non-home redirection"}},
+        {"$count": "count"}
+    ])
+    nonhome_redirction_links = list(nonhome_redirction_links)[0]['count']
+    dns_links = db.url_status.aggregate([
+        {"$match": {"year": year, "status": "DNSError"}},
+        {"$count": "count"}
+    ])
+    dns_links = list(dns_links)[0]['count']
+    other_links = db.url_status.aggregate([
+        {"$match": {"year": year, "status": "OtherError"}},
+        {"$count": "count"}
+    ])
+    other_links = list(other_links)[0]['count']
+    print(error_links/total_links, no_redirection_links/total_links, home_redirction_links/total_links,\
+            nonhome_redirction_links/total_links, dns_links/total_links, other_links/total_links)
+
+# create_status_by_host()
+status_breakdown_links()

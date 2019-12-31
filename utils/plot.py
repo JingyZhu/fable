@@ -13,13 +13,13 @@ def plot_CDF(data, classname=[], savefig='', show=True, cut=1):
     """
     data = [sorted(datus) for datus in data]
     size = [len(datus) for datus in data]
-    data = [datus[: int(s*cut)] for datus, s in zip(data, size)]
+    # data = [datus[: int(s*cut)] for datus, s in zip(data, size)]
     if len(classname) != len(data):
         classname = [ str(i + 1) for i in range(len(data))]
     for datus, cn in zip(data, classname):
-        length = len(datus)
-        x = datus
-        y = [ (i + 1) / length for i in range(length)]
+        length = int(len(datus) * cut)
+        x = datus[: int(length*cut)]
+        y = [ (i + 1) / length for i in range(length)][:int(length*cut)]
         plt.plot(x, y, label=cn)
     plt.legend()
     if savefig:
