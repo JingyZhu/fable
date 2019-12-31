@@ -6,10 +6,12 @@ import pymongo
 import sys
 import re
 import json
+from urllib.parse import urlparse
+from collections import defaultdict
 
 sys.path.append('../')
 import config
-from utils import plot
+from utils import plot, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 db = MongoClient(config.MONGO_HOSTNAME).test
@@ -122,5 +124,38 @@ def status_breakdown_links():
     print(error_links/total_links, no_redirection_links/total_links, home_redirction_links/total_links,\
             nonhome_redirction_links/total_links, dns_links/total_links, other_links/total_links)
 
+def count_dnserror_subhost():
+    """
+    For each host that has not only DNSError, 
+    see whether other status are result in different subhosts.
+    And define there relationships
+    """
+    hosts = db.host_status.aggregate([
+        {"$match": {"status": "DNSError", "year": year}},
+        {"$lookup": {
+            "from": "host_status",
+            "localField": "hostname",
+            "foreignField": "hostname",
+            "as": "all_status"
+        }},
+        {"$project":{
+            "hostname": "$hostname",
+            "status": "$status",
+            "_id": False,
+            "all_status": "$all_status.status"
+        }},
+        {"$match": {"all_status.1": {"$exists": True}} },
+    ])
+    hosts = [h['hostname'] for h in hosts]
+    netloc_status = defaultdict(lambda: defaultdict(set))
+    for host in hosts:
+        urls = db.url_status.find({"year": year, "hostname": host})
+        for url in urls:
+            netloc = urlparse(url['url']).netloc
+            status = url_utils.status_categories(url['status'], url['detail'])
+            netloc_status[host][netloc].add(status)
+    netloc_status = {k: {kk: list(vv) for kk, vv in netloc_status[k].items()} for k in netloc_status}
+    json.dump(netloc_status, open('test.json', 'w+'))
+
+count_dnserror_subhost()
 # create_status_by_host()
-status_breakdown_links()

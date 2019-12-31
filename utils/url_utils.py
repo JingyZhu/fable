@@ -2,6 +2,7 @@
 from publicsuffix import fetch, PublicSuffixList
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
+import re
 
 class HostExtractor:
     def __init__(self):
@@ -46,4 +47,20 @@ def find_link_density(html):
         atag_length += len(atag_text)
 
     return atag_length / total_length
+
+
+def status_categories(status, detail):
+    """
+    Given a detailed status code (and possibly its detail)
+    Return a better categorized status
+    no redirection/ homepage/ non-homepage/ 4/5xx / DNSError / OtherError_Type
+    """
+    if not re.compile("^([2345]|DNSError|OtherError)").match(status): return "Unknown"
+    if re.compile("^[45]").match(status): return "4/5xx"
+    elif re.compile("^[23]").match(status): return detail
+    elif re.compile("^DNSError").match(status): return status
+    elif  re.compile("^OtherError").match(status): return detail
+    else:
+        raise
+
 
