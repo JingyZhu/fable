@@ -59,7 +59,7 @@ def status_categories(status, detail):
     if re.compile("^[45]").match(status): return "4/5xx"
     elif re.compile("^[23]").match(status): return detail
     elif re.compile("^DNSError").match(status): return status
-    elif  re.compile("^OtherError").match(status): return detail
+    elif  re.compile("^OtherError").match(status): return "OtherError_" + detail
     else:
         raise
 

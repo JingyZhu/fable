@@ -51,3 +51,36 @@ Unique on each obj (all fields composition)
     "detail": "string"
 }
 ```
+
+### url_status
+Status for each url, urls with hosts in host_status
+Unique on (url + year)
+```json
+{
+    "url": "string",
+    "hostname": "string",
+    "year": "int",
+    "status": "status (2/3/4/5xx / DNS / Other)",
+    "detail": "string"
+}
+```
+
+### url_year_added
+For each hosts in hosts_added_links, all the urls newly crawled on wayback
+```json
+{
+    "url": "string",
+    "hostname": "string",
+    "year": "int",
+}
+```
+
+### url_population
+only url in url_year_added with host has >=100 new urls in certain year
+```json
+{
+    "url": "string",
+    "hostname": "string",
+    "year": "int",
+}
+```

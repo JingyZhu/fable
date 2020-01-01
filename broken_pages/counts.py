@@ -14,7 +14,7 @@ import config
 from utils import plot, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-db = MongoClient(config.MONGO_HOSTNAME).test
+# db = MongoClient(config.MONGO_HOSTNAME).test
 year = 1999
 
 def create_status_by_host():
@@ -157,5 +157,15 @@ def count_dnserror_subhost():
     netloc_status = {k: {kk: list(vv) for kk, vv in netloc_status[k].items()} for k in netloc_status}
     json.dump(netloc_status, open('test.json', 'w+'))
 
-count_dnserror_subhost()
-# create_status_by_host()
+
+data = json.load(open('test.json', 'r'))
+dnserror_count = []
+connect_succ = set(['4/5xx', 'no redirection', 'homepage redirection', 'non-home redirection'])
+other_error_counts = set()
+for host, v in data.items():
+    for status in v.values():
+        if 'DNSError' in status: dnserror_count.append(len(status))
+        for s in status:
+            if s in connect_succ: other_error_counts.add(host)
+
+print(len(data), len(other_error_counts), len(dnserror_count), sum(1 for _ in filter(lambda x: x > 1, dnserror_count)))
