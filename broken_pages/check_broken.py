@@ -92,7 +92,7 @@ def other_error(url):
         netloc_othererror[netloc] = "DNS lookup failure"
         return "DNS lookup failure"
     try:
-        output = subprocess.check_output(['ping', '-c', '10', ip])
+        output = subprocess.check_output(['ping', '-c', '3', ip])
         result = re.compile('[0-9]+ received').findall(output.decode())[0]
         num_recv = int(result.split(' ')[0])
         if num_recv == 0: 
@@ -187,7 +187,7 @@ def sample_urls():
         if not db.hosts_meta.find_one({'hostname': hostname, 'year': year}):
             continue
         valid_hosts_in_year.append(hostname)
-        valid_hosts_in_year = list(filter(lambda x: '\n' not in x, valid_hosts_in_year))
+    valid_hosts_in_year = list(filter(lambda x: '\n' not in x, valid_hosts_in_year))
     for hostname in valid_hosts_in_year:
         urls_list = list(db.url_population.aggregate([{'$match': {'hostname': hostname, 'year': year}}, {'$sample': {'size': 100}}]))
         for url_obj in urls_list:
@@ -247,4 +247,54 @@ def other_error_update():
     for t in pools:
         t.join()
 
-other_error_update()
+
+r = re.compile("^80_\w+_443_\w+")
+other_error_urls = db.url_status.find({'year': year, "status": "OtherError", "error_code": r})
+for i, obj in enumerate(other_error_urls):
+    url = obj['url']
+    print(i, url)
+    resp, msg = send_request(url)
+    status, detail = "", ""
+    if msg == 'SUCCESSFUL':
+        final_url, status_code = resp.url, resp.status_code
+        url_path = urlparse(url).path
+        final_url_path = urlparse(final_url).path
+        # remove the last '/' if it exists
+        if url_path.endswith('/'):
+            url_path = url_path[:-1]
+        if final_url_path.endswith('/'):
+            final_url_path = final_url_path[:-1]
+        
+        status = str(status_code)
+        # if the response status code is 400 or 500 level, brokem
+        if int(status_code / 100) >= 4:
+            detail = status_code
+        # if status code is 200 level and no redirection
+        elif (int(status_code/100) == 2 or int(status_code/100) == 3) and final_url_path == url_path:
+            detail = 'no redirection'
+        # if a non-hompage redirects to a homepage, considered broken
+        elif final_url_path == '' and url_path != '':
+            detail = 'homepage redirection'
+        # if it redirects to another path, we are unsure.
+        elif final_url_path != url_path:
+            detail = 'non-home redirection'
+
+        # do not know what redirection happens
+        else:
+            # this list should be empty
+            detail = 'unknown redirection'
+    else:
+        if 'ConnectionError_DNSLookupError' in msg:
+            status = 'DNSError'
+        else:
+            status = 'OtherError'
+            detail = msg
+            error_code = other_error(url)
+    update = {
+        "status": status,
+        "detail": detail
+    }
+    if update['status'] == "OtherError": update['error_code'] = error_code
+    db.url_status.update_one({"_id": obj['_id']}, {"$set": update})
+    if update['status'] != "OtherError":
+        db.url_status.update_one({"_id": obj['_id']}, {"$unset": {"error_code": ""}})

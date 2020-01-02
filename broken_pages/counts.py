@@ -171,5 +171,3 @@ def other_error():
     for obj in hosts:
         obj['errors'] = list(set(obj['errors']))
     json.dump(hosts, open('other_error.json', 'w+'))
-
-other_error()
