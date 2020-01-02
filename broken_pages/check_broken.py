@@ -24,6 +24,8 @@ year = 1999
 NUM_THREADS = 10
 counter = 0
 
+netloc_othererror = {}
+
 def send_request(url):
     '''
     Send one request to url.
@@ -82,22 +84,28 @@ def other_error(url):
     nmap scan on {80, 443}
     Return on failure on which part. If all success, return listening port
     """
-    netloc = urlparse(url).netloc
+    netloc = urlparse(url).netloc.split(":")[0]
+    if netloc in netloc_othererror: return netloc_othererror[netloc]
     try:
         ip = socket.gethostbyname(netloc)
     except:
+        netloc_othererror[netloc] = "DNS lookup failure"
         return "DNS lookup failure"
     try:
         output = subprocess.check_output(['ping', '-c', '10', ip])
         result = re.compile('[0-9]+ received').findall(output.decode())[0]
         num_recv = int(result.split(' ')[0])
-        if num_recv == 0: return "Ping failure"
+        if num_recv == 0: 
+            netloc_othererror[netloc] = "Ping failure"
+            return "Ping failure"
     except:
+        netloc_othererror[netloc] = "Ping failure"
         return "Ping failure"
     nm = nmap.PortScanner()
-    nm.scan(ip, arguments="-sT p80,443")
+    nm.scan(ip, arguments="-sT -Pn -p80,443")
     scan_dict = nm[ip]['tcp']
     r_str = '80_{}_443_{}'.format(scan_dict[80]['state'], scan_dict[443]['state'])
+    netloc_othererror[netloc] = r_str
     return r_str
 
 
@@ -213,3 +221,30 @@ def collect_status():
 
 
 # collect_status()
+
+def other_error_update():
+    def other_error_thread(q_in):
+        global counter
+        while not q_in.empty():
+            counter += 1
+            url = q_in.get()
+            print(counter, url)
+            error_code = other_error(url)
+            db.url_status.update_one({"_id": url}, {"$set": {"error_code": error_code}})
+    urls = db.url_status.find({"year": year, "status": "OtherError"})
+    q_in = queue.Queue()
+    urls = sorted([url['url'] for url in urls])
+    idx, length = config.HOSTS.index(socket.gethostname()), len(urls)
+    urls_shard = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
+    print(socket.gethostname(), len(urls_shard))
+    random.shuffle(urls_shard)
+    for url in urls_shard:
+        q_in.put(url)
+    pools = []
+    for _ in range(NUM_THREADS):
+        pools.append(threading.Thread(target=other_error_thread, args=(q_in,)))
+        pools[-1].start()
+    for t in pools:
+        t.join()
+
+other_error_update()
