@@ -7,7 +7,7 @@ import sys
 import re
 import json
 from urllib.parse import urlparse
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 sys.path.append('../')
 import config
@@ -155,17 +155,21 @@ def count_dnserror_subhost():
             status = url_utils.status_categories(url['status'], url['detail'])
             netloc_status[host][netloc].add(status)
     netloc_status = {k: {kk: list(vv) for kk, vv in netloc_status[k].items()} for k in netloc_status}
-    json.dump(netloc_status, open('test.json', 'w+'))
+    json.dump(netloc_status, open('dns_more.json', 'w+'))
 
 
-data = json.load(open('test.json', 'r'))
-dnserror_count = []
-connect_succ = set(['4/5xx', 'no redirection', 'homepage redirection', 'non-home redirection'])
-other_error_counts = set()
-for host, v in data.items():
-    for status in v.values():
-        if 'DNSError' in status: dnserror_count.append(len(status))
-        for s in status:
-            if s in connect_succ: other_error_counts.add(host)
+def other_error():
+    hosts = db.host_status.aggregate([
+        {"$match": {"status": "OtherError", "year": year}},
+        {"$group": {
+            "_id": "$hostname",
+            "errors": {"$push": "$detail"}
+        }}
+    ])
+    hosts = list(hosts)
+    # print(hosts)
+    for obj in hosts:
+        obj['errors'] = list(set(obj['errors']))
+    json.dump(hosts, open('other_error.json', 'w+'))
 
-print(len(data), len(other_error_counts), len(dnserror_count), sum(1 for _ in filter(lambda x: x > 1, dnserror_count)))
+other_error()

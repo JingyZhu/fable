@@ -2,17 +2,18 @@
 Check whether a page is broken
 """
 import requests
-import os
-import shutil
+import os, shutil
 from urllib.parse import urlparse 
 from pymongo import MongoClient
 import pymongo
 import sys
-import threading
-import queue
+import threading, queue
 import json
 import socket
 import random
+import re
+import subprocess
+import nmap
 # from collections import defaultdict
 
 sys.path.append('../')
@@ -71,6 +72,33 @@ def send_request(url):
         return resp, error_msg
 
     return resp, 'SUCCESSFUL'
+
+
+def other_error(url):
+    """
+    Categorize other error by:
+    DNS resolution
+    Ping the IP
+    nmap scan on {80, 443}
+    Return on failure on which part. If all success, return listening port
+    """
+    netloc = urlparse(url).netloc
+    try:
+        ip = socket.gethostbyname(netloc)
+    except:
+        return "DNS lookup failure"
+    try:
+        output = subprocess.check_output(['ping', '-c', '10', ip])
+        result = re.compile('[0-9]+ received').findall(output.decode())[0]
+        num_recv = int(result.split(' ')[0])
+        if num_recv == 0: return "Ping failure"
+    except:
+        return "Ping failure"
+    nm = nmap.PortScanner()
+    nm.scan(ip, arguments="-sT p80,443")
+    scan_dict = nm[ip]['tcp']
+    r_str = '80_{}_443_{}'.format(scan_dict[80]['state'], scan_dict[443]['state'])
+    return r_str
 
 
 def test_links(q_in):
@@ -168,19 +196,11 @@ def collect_status():
     """
     db.url_status.create_index([("hostname", pymongo.ASCENDING), ("year", pymongo.ASCENDING)])
     q_in = queue.Queue()
-    ## Temp code
-    sample_hosts = json.load(open('1khosts.json', 'r'))
-    hostnames = sorted(sample_hosts)
-    ###
-    ### Temp comment
-    # hostnames = list(db.url_sample.aggregate([{'$group': {"_id": "$hostname"}}]))
-    # hostnames = sorted([obj['_id'] for obj in hostnames])
+    hostnames = list(db.url_sample.aggregate([{'$group': {"_id": "$hostname"}}]))
+    hostnames = sorted([obj['_id'] for obj in hostnames])
     idx, length = config.HOSTS.index(socket.gethostname()), len(hostnames)
     host_shards = hostnames[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     for hostname in host_shards:
-        # Temp code
-        if db.url_status.find_one({'hostname': hostname}): continue
-        ###
         urls_list = db.url_sample.find({'hostname': hostname, 'year': year})
         for obj in urls_list:
             q_in.put((obj['url'], hostname))
@@ -191,4 +211,5 @@ def collect_status():
     for t in pools:
         t.join()
 
-collect_status()
+
+# collect_status()

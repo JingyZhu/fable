@@ -20,7 +20,7 @@ import random
 import config
 
 NUM_HOST = 100000
-NUM_THREAD = 4
+NUM_THREAD = 2
 JUMP_RATIO = 0.1
 
 NUM_SEEDS = 1000
