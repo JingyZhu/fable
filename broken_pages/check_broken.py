@@ -118,7 +118,7 @@ def test_links(q_in):
         counter += 1
         print(counter, url)
         resp, msg = send_request(url)
-        status, detail = "", ""
+        status, detail, error_code = "", "", None
         if msg == 'SUCCESSFUL':
             final_url, status_code = resp.url, resp.status_code
             url_path = urlparse(url).path
@@ -153,14 +153,17 @@ def test_links(q_in):
             else:
                 status = 'OtherError'
                 detail = msg
-        objs.append({
+                error_code = other_error(url)
+        obj = {
             "_id": url,
             "url": url,
             "hostname": hostname,
             "year": year,
             "status": status,
             "detail": detail
-        })
+        }
+        if error_code: obj.update({"error_code": error_code})
+        objs.append(obj)
         if len(objs) >= 100:
             try:
                 db.url_status.insert_many(objs, ordered=False)
@@ -208,10 +211,14 @@ def collect_status():
     hostnames = sorted([obj['_id'] for obj in hostnames])
     idx, length = config.HOSTS.index(socket.gethostname()), len(hostnames)
     host_shards = hostnames[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
+    temp = []
     for hostname in host_shards:
+        if db.host_status.find_one({"hostname": hostname}): continue
         urls_list = db.url_sample.find({'hostname': hostname, 'year': year})
         for obj in urls_list:
-            q_in.put((obj['url'], hostname))
+            temp.append((obj['url'], hostname))
+    random.shuffle(temp)
+    for t in temp: q_in.put(t)
     pools = []
     for _ in range(NUM_THREADS):
         pools.append(threading.Thread(target=test_links, args=(q_in,)))
@@ -247,54 +254,55 @@ def other_error_update():
     for t in pools:
         t.join()
 
+collect_status()
 
-r = re.compile("^80_\w+_443_\w+")
-other_error_urls = db.url_status.find({'year': year, "status": "OtherError", "error_code": r})
-for i, obj in enumerate(other_error_urls):
-    url = obj['url']
-    print(i, url)
-    resp, msg = send_request(url)
-    status, detail = "", ""
-    if msg == 'SUCCESSFUL':
-        final_url, status_code = resp.url, resp.status_code
-        url_path = urlparse(url).path
-        final_url_path = urlparse(final_url).path
-        # remove the last '/' if it exists
-        if url_path.endswith('/'):
-            url_path = url_path[:-1]
-        if final_url_path.endswith('/'):
-            final_url_path = final_url_path[:-1]
+# r = re.compile("^80_\w+_443_\w+")
+# other_error_urls = db.url_status.find({'year': year, "status": "OtherError", "error_code": r})
+# for i, obj in enumerate(other_error_urls):
+#     url = obj['url']
+#     print(i, url)
+#     resp, msg = send_request(url)
+#     status, detail = "", ""
+#     if msg == 'SUCCESSFUL':
+#         final_url, status_code = resp.url, resp.status_code
+#         url_path = urlparse(url).path
+#         final_url_path = urlparse(final_url).path
+#         # remove the last '/' if it exists
+#         if url_path.endswith('/'):
+#             url_path = url_path[:-1]
+#         if final_url_path.endswith('/'):
+#             final_url_path = final_url_path[:-1]
         
-        status = str(status_code)
-        # if the response status code is 400 or 500 level, brokem
-        if int(status_code / 100) >= 4:
-            detail = status_code
-        # if status code is 200 level and no redirection
-        elif (int(status_code/100) == 2 or int(status_code/100) == 3) and final_url_path == url_path:
-            detail = 'no redirection'
-        # if a non-hompage redirects to a homepage, considered broken
-        elif final_url_path == '' and url_path != '':
-            detail = 'homepage redirection'
-        # if it redirects to another path, we are unsure.
-        elif final_url_path != url_path:
-            detail = 'non-home redirection'
+#         status = str(status_code)
+#         # if the response status code is 400 or 500 level, brokem
+#         if int(status_code / 100) >= 4:
+#             detail = status_code
+#         # if status code is 200 level and no redirection
+#         elif (int(status_code/100) == 2 or int(status_code/100) == 3) and final_url_path == url_path:
+#             detail = 'no redirection'
+#         # if a non-hompage redirects to a homepage, considered broken
+#         elif final_url_path == '' and url_path != '':
+#             detail = 'homepage redirection'
+#         # if it redirects to another path, we are unsure.
+#         elif final_url_path != url_path:
+#             detail = 'non-home redirection'
 
-        # do not know what redirection happens
-        else:
-            # this list should be empty
-            detail = 'unknown redirection'
-    else:
-        if 'ConnectionError_DNSLookupError' in msg:
-            status = 'DNSError'
-        else:
-            status = 'OtherError'
-            detail = msg
-            error_code = other_error(url)
-    update = {
-        "status": status,
-        "detail": detail
-    }
-    if update['status'] == "OtherError": update['error_code'] = error_code
-    db.url_status.update_one({"_id": obj['_id']}, {"$set": update})
-    if update['status'] != "OtherError":
-        db.url_status.update_one({"_id": obj['_id']}, {"$unset": {"error_code": ""}})
+#         # do not know what redirection happens
+#         else:
+#             # this list should be empty
+#             detail = 'unknown redirection'
+#     else:
+#         if 'ConnectionError_DNSLookupError' in msg:
+#             status = 'DNSError'
+#         else:
+#             status = 'OtherError'
+#             detail = msg
+#             error_code = other_error(url)
+#     update = {
+#         "status": status,
+#         "detail": detail
+#     }
+#     if update['status'] == "OtherError": update['error_code'] = error_code
+#     db.url_status.update_one({"_id": obj['_id']}, {"$set": update})
+#     if update['status'] != "OtherError":
+#         db.url_status.update_one({"_id": obj['_id']}, {"$unset": {"error_code": ""}})

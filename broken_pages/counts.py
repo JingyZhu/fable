@@ -17,7 +17,7 @@ db = MongoClient(config.MONGO_HOSTNAME).web_decay
 # db = MongoClient(config.MONGO_HOSTNAME).test
 year = 1999
 
-def create_status_by_host():
+def create_host_status():
     """
     Create collections as year, host, status (one KXX), and detail
     """
