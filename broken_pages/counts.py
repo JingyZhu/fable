@@ -25,14 +25,19 @@ def create_host_status():
          ('status', pymongo.ASCENDING), ('detail', pymongo.ASCENDING)], unique=True)
     for url in db.url_status.find({'year': year}):
         status = url['status']
+        detail = url['detail']
         status = str(int(status) // 100) + "xx" if status != 'DNSError' and status != 'OtherError' else status
         if not re.compile("^([2345]|DNSError|OtherError)").match(status): continue
+        if status == "OtherError":
+            detail = url['error_code']
+            if "DNS" in detail:
+                status = 'DNSError'
         try:
             db.host_status.insert_one({
                 "hostname": url['hostname'],
                 "year": year,
                 "status": status,
-                'detail': url['detail']
+                'detail': detail
             })
         except:
             continue
@@ -75,14 +80,27 @@ def status_breakdown_host():
         {"$count": "count"}
     ])
     dns_host = list(dns_host)[0]['count']
-    other_host = db.host_status.aggregate([
-        {"$match": {"year": year, "status": "OtherError"}},
+    ping_error = db.host_status.aggregate([
+        {"$match": {"year": year, "status": "OtherError", "detail": re.compile("^Ping")}},
         {"$group": {"_id": "$hostname"}},
         {"$count": "count"}
     ])
-    other_host = list(other_host)[0]['count']
+    ping_error = list(ping_error)[0]['count']
+    not_open = db.host_status.aggregate([
+        {"$match": {"year": year, "status": "OtherError", "detail": re.compile("^80_(?!open)\w+_443_(?!open)\w+")}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    not_open = list(not_open)[0]['count']
+    some_open = db.host_status.aggregate([
+        {"$match": {"year": year, "status": "OtherError", "detail": re.compile("^80_open_443_\w+|80_\w+_443_open")}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    some_open = list(some_open)[0]['count']
     print(error_host/total_host, no_redirection_host/total_host, home_redirction_host/total_host,\
-            nonhome_redirction_host/total_host, dns_host/total_host, other_host/total_host)
+            nonhome_redirction_host/total_host, dns_host/total_host,ping_error/total_host, not_open/total_host,\
+            some_open/total_host)
 
 
 def status_breakdown_links():
@@ -116,13 +134,24 @@ def status_breakdown_links():
         {"$count": "count"}
     ])
     dns_links = list(dns_links)[0]['count']
-    other_links = db.url_status.aggregate([
-        {"$match": {"year": year, "status": "OtherError"}},
+    ping_error_links = db.url_status.aggregate([
+        {"$match": {"year": year, "status": "OtherError", "error_code": re.compile("^Ping")}},
         {"$count": "count"}
     ])
-    other_links = list(other_links)[0]['count']
+    ping_error_links = list(ping_error_links)[0]['count']
+    not_open_links = db.url_status.aggregate([
+        {"$match": {"year": year, "status": "OtherError", "error_code": re.compile("^80_(?!open)\w+_443_(?!open)\w+")}},
+        {"$count": "count"}
+    ])
+    not_open_links = list(not_open_links)[0]['count']
+    some_open_links = db.url_status.aggregate([
+        {"$match": {"year": year, "status": "OtherError", "error_code": re.compile("^80_open_443_\w+|80_\w+_443_open")}},
+        {"$count": "count"}
+    ])
+    some_open_links = list(some_open_links)[0]['count']
     print(error_links/total_links, no_redirection_links/total_links, home_redirction_links/total_links,\
-            nonhome_redirction_links/total_links, dns_links/total_links, other_links/total_links)
+            nonhome_redirction_links/total_links, dns_links/total_links, ping_error_links/total_links,\
+                not_open_links/total_links, some_open_links/total_links)
 
 def count_dnserror_subhost():
     """
@@ -171,3 +200,6 @@ def other_error():
     for obj in hosts:
         obj['errors'] = list(set(obj['errors']))
     json.dump(hosts, open('other_error.json', 'w+'))
+
+
+status_breakdown_links()

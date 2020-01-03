@@ -213,7 +213,7 @@ def collect_status():
     host_shards = hostnames[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     temp = []
     for hostname in host_shards:
-        if db.host_status.find_one({"hostname": hostname}): continue
+        if db.url_status.find_one({"hostname": hostname, "year": year}): continue
         urls_list = db.url_sample.find({'hostname': hostname, 'year': year})
         for obj in urls_list:
             temp.append((obj['url'], hostname))
