@@ -36,7 +36,7 @@ Sampled urls. For every host with >= 500 urls, sample 100 from them
     "_id": "url",
     "url": "string",
     "hostname": "string",
-    "year": "int"
+    "year": ["int"]
 }
 ```
 
@@ -46,7 +46,7 @@ Unique on each obj (all fields composition)
 ```json
 {
     "hostname": "string",
-    "year": "int",
+    "year": ["int"],
     "status": "status (2/3/4/5xx / DNS / Other)",
     "detail": "string"
 }
@@ -59,7 +59,7 @@ Unique on (url + year)
 {
     "url": "string",
     "hostname": "string",
-    "year": "int",
+    "year": ["int"],
     "status": "status (2/3/4/5xx / DNS / Other)",
     "detail": "string"
 }

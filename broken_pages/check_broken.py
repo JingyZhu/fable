@@ -118,7 +118,7 @@ def test_links(q_in):
         counter += 1
         print(counter, url)
         resp, msg = send_request(url)
-        status, detail, error_code = "", "", None
+        status, detail = "", ""
         if msg == 'SUCCESSFUL':
             final_url, status_code = resp.url, resp.status_code
             url_path = urlparse(url).path
@@ -152,8 +152,8 @@ def test_links(q_in):
                 status = 'DNSError'
             else:
                 status = 'OtherError'
-                detail = msg
-                error_code = other_error(url)
+                detail = other_error(url)
+                if "DNS" in detail: status = "DNSError"
         obj = {
             "_id": url,
             "url": url,
@@ -162,7 +162,6 @@ def test_links(q_in):
             "status": status,
             "detail": detail
         }
-        if error_code: obj.update({"error_code": error_code})
         objs.append(obj)
         if len(objs) >= 100:
             try:
