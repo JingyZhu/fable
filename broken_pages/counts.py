@@ -29,10 +29,6 @@ def create_host_status():
         detail = url['detail']
         status = str(int(status) // 100) + "xx" if status != 'DNSError' and status != 'OtherError' else status
         if not re.compile("^([2345]|DNSError|OtherError)").match(status): continue
-        if status == "OtherError":
-            detail = url['error_code']
-            if "DNS" in detail:
-                status = 'DNSError'
         try:
             db.host_status.insert_one({
                 "hostname": url['hostname'],

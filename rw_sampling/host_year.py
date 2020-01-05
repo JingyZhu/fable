@@ -21,8 +21,8 @@ import config
 
 hosts = ['lions', 'pistons', 'wolverines', 'redwings']
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-proxies = config.PROXIES[2]
-year = 2014
+proxies = config.PROXIES[3]
+year = 2019
 
 metadata = json.load(open('hosts_year_10k.json', 'r'))
 
@@ -51,12 +51,12 @@ def get_links():
     db.url_year_added.create_index('hostname')
     db.url_population.create_index('hostname')
     db.hosts_added_links.create_index([('hostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING)], unique=True)
-    keys = list(db.hosts_meta.find({'year': year}))
+    keys = db.hosts_meta.find({'year': year})
     keys = list([k['hostname'] for k in keys])
-    # index = hosts.index(socket.gethostname())
-    # key_shards = sorted(keys)[int(index/4 * size): int((index + 1)/4 * size)]
+    idx, length = config.HOSTS.index(socket.gethostname()), len(keys)
+    key_shards = sorted(keys)[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     # key_shards = sorted(keys[:100])
-    for i, hostname in enumerate(keys):
+    for i, hostname in enumerate(key_shards):
         print(i, hostname)
         crawled_hosts = list(db.hosts_added_links.find({'hostname': hostname}))
         if len(crawled_hosts) > 0:

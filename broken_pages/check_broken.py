@@ -18,9 +18,10 @@ import nmap
 
 sys.path.append('../')
 import config
+from utils import db_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-year = 1999
+year = 2004
 NUM_THREADS = 10
 counter = 0
 
@@ -112,7 +113,7 @@ def other_error(url):
 def test_links(q_in):
     '''Send requests to each link and log their status.'''
     global counter
-    objs = []
+    objs, errors = [], []
     while not q_in.empty():
         url, hostname = q_in.get()
         counter += 1
@@ -153,6 +154,7 @@ def test_links(q_in):
             else:
                 status = 'OtherError'
                 detail = other_error(url)
+                if msg == "Timeout" and "Ping" not in detail: errors.append(url)
                 if "DNS" in detail: status = "DNSError"
         obj = {
             "_id": url,
@@ -173,6 +175,7 @@ def test_links(q_in):
         db.url_status.insert_many(objs, ordered=False)
     except:
         pass
+    json.dump(errors, open("errors_{}.json".format(socket.gethostname()), 'w+'))
     
 
 def sample_urls():
@@ -181,16 +184,11 @@ def sample_urls():
     Put the sampled record into db.url_sample
     """
     db.url_sample.create_index([("hostname", pymongo.ASCENDING), ("year", pymongo.ASCENDING)])
-    valid_hosts = list(db.hosts_added_links.find({'year': year, 'added_links': {'$gte': 100}}, {"hostname": True}))
-    valid_hosts_in_year = []
-    # Filter out later years' crawled hostname but has copies in this year
-    for valid_host in valid_hosts:
-        hostname = valid_host['hostname']
-        if not db.hosts_meta.find_one({'hostname': hostname, 'year': year}):
-            continue
-        valid_hosts_in_year.append(hostname)
-    valid_hosts_in_year = list(filter(lambda x: '\n' not in x, valid_hosts_in_year))
-    for hostname in valid_hosts_in_year:
+    cursor = db_utils.Hosts_gte_N_links_in_year(db, 500, year)
+    valid_hosts = [u['hostname'] for u in cursor]
+    valid_hosts = set(filter(lambda x: '\n' not in x, valid_hosts))
+    print(len(valid_hosts))
+    for hostname in valid_hosts:
         urls_list = list(db.url_population.aggregate([{'$match': {'hostname': hostname, 'year': year}}, {'$sample': {'size': 100}}]))
         for url_obj in urls_list:
             url_obj['_id'] = url_obj['url']
@@ -206,7 +204,7 @@ def collect_status():
     """
     db.url_status.create_index([("hostname", pymongo.ASCENDING), ("year", pymongo.ASCENDING)])
     q_in = queue.Queue()
-    hostnames = list(db.url_sample.aggregate([{'$group': {"_id": "$hostname"}}]))
+    hostnames = list(db.url_sample.aggregate([{"$match": {"year": year}}, {'$group': {"_id": "$hostname"}}]))
     hostnames = sorted([obj['_id'] for obj in hostnames])
     idx, length = config.HOSTS.index(socket.gethostname()), len(hostnames)
     host_shards = hostnames[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
@@ -254,54 +252,3 @@ def other_error_update():
         t.join()
 
 collect_status()
-
-# r = re.compile("^80_\w+_443_\w+")
-# other_error_urls = db.url_status.find({'year': year, "status": "OtherError", "error_code": r})
-# for i, obj in enumerate(other_error_urls):
-#     url = obj['url']
-#     print(i, url)
-#     resp, msg = send_request(url)
-#     status, detail = "", ""
-#     if msg == 'SUCCESSFUL':
-#         final_url, status_code = resp.url, resp.status_code
-#         url_path = urlparse(url).path
-#         final_url_path = urlparse(final_url).path
-#         # remove the last '/' if it exists
-#         if url_path.endswith('/'):
-#             url_path = url_path[:-1]
-#         if final_url_path.endswith('/'):
-#             final_url_path = final_url_path[:-1]
-        
-#         status = str(status_code)
-#         # if the response status code is 400 or 500 level, brokem
-#         if int(status_code / 100) >= 4:
-#             detail = status_code
-#         # if status code is 200 level and no redirection
-#         elif (int(status_code/100) == 2 or int(status_code/100) == 3) and final_url_path == url_path:
-#             detail = 'no redirection'
-#         # if a non-hompage redirects to a homepage, considered broken
-#         elif final_url_path == '' and url_path != '':
-#             detail = 'homepage redirection'
-#         # if it redirects to another path, we are unsure.
-#         elif final_url_path != url_path:
-#             detail = 'non-home redirection'
-
-#         # do not know what redirection happens
-#         else:
-#             # this list should be empty
-#             detail = 'unknown redirection'
-#     else:
-#         if 'ConnectionError_DNSLookupError' in msg:
-#             status = 'DNSError'
-#         else:
-#             status = 'OtherError'
-#             detail = msg
-#             error_code = other_error(url)
-#     update = {
-#         "status": status,
-#         "detail": detail
-#     }
-#     if update['status'] == "OtherError": update['error_code'] = error_code
-#     db.url_status.update_one({"_id": obj['_id']}, {"$set": update})
-#     if update['status'] != "OtherError":
-#         db.url_status.update_one({"_id": obj['_id']}, {"$unset": {"error_code": ""}})
