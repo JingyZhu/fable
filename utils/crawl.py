@@ -7,7 +7,7 @@ import os
 import time
 from os.path import abspath, dirname, join
 import base64
-import threading
+import threading, queue
 import itertools
 
 def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
@@ -88,7 +88,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
         return [], "Empty"
 
 
-def wayback_year_links(prefix, years, NUM_THREADS=5, max_limit=0, param_dict={}, proxies={}):
+def wayback_year_links(prefix, years, NUM_THREADS=3, max_limit=0, param_dict={}, proxies={}):
     """
     Get the result of links in certain years
     prefix: some string of url e.g: *.a.b.com/*
@@ -110,49 +110,48 @@ def wayback_year_links(prefix, years, NUM_THREADS=5, max_limit=0, param_dict={},
     }
     params.update(param_dict)
     l = threading.Lock()
-    def get_year_links(year):
+    def get_year_links(q_in):
         nonlocal total_r, cur_limit, max_limit
-        total_r.setdefault(year, set())
-        params.update({
-            "from": "{}0101".format(year),
-            "to": "{}1231".format(year)
-            # 'collapse': 'timestamp:4',
-        })
-        
-        while True:
-            try:
-                r = requests.get('http://web.archive.org/cdx/search/cdx', params=params, proxies=proxies)
-                r = r.json()
-                r = [u[2] for u in r[1:]]
-            except Exception as e:
-                print('1', str(e))
-                time.sleep(20)
-                continue
-            try:
-                assert(len(r) < cur_limit or cur_limit >= max_limit)
-                break
-            except Exception as e:
-                print('2', str(e))
-                cur_limit *= 2
-                params.update({'limit': str(cur_limit)})
-                continue
-        print( (year, len(r)) )
-        l.acquire()
-        for url in r:
-            total_r[year].add(url)
-        l.release()
+        while not q_in.empty():
+            year = q_in.get()
+            total_r.setdefault(year, set())
+            params.update({
+                "from": "{}0101".format(year),
+                "to": "{}1231".format(year)
+                # 'collapse': 'timestamp:4',
+            })
+            
+            while True:
+                try:
+                    r = requests.get('http://web.archive.org/cdx/search/cdx', params=params, proxies=proxies)
+                    r = r.json()
+                    r = [u[2] for u in r[1:]]
+                except Exception as e:
+                    print('1', str(e))
+                    time.sleep(10)
+                    continue
+                try:
+                    assert(len(r) < cur_limit or cur_limit >= max_limit)
+                    break
+                except Exception as e:
+                    print('2', str(e))
+                    cur_limit *= 2
+                    params.update({'limit': str(cur_limit)})
+                    continue
+            print( (year, len(r)) )
+            l.acquire()
+            for url in r:
+                total_r[year].add(url)
+            l.release()
     t = []
-    batch = []
-    for begin in range(0, len(years), NUM_THREADS):
-        end = begin + NUM_THREADS  if begin + NUM_THREADS < len(years) else len(years) 
-        batch.append(years[begin:end])
-    for shot in batch:
-        t = []
-        for year in shot:
-            t.append(threading.Thread(target=get_year_links, args=(year,)))
-            t[-1].start()
-        for ti in t:
-            ti.join()
+    q_in = queue.Queue(maxsize=len(years) + 1)
+    for year in years:
+        q_in.put(year)
+    for _ in range(NUM_THREADS):
+        t.append(threading.Thread(target=get_year_links, args=(q_in,)))
+        t[-1].start()
+    for tt in t:
+        tt.join() 
 
     return {k: list(v) for k, v in total_r.items()}
 

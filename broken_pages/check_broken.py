@@ -21,7 +21,7 @@ import config
 from utils import db_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-year = 2004
+year = 2014
 NUM_THREADS = 10
 counter = 0
 
@@ -66,6 +66,8 @@ def send_request(url):
         error_msg = 'InvalidSchema'
     except requests.exceptions.RequestException:
         error_msg = 'RequestException'
+    except requests.exceptions.TooManyRedirects:
+        error_msg = 'TooManyRedirects'
     except UnicodeError:
         error_msg = 'ERROR_UNICODE'
     except Exception as _:
@@ -151,6 +153,9 @@ def test_links(q_in):
         else:
             if 'ConnectionError_DNSLookupError' in msg:
                 status = 'DNSError'
+            elif msg == 'TooManyRedirects':
+                status = 'OtherError'
+                detail = 'TooManyRedirects'
             else:
                 status = 'OtherError'
                 detail = other_error(url)
@@ -175,7 +180,7 @@ def test_links(q_in):
         db.url_status.insert_many(objs, ordered=False)
     except:
         pass
-    json.dump(errors, open("errors_{}.json".format(socket.gethostname()), 'w+'))
+    json.dump(errors, open("errors/errors_{}.json".format(socket.gethostname()), 'w+'))
     
 
 def sample_urls():

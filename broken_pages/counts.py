@@ -16,7 +16,7 @@ from utils import plot, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 # db = MongoClient(config.MONGO_HOSTNAME).test
-year = 1999
+year = 2009
 
 def create_host_status():
     """
@@ -132,17 +132,17 @@ def status_breakdown_links():
     ])
     dns_links = list(dns_links)[0]['count']
     ping_error_links = db.url_status.aggregate([
-        {"$match": {"year": year, "status": "OtherError", "error_code": re.compile("^Ping")}},
+        {"$match": {"year": year, "status": "OtherError", "detail": re.compile("^Ping")}},
         {"$count": "count"}
     ])
     ping_error_links = list(ping_error_links)[0]['count']
     not_open_links = db.url_status.aggregate([
-        {"$match": {"year": year, "status": "OtherError", "error_code": re.compile("^80_(?!open)\w+_443_(?!open)\w+")}},
+        {"$match": {"year": year, "status": "OtherError", "detail": re.compile("^80_(?!open)\w+_443_(?!open)\w+")}},
         {"$count": "count"}
     ])
     not_open_links = list(not_open_links)[0]['count']
     some_open_links = db.url_status.aggregate([
-        {"$match": {"year": year, "status": "OtherError", "error_code": re.compile("^80_open_443_\w+|80_\w+_443_open")}},
+        {"$match": {"year": year, "status": "OtherError", "detail": re.compile("^80_open_443_\w+|80_\w+_443_open")}},
         {"$count": "count"}
     ])
     some_open_links = list(some_open_links)[0]['count']
@@ -213,4 +213,11 @@ def frac_45xx_links():
     plt.savefig('fig/45xx_frac.png')
 
 
-frac_45xx_links()
+def ping_error_detail():
+    """
+        Dive deep into the ping error hosts
+        For each subhost (with only ping error), check other subhost in the host
+        If others have available status (2/3/4/5), probably DNS handling problem
+        Else Probably the site is abandoned
+    """
+    # TODO
