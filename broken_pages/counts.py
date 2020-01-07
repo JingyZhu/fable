@@ -9,6 +9,8 @@ import json
 from urllib.parse import urlparse
 from collections import defaultdict, Counter
 import matplotlib.pyplot as plt
+import whois
+import datetime
 
 sys.path.append('../')
 import config
@@ -219,5 +221,69 @@ def ping_error_detail():
         For each subhost (with only ping error), check other subhost in the host
         If others have available status (2/3/4/5), probably DNS handling problem
         Else Probably the site is abandoned
+
+        TODO Make it a database version
     """
-    # TODO
+    ping_hosts = list(db.host_status.find({"year": year, "detail": re.compile("^Ping")}))
+    print(len(ping_hosts))
+    ping_dict = {"avail": {}, "unavail": {}}
+    for host in ping_hosts:
+        d = defaultdict(set)
+        netloc_stats = defaultdict(set)
+        urls = db.url_status.find({"year": year, "hostname": host['hostname']})
+        for url in urls:
+            netloc = urlparse(url['url']).netloc
+            if not re.compile("^([2345]|DNSError|OtherError)").match(url['status']): continue
+            if re.compile("[2345]").match(url['status']):
+                status = "avail"
+            elif re.compile('^Ping').match(url['detail']):
+                status = "ping"
+            else:
+                status = "unavail"
+            d[netloc].add(status)
+            netloc_stats[netloc].add(url['status'])
+        valid, avail = False, False
+        valid_netloc, avail_netloc = "", []
+        for netloc, statuses in d.items():
+            if "ping" in statuses and len(statuses) <= 1:
+                valid = True
+                valid_netloc = netloc
+            if "avail" in statuses:
+                avail = True
+                avail_netloc.append(netloc)
+        if valid:
+            if avail:
+                ping_dict['avail'][host['hostname']] = {
+                    "ping error": valid_netloc,
+                    "avail": [[n, list(netloc_stats[n])] for n in avail_netloc]
+                }
+            else:
+                ping_dict['unavail'][host['hostname']] = [valid_netloc]
+    print(len(ping_dict['avail']), len(ping_dict['unavail']))
+    json.dump(ping_dict, open("ping_detail.json", 'w+'))
+
+
+def whois_expiration():
+    """
+        For each host with only ping error and no other avail,
+        Use whois to get the expiration data (if applicable)
+
+        TODO Currently read from json, read from db in future
+    """
+    data = json.load(open("ping_detail.json", 'r'))['unavail']
+    print(len(data))
+    expires, none_count = {}, 0
+    for i, host in enumerate(data):
+        print(i, host)
+        try:
+            expire = whois.query(host).expiration_date
+            if expire: expires[host] = expire
+            else: none_count += 1
+        except:
+            none_count += 1
+    print(none_count)
+    json.dump(expires, open('whois.json', 'w+'))
+
+
+# ping_error_detail()
+whois_expiration()

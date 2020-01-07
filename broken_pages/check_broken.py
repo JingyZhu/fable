@@ -43,7 +43,7 @@ def send_request(url):
     # TODO: look into the fail reason in ConnectionError and find which other ones are related to DNS.
     req_failed = True
     try:
-        resp = requests.get(url, headers=user_agent_dict, timeout=10)
+        resp = requests.get(url, headers=user_agent_dict, timeout=15)
         req_failed = False
     # Requsts timeout
     except requests.exceptions.ReadTimeout:
@@ -228,8 +228,6 @@ def collect_status():
     for t in pools:
         t.join()
 
-
-# collect_status()
 
 def other_error_update():
     def other_error_thread(q_in):
