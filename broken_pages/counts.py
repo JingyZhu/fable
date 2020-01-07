@@ -18,7 +18,7 @@ from utils import plot, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 # db = MongoClient(config.MONGO_HOSTNAME).test
-year = 2009
+year = 2004
 
 def create_host_status():
     """
@@ -152,6 +152,7 @@ def status_breakdown_links():
             nonhome_redirction_links/total_links, dns_links/total_links, ping_error_links/total_links,\
                 not_open_links/total_links, some_open_links/total_links)
 
+
 def count_dnserror_subhost():
     """
     For each host that has not only DNSError, 
@@ -267,23 +268,38 @@ def whois_expiration():
     """
         For each host with only ping error and no other avail,
         Use whois to get the expiration data (if applicable)
-
-        TODO Currently read from json, read from db in future
     """
     data = json.load(open("ping_detail.json", 'r'))['unavail']
     print(len(data))
-    expires, none_count = {}, 0
+    last_updates = {}
+    none_count, no_lu = 0, 0
     for i, host in enumerate(data):
         print(i, host)
         try:
-            expire = whois.query(host).expiration_date
-            if expire: expires[host] = expire
-            else: none_count += 1
+            lu = whois.query(host).last_updated
+            if lu: 
+                last_updates[host] = lu.year
+            else: 
+                no_lu += 1
         except:
             none_count += 1
-    print(none_count)
-    json.dump(expires, open('whois.json', 'w+'))
+    print(none_count, no_lu)
+    print(len(list(filter(lambda x: x >= 2019, last_updates.values()))))
+    json.dump(last_updates, open('whois.json', 'w+'))
 
 
 # ping_error_detail()
-whois_expiration()
+# whois_expiration()
+
+year = 1999
+status_breakdown_host()
+year = 2004
+status_breakdown_host()
+year = 2009
+status_breakdown_host()
+year = 1999
+status_breakdown_links()
+year = 2004
+status_breakdown_links()
+year = 2009
+status_breakdown_links()

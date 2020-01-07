@@ -18,10 +18,10 @@ import nmap
 
 sys.path.append('../')
 import config
-from utils import db_utils
+from utils import db_utils, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-year = 2014
+year = 1999
 NUM_THREADS = 10
 counter = 0
 
@@ -254,4 +254,49 @@ def other_error_update():
     for t in pools:
         t.join()
 
-collect_status()
+
+def dns_more_host_investigation():
+    """
+    For hosts with more than DNS Error problem, check whether they are still working
+    """
+    host_extractor = url_utils.HostExtractor()
+    dns_error_hosts = db.host_status.aggregate([
+        {"$match":{"year": year, "status": "DNSError"}},
+        {"$lookup": {
+            "from": "host_status",
+            "let": {"hostname": "$hostname", "year": "$year"},
+            "pipeline": [
+                {"$match": {"$expr": {"$and": [
+                    {"$eq": ["$hostname", "$$hostname"]},
+                    {"$eq": ["$year", "$$year"]}
+                ]}}}
+            ],
+            "as": "meta"
+        }},
+        {"$match": {"meta.1": {"$exists" :True}}},
+        {"$project": {"meta": False}}
+    ])
+    host_status = {}
+    for i, host in enumerate(dns_error_hosts):
+        hostname = host['hostname']
+        print(i, hostname)
+        url = 'http://{}/'.format(hostname)
+        try:
+            r = requests.get(url, timeout=10)
+        except:
+            error_code = other_error(url)
+            host_status[hostname] = error_code
+            continue
+        if r.status_code // 100 >= 4: 
+            host_status[hostname] = '4/5xx'
+        else:
+            final_url = r.url
+            if host_extractor.extract(final_url) == host_extractor.extract(url):
+                host_status[hostname] = 'same netloc'
+            else:
+                host_status[hostname] = 'diff netloc'
+
+    json.dump(host_status, open('dns_host.json', 'r'))
+
+
+dns_more_host_investigation()
