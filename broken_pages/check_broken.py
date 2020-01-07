@@ -277,26 +277,38 @@ def dns_more_host_investigation():
         {"$project": {"meta": False}}
     ])
     host_status = {}
-    for i, host in enumerate(dns_error_hosts):
-        hostname = host['hostname']
-        print(i, hostname)
-        url = 'http://{}/'.format(hostname)
-        try:
-            r = requests.get(url, timeout=10)
-        except:
-            error_code = other_error(url)
-            host_status[hostname] = error_code
-            continue
-        if r.status_code // 100 >= 4: 
-            host_status[hostname] = '4/5xx'
-        else:
-            final_url = r.url
-            if host_extractor.extract(final_url) == host_extractor.extract(url):
-                host_status[hostname] = 'same netloc'
+    counter = 0
+    def dns_thread_func(q_in, host_status):
+        nonlocal counter
+        while not q_in.empty():
+            hostname = q_in.get()
+            counter += 1
+            print(counter, hostname)
+            url = 'http://{}/'.format(hostname)
+            try:
+                r = requests.get(url, timeout=15)
+            except:
+                error_code = other_error(url)
+                host_status[hostname] = error_code
+                continue
+            if r.status_code // 100 >= 4: 
+                host_status[hostname] = '4/5xx'
             else:
-                host_status[hostname] = 'diff netloc'
+                final_url = r.url
+                if host_extractor.extract(final_url) == host_extractor.extract(url):
+                    host_status[hostname] = 'same netloc'
+                else:
+                    host_status[hostname] = 'diff netloc'
 
-    json.dump(host_status, open('dns_host.json', 'r'))
+    q_in = queue.Queue()
+    for host in dns_error_hosts: q_in.put(host['hostname'])
+    pools = []
+    for _ in range(NUM_THREADS):
+        pools.append(threading.Thread(target=dns_thread_func, args=(q_in, host_status)))
+        pools[-1].start()
+    for t in pools:
+        t.join()
+    json.dump(host_status, open('dns_host.json', 'w+'))
 
 
 dns_more_host_investigation()
