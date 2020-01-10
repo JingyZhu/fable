@@ -174,6 +174,7 @@ def metadata_search():
     for i, url in enumerate(db.test_search.find()):
         top, title = url['topN'], url['titleMatch']
         print(i, url['url'])
+        if db.test_metadata_search.find_one({"from": url['url']}): continue
         top_urls = google_search(top)
         title_urls = google_search(title)
         top5 = set(top_urls[:5] + title_urls[:5])
@@ -197,5 +198,7 @@ def metadata_search():
         except Exception as e:
             print(str(e))
 
-metadata_search()       
+
+if __name__ == '__main__':
+    metadata_search()       
 

@@ -17,6 +17,9 @@ import difflib
 
 class TFidf:
     def re_init(self):
+        """
+        Re calculated the tfidf from the self.corpus
+        """
         self.vectorizer = TfidfVectorizer()
         self.tfidf = self.vectorizer.fit_transform(self.corpus)
         self.simi = cosine_similarity(self.tfidf)
@@ -29,6 +32,10 @@ class TFidf:
         self.simi = cosine_similarity(self.tfidf)
     
     def similar(self, text1, text2):
+        """
+        Get similarity of 2 text
+        If any of the text is not in the corpus, TFIDF matrix will be recalculated
+        """
         need_reinit = False
         if text1 not in self.idx:
             self.idx[text1] = len(self.corpus)
@@ -42,6 +49,10 @@ class TFidf:
         return self.simi[self.idx[text1], self.idx[text2]]
     
     def topN(self, text, N=5):
+        """
+        Get the highest weighted N words in a text
+        If text is not in the corpus, it'll be added, and tfidf'll be recalculated
+        """
         need_reinit = False
         if text not in self.idx:
             self.idx[text] = len(self.corpus)
@@ -163,14 +174,21 @@ def justext_extract(html):
     return text
 
 
+def newspaper_extract(html):
+    article = Article('http://localhost:8988') # Dummp urls to initialize the obj
+    article.download(input_html=html)
+    article.parse()
+    return article.text
+
+
 def extract_body(html, version='justext'):
     """
     Wrapper functions for different version of html body extraction
     """
     func_dict = {
         "justext": justext_extract,
-        "goose": goose_extract
-
+        "goose": goose_extract,
+        "newspaper": newspaper_extract
     }
     return func_dict[version](html)
 
@@ -183,6 +201,7 @@ def newspaper_title_extract(html):
 
 
 def mine_title_extract():
+    # TODO Inplement this func
     pass
 
 
