@@ -175,7 +175,7 @@ def justext_extract(html):
 
 
 def newspaper_extract(html):
-    article = Article('http://localhost:8988') # Dummp urls to initialize the obj
+    article = Article('https://google.com') # Dummy urls to initialize the obj Can be anything able to wget
     article.download(input_html=html)
     article.parse()
     return article.text
