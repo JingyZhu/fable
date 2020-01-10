@@ -2,6 +2,8 @@
 Utils for text
 """
 import justext
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from langcodes import Language
 from langdetect import detect_langs
 from goose3 import Goose
@@ -12,6 +14,45 @@ from dateutil import parser as dparser
 from dateparser.search import search_dates
 import dateparser
 import difflib
+
+class TFidf:
+    def re_init(self):
+        self.vectorizer = TfidfVectorizer()
+        self.tfidf = self.vectorizer.fit_transform(self.corpus)
+        self.simi = cosine_similarity(self.tfidf)
+
+    def __init__(self, corpus):
+        self.idx = {c: i for i, c in enumerate(corpus)}
+        self.corpus = corpus
+        self.vectorizer = TfidfVectorizer()
+        self.tfidf = self.vectorizer.fit_transform(corpus)
+        self.simi = cosine_similarity(self.tfidf)
+    
+    def similar(self, text1, text2):
+        need_reinit = False
+        if text1 not in self.idx:
+            self.idx[text1] = len(self.corpus)
+            self.corpus.append(text1)
+            need_reinit = True
+        if text2 not in self.idx:
+            self.idx[text2] = len(self.corpus)
+            self.corpus.append(text2)
+            need_reinit = True
+        if need_reinit: self.re_init()
+        return self.simi[self.idx[text1], self.idx[text2]]
+    
+    def topN(self, text, N=5):
+        need_reinit = False
+        if text not in self.idx:
+            self.idx[text] = len(self.corpus)
+            self.corpus.append(text)
+            need_reinit = True
+        if need_reinit: self.re_init()
+        array = self.tfidf[self.idx[text]].toarray()[0]
+        idxes = array.argsort()[-N:]
+        words = self.vectorizer.get_feature_names()
+        return [words[i] for i in reversed(idxes)]
+
 
 def find_complement_string(A, B):
     A, B = A.split(), B.split()
@@ -110,7 +151,11 @@ def goose_extract(html):
 def justext_extract(html):
     lang_code = detect_langs(html)[0].lang
     lang = Language.make(language=lang_code).language_name()
-    paragraphs = justext.justext(html, justext.get_stoplist(lang))
+    try:
+        stoplist = justext.get_stoplist(lang)
+    except:
+        stoplist = justext.get_stoplist("English")
+    paragraphs = justext.justext(html, stoplist)
     text = ''
     for p in paragraphs:
         if not p.is_boilerplate:
@@ -126,5 +171,27 @@ def extract_body(html, version='justext'):
         "justext": justext_extract,
         "goose": goose_extract
 
+    }
+    return func_dict[version](html)
+
+
+def newspaper_title_extract(html):
+    article = Article('https://localhost:8988')
+    article.download(input_html=html)
+    article.parse()
+    return article.title
+
+
+def mine_title_extract():
+    pass
+
+
+def extract_title(html, version='mine'):
+    """
+    Wrapper functions for different version of html body extraction
+    """
+    func_dict = {
+        "newspaper": newspaper_title_extract,
+        "mine": mine_title_extract
     }
     return func_dict[version](html)

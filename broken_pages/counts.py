@@ -18,7 +18,7 @@ from utils import plot, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 # db = MongoClient(config.MONGO_HOSTNAME).test
-year = 2004
+year = 2014
 
 def create_host_status():
     """
@@ -55,7 +55,7 @@ def create_subhost_status():
         if not re.compile("^([2345]|DNSError|OtherError)").match(status): continue
         try:
             db.host_status.insert_one({
-                "subhostname": urlparse(url['url']).netloc
+                "subhostname": urlparse(url['url']).netloc,
                 "hostname": url['hostname'],
                 "year": year,
                 "status": status,
@@ -315,15 +315,20 @@ def whois_expiration():
 # ping_error_detail()
 # whois_expiration()
 
+# create_host_status()
 year = 1999
 status_breakdown_host()
 year = 2004
 status_breakdown_host()
 year = 2009
 status_breakdown_host()
+year = 2014
+status_breakdown_host()
 year = 1999
 status_breakdown_links()
 year = 2004
 status_breakdown_links()
 year = 2009
+status_breakdown_links()
+year = 2014
 status_breakdown_links()
