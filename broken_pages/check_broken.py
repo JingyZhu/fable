@@ -21,7 +21,7 @@ import config
 from utils import db_utils, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-year = 1999
+year = 2019
 NUM_THREADS = 10
 counter = 0
 
@@ -310,5 +310,4 @@ def dns_more_host_investigation():
         t.join()
     json.dump(host_status, open('dns_host.json', 'w+'))
 
-
-dns_more_host_investigation()
+collect_status()

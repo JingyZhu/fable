@@ -226,19 +226,6 @@ def other_error():
     json.dump(hosts, open('other_error.json', 'w+'))
 
 
-def frac_45xx_links():
-    missing_count = db.url_status.aggregate([
-        {"$match": {"year": year, "status": re.compile("^[45]")}},
-        {"$group": {"_id": "$hostname", "total": {"$sum": 1}}},
-        {"$sort": {"total": 1}}
-    ])
-    missing_count = list([m['total'] for m in missing_count])
-    plot.plot_CDF([missing_count], show=False)
-    plt.xlabel("#urls has 4/5xx")
-    plt.ylabel("CDF across hosts")
-    plt.title("#urls has 4/5xx status code for hosts in 4/5xx")
-    plt.savefig('fig/45xx_frac.png')
-
 
 def ping_error_detail():
     """

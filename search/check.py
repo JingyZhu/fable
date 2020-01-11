@@ -171,7 +171,7 @@ def extract_content():
 
 
 def metadata_search():
-    for i, url in enumerate(db.test_search.find()):
+    for i, url in enumerate(list(db.test_search.find())):
         top, title = url['topN'], url['titleMatch']
         print(i, url['url'])
         if db.test_metadata_search.find_one({"from": url['url']}): continue
