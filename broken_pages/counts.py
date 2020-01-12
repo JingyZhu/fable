@@ -18,7 +18,7 @@ from utils import plot, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 # db = MongoClient(config.MONGO_HOSTNAME).test
-year = 2014
+year = 2019
 
 def create_host_status():
     """
@@ -303,19 +303,19 @@ def whois_expiration():
 # whois_expiration()
 
 # create_host_status()
-year = 1999
-status_breakdown_host()
-year = 2004
-status_breakdown_host()
-year = 2009
-status_breakdown_host()
+# year = 1999
+# status_breakdown_host()
+# year = 2004
+# status_breakdown_host()
+# year = 2009
+# status_breakdown_host()
 year = 2014
 status_breakdown_host()
-year = 1999
-status_breakdown_links()
-year = 2004
-status_breakdown_links()
-year = 2009
-status_breakdown_links()
-year = 2014
-status_breakdown_links()
+# year = 1999
+# status_breakdown_links()
+# year = 2004
+# status_breakdown_links()
+# year = 2009
+# status_breakdown_links()
+# year = 2014
+# status_breakdown_links()

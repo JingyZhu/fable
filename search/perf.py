@@ -1,3 +1,6 @@
+"""
+Test the performance of query extraction from the HTML on the search engine
+"""
 import brotli
 import sys
 import requests
@@ -11,7 +14,7 @@ import random
 
 sys.path.append('../')
 import config
-from utils import text_utils
+from utils import text_utils, plot
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 
@@ -200,6 +203,29 @@ def metadata_search():
             print(str(e))
 
 
-if __name__ == '__main__':
-    extract_content()     
+def performance():
+    """
+    Get the maximum similarity of the google search query
+    Top5 and Top10
+    """
+    origin_corpus = list(db.test_search.find({"content": {"$exists": True}}, {"content": True}))
+    origin_corpus = [e['content'] for e in origin_corpus]
+    search_corpus = list(db.test_metadata_search.find({"content": {"$exists": True}}, {"content": True}))
+    search_corpus = [e['content'] for e in search_corpus]
+    TFidf = text_utils.TFidf(origin_corpus + search_corpus)
+    top5, top10 = [], []
+    for url in db.test_search.find({"content": {"$exists": True}}):
+        content = url['content']
+        print(url['url'])
+        search_results = list(db.test_metadata_search.find({"from": url['url']}))
+        t5 = [TFidf.similar(content, u['content']) for u in search_results if u['rank'] == 'top5']
+        t10 = [TFidf.similar(content, u['content']) for u in search_results]
+        t5 = max(t5) if len(t5) > 0 else 0
+        t10 = max(t10) if len(t10) > 0 else 0
+        top5.append(t5)
+        top10.append(t10)
+    plot.plot_CDF([top5, top10], classname=['top5', 'top10'], show=False, savefig='fig/search_perf.png')
 
+
+if __name__ == '__main__':
+    performance()
