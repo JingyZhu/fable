@@ -33,9 +33,9 @@ bing_query_dict = {
 google_url = 'https://www.googleapis.com/customsearch/v1'
 bing_url = 'https://api.cognitive.microsoft.com/bing/v7.0/search'
 
-corpus = list(db.test_search.find({"content": {"$exists": True}}, {"content": True}))
-corpus = [e['content'] for e in corpus]
-TFidf = text_utils.TFidf(corpus)
+#corpus = list(db.test_search.find({"content": {"$exists": True}}, {"content": True}))
+#corpus = [e['content'] for e in corpus]
+#TFidf = text_utils.TFidf(corpus)
 
 def topN(url):
     content = db.test_search.find_one({"_id": url})
@@ -151,18 +151,19 @@ def trend_search():
 
 def extract_content():
     filter_ext = ['.pdf']
-    cursor = db.test_meta_search.find({"content": {"$exists": False}})
+    cursor = list(db.test_metadata_search.find({"content": {"$exists": False}}))
     for url in cursor:
         if os.path.splitext(url['url'])[1] in filter_ext: continue 
         if url.get('content'): continue
         html = brotli.decompress(url['html']).decode()
-        if html == '':
-            html = requests.get(url['url'], headers=requests_header).text
         print(url['url'])
+        if html == '':
+            db.test_metadata_search.delete_many({'url': url['url']})
+            continue
         content = text_utils.extract_body(html)
         html = brotli.compress(html.encode())
         try:
-            db.test_meta_search.update_one({"_id": url['_id']}, {"$set": {"html": html, "content": content} })
+            db.test_metadata_search.update_one({"_id": url['_id']}, {"$set": {"html": html, "content": content} })
         except Exception as e:
             print(str(e))
 
@@ -200,5 +201,5 @@ def metadata_search():
 
 
 if __name__ == '__main__':
-    metadata_search()       
+    extract_content()     
 
