@@ -45,8 +45,7 @@ def find_link_density(html):
     for atag in soup.findAll('a'):
         atag_text = filter_separator(atag.get_text())
         atag_length += len(atag_text)
-
-    return atag_length / total_length
+    return atag_length / total_length if total_length != 0 else 0
 
 
 def status_categories(status, detail):
