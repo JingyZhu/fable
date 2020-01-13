@@ -185,6 +185,7 @@ def extract_body(html, version='justext'):
     """
     Wrapper functions for different version of html body extraction
     """
+    if html == '': return ''
     func_dict = {
         "justext": justext_extract,
         "goose": goose_extract,
@@ -209,6 +210,7 @@ def extract_title(html, version='mine'):
     """
     Wrapper functions for different version of html body extraction
     """
+    if html == '': return ''
     func_dict = {
         "newspaper": newspaper_title_extract,
         "mine": mine_title_extract

@@ -84,3 +84,17 @@ only url in url_year_added with host has >=100 new urls in certain year
     "year": "int",
 }
 ```
+
+### url_content
+HTML and content of url, both from wayback machine and realweb \
+src defines the where the html was crawled \
+If src: wayback, ts is added.
+```json
+{
+    "url": "string",
+    "src": "string",
+    "(ts)":"int",
+    "html": "Bytes (compressed by brotli)",
+    "content": "string"
+}
+```
