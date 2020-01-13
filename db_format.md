@@ -98,3 +98,12 @@ If src: wayback, ts is added.
     "content": "string"
 }
 ```
+
+### host_sample
+Sample host which contains 2xx/3xx status code
+```json
+{
+    "hostname": "string",
+    "year": "int"
+}
+```

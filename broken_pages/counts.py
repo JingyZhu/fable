@@ -309,7 +309,9 @@ def whois_expiration():
 # status_breakdown_host()
 # year = 2009
 # status_breakdown_host()
-year = 2014
+# year = 2014
+# status_breakdown_host()
+year = 2019
 status_breakdown_host()
 # year = 1999
 # status_breakdown_links()
@@ -319,3 +321,5 @@ status_breakdown_host()
 # status_breakdown_links()
 # year = 2014
 # status_breakdown_links()
+year = 2019
+status_breakdown_links()
