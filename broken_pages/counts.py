@@ -42,30 +42,6 @@ def create_host_status():
             continue
 
 
-def create_subhost_status():
-    """
-    Create collections as year, subhost, host, status (one KXX), and detail
-    """
-    db.subhost_status.create_index([('subhostname', pymongo.ASCENDING), ('year', pymongo.ASCENDING),\
-         ('status', pymongo.ASCENDING), ('detail', pymongo.ASCENDING)], unique=True)
-    for url in db.url_status.find({'year': year}):
-        status = url['status']
-        detail = url['detail']
-        status = str(int(status) // 100) + "xx" if status != 'DNSError' and status != 'OtherError' else status
-        if not re.compile("^([2345]|DNSError|OtherError)").match(status): continue
-        try:
-            db.host_status.insert_one({
-                "subhostname": urlparse(url['url']).netloc,
-                "hostname": url['hostname'],
-                "year": year,
-                "status": status,
-                'detail': detail
-            })
-        except:
-            continue
-
-
-
 def status_breakdown_host():
     total_host = db.host_status.aggregate([
         {"$match": {"year": year}},
@@ -299,10 +275,9 @@ def whois_expiration():
     json.dump(last_updates, open('whois.json', 'w+'))
 
 
-# ping_error_detail()
-# whois_expiration()
 
 # create_host_status()
+
 # year = 1999
 # status_breakdown_host()
 # year = 2004

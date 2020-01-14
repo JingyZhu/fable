@@ -21,7 +21,7 @@ import config
 from utils import db_utils, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-year = 2019
+year = 2014
 NUM_THREADS = 10
 counter = 0
 
@@ -36,14 +36,12 @@ def send_request(url):
     '''
 
     resp = None
-    user_agent_dict = {
-        # the user agent
-    }
+    requests_header = {'user-agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"}
 
     # TODO: look into the fail reason in ConnectionError and find which other ones are related to DNS.
     req_failed = True
     try:
-        resp = requests.get(url, headers=user_agent_dict, timeout=15)
+        resp = requests.get(url, headers=requests_header, timeout=15)
         req_failed = False
     # Requsts timeout
     except requests.exceptions.ReadTimeout:
@@ -161,26 +159,31 @@ def test_links(q_in):
                 detail = other_error(url)
                 if msg == "Timeout" and "Ping" not in detail: errors.append(url)
                 if "DNS" in detail: status = "DNSError"
-        obj = {
-            "_id": url,
-            "url": url,
-            "hostname": hostname,
-            "year": year,
-            "status": status,
-            "detail": detail
-        }
-        objs.append(obj)
-        if len(objs) >= 100:
-            try:
-                db.url_status.insert_many(objs, ordered=False)
-            except Exception as e:
-                print(str(e))
-            objs = []
-    try:
-        db.url_status.insert_many(objs, ordered=False)
-    except:
-        pass
-    json.dump(errors, open("errors/errors_{}.json".format(socket.gethostname()), 'w+'))
+        # .Temp added
+        db.url_status.update_one({"_id": url}, {"$set": {"status": status, "detail": detail}})
+        # End
+    # Temp Commmented
+    #     obj = {
+    #         "_id": url,
+    #         "url": url,
+    #         "hostname": hostname,
+    #         "year": year,
+    #         "status": status,
+    #         "detail": detail
+    #     }
+    #     objs.append(obj)
+    #     if len(objs) >= 100:
+    #         try:
+    #             db.url_status.insert_many(objs, ordered=False)
+    #         except Exception as e:
+    #             print(str(e))
+    #         objs = []
+    # try:
+    #     db.url_status.insert_many(objs, ordered=False)
+    # except:
+    #     pass
+    # json.dump(errors, open("errors/errors_{}.json".format(socket.gethostname()), 'w+'))
+    # End 
     
 
 def sample_urls():
@@ -215,8 +218,13 @@ def collect_status():
     host_shards = hostnames[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     temp = []
     for hostname in host_shards:
-        if db.url_status.find_one({"hostname": hostname, "year": year}): continue
-        urls_list = db.url_sample.find({'hostname': hostname, 'year': year})
+        # Temp Commented
+        # if db.url_status.find_one({"hostname": hostname, "year": year}): continue
+        # urls_list = db.url_sample.find({'hostname': hostname, 'year': year})
+        # End
+        # Temp added
+        urls_list = db.url_status.find({'hostname': hostname, 'year': year, 'status': re.compile("^403")})
+        # End
         for obj in urls_list:
             temp.append((obj['url'], hostname))
     random.shuffle(temp)
