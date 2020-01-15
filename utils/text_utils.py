@@ -25,6 +25,7 @@ class TFidf:
         self.simi = cosine_similarity(self.tfidf)
 
     def __init__(self, corpus):
+        corpus = list(set(corpus))
         self.idx = {c: i for i, c in enumerate(corpus)}
         self.corpus = corpus
         self.vectorizer = TfidfVectorizer()

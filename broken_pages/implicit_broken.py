@@ -15,7 +15,7 @@ import random
 import re
 
 sys.path.append('../')
-from utils import text_utils, crawl, url_utils
+from utils import text_utils, crawl, url_utils, plot
 import config
 
 idx = config.HOSTS.index(socket.gethostname())
@@ -165,5 +165,35 @@ def host_sampling():
         db.host_sample.insert_many(hosts, ordered=False)
 
 
+def compute_broken():
+    """
+    Compute the TFidf similarity of urls with existed content
+    Update similarities to url_status
+    """
+    contents = db.url_content.find({}, {'content': True})
+    contents = [c['content'] for c in contents]
+    tfidf = text_utils.TFidf(contents)
+    available_urls = db.url_status.aggregate([
+        {"$match": {"status": re.compile('^[23]'), "similarity":{"$exist": False} }},
+        {"$lookup": {
+            "from": "url_content",
+            "localField": "_id",
+            "foreignField": "url",
+            "as": "contents"
+        }},
+        {"$match": {"contents.0": {"$exists": 1}}},
+        {"$project": {"contents.html": False, "contents._id": False}}
+    ])
+    similarities = []
+    for i, url in enumerate(available_urls):
+        content = url['contents']
+        simi = tfidf.simi(content[0]['content'], content[1]['content'])
+        similarities.append(simi)
+        db.url_status.update_one({"_id": url['_id']}, {"$set": {"similarity": simi}})
+        if i % 10000 == 0: print(i)
+    plot.plot_CDF([similarities], savefig='figs/similarities.png')
+
+
+
 if __name__ == '__main__':
-    crawl_pages_wrap(NUM_THREADS=10)
+    compute_broken()
