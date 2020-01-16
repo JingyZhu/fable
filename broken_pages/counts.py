@@ -275,26 +275,132 @@ def whois_expiration():
     json.dump(last_updates, open('whois.json', 'w+'))
 
 
+def broken_200_breakdown_host():
+    """
+    Calculate the fraction of "real broken" breakdown hosts
+    Should be run after implicit_broken.py/calculate_broken() to have similarity field in url_status
+    """
+    total = db.url_status.aggregate([
+        {"$match": {"similarity": {"$exists": True}, "year": year}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    total = list(total)[0]['count']
+    
+    match = db.url_status.aggregate([
+        {"$match": {"similarity": {"$exists": True}, "year": year}},
+        {"$match": {"similarity": {"$gte": 0.8}}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    match = list(match)[0]['count']
+    
+    broken = db.url_status.aggregate([
+        {"$match": {"similarity": {"$exists": True}, "year": year}},
+        {"$match": {"similarity": {"$lte": 0.2}}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    broken = list(broken)[0]['count']
+    
+    unsure = db.url_status.aggregate([
+        {"$match": {"similarity": {"$exists": True}, "year": year}},
+        {"$match": {"similarity": {"$gt": 0.2, "$lt": 0.8}}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    unsure = list(unsure)[0]['count']
+    print(match/total, broken/total, unsure/total, total)
 
+
+def total_broken_host():
+    """
+    Total broken rate, catagorized by:
+    Broken (4/5xx, DNSError, OtherError)
+    Not Broken (Content match)
+    Not sure (Landing Pages, content not match)
+    """
+    total = db.url_status.aggregate([
+        {"$match": {"year": year}},
+        {"$group": {"_id": "$Hostname"}},
+        {"$count": "count"}
+    ])
+    total = list(total)[0]['count']
+
+    broken = db.url_status.aggregate([
+        {"$match": {"year": year,  "$or": [
+            {"status": re.compile("^([45]|DNSError|OtherError)")},
+            {"similarity": {"$exists": True, "$lte": 0.2}}
+        ]}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    broken = list(broken)[0]['count']
+
+    fine = db.url_status.aggregate([
+        {"$match": {"similarity": {"$exists": True, "$gte": 0.8}, "year": year}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    fine = list(fine)[0]['count']
+
+    not_sure = db.url_status.aggregate([
+        {"$match": {"year": year, "$or": [
+            {"similarity": {"$exists": True, "$gt": 0.2, "$lt": 0.8}},
+            {"similarity": {"$exists": False}, "status": re.compile("^[2]")}
+        ]}},
+        {"$group": {"_id": "$hostname"}},
+        {"$count": "count"}
+    ])
+    not_sure = list(not_sure)[0]['count']
+    print(broken / total, fine / total, not_sure / total)
+
+
+def total_broken_link():
+    """
+    Total broken rate, catagorized by:
+    Broken (4/5xx, DNSError, OtherError)
+    Not Broken (Content match)
+    Not sure (Landing Pages, content not match)
+    """
+    total = db.url_status.aggregate([
+        {"$match": {"year": year}},
+        {"$count": "count"}
+    ])
+    total = list(total)[0]['count']
+
+    broken = db.url_status.aggregate([
+        {"$match": {"year": year,  "$or": [
+            {"status": re.compile("^([45]|DNSError|OtherError)")},
+            {"similarity": {"$exists": True, "$lte": 0.2}}
+        ]}},
+        {"$count": "count"}
+    ])
+    broken = list(broken)[0]['count']
+
+    fine = db.url_status.aggregate([
+        {"$match": {"similarity": {"$exists": True, "$gte": 0.8}, "year": year}},
+        {"$count": "count"}
+    ])
+    fine = list(fine)[0]['count']
+
+    not_sure = db.url_status.aggregate([
+        {"$match": {"year": year, "$or": [
+            {"similarity": {"$exists": True, "$gt": 0.2, "$lt": 0.8}},
+            {"similarity": {"$exists": False}, "status": re.compile("^[2]")}
+        ]}},
+        {"$count": "count"}
+    ])
+
+    print(broken / total, fine / total, not_sure / total)
 # create_host_status()
 
-# year = 1999
-# status_breakdown_host()
-# year = 2004
-# status_breakdown_host()
-# year = 2009
-# status_breakdown_host()
-# year = 2014
-# status_breakdown_host()
-year = 2019
-status_breakdown_host()
-# year = 1999
-# status_breakdown_links()
-# year = 2004
-# status_breakdown_links()
-# year = 2009
-# status_breakdown_links()
-# year = 2014
-# status_breakdown_links()
-year = 2019
-status_breakdown_links()
+
+years = [1999, 2004, 2009, 2014, 2019]
+for y in years:
+    year = y
+    total_broken_host()
+for y in years:
+    year = y
+    total_broken_link()
+
