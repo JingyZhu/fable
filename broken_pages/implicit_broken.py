@@ -136,14 +136,43 @@ def crawl_pages_wrap(NUM_THREADS=5):
     db.url_content.create_index([("url", pymongo.ASCENDING), ("src", pymongo.ASCENDING)], unique=True)
     db.url_content.create_index([("url", pymongo.ASCENDING)])
     q_in = queue.Queue()
-    sampled_hosts = db.host_sample.find()
-    sampled_hosts = sorted(list(sampled_hosts), key=lambda x: x['hostname'] + str(x['year']))
-    length = len(sampled_hosts)
-    sampled_hosts = sampled_hosts[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
-    urls = []
-    for sampled_host in sampled_hosts:
-        host, year = sampled_host['hostname'], sampled_host['year']
-        urls += list(db.url_status.find({"hostname": host, "year": year, "status": re.compile("^[23]")}))
+    # Temporary commented
+    # sampled_hosts = db.host_sample.find()
+    # sampled_hosts = sorted(list(sampled_hosts), key=lambda x: x['hostname'] + str(x['year']))
+    # length = len(sampled_hosts)
+    # sampled_hosts = sampled_hosts[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
+    # urls = []
+    # for sampled_host in sampled_hosts:
+    #     host, year = sampled_host['hostname'], sampled_host['year']
+    #     urls += list(db.url_status.find({"hostname": host, "year": year, "status": re.compile("^[23]")}))
+    #End
+
+    #Temporary added
+    urls = db.url_status.aggregate([
+        {"$match": {"status": re.compile("^[23]")}},
+        {"$lookup": {
+            "from": "host_sample",
+            "localField": "hostname",
+            "foreignField": "hostname",
+            "as": "in_sample"
+        }},
+        {"$match": {"in_sample.0": {"$exists": True}}},
+        {"$project": {"in_sample": False}},
+        # {"$count": "count"}
+        {"$lookup": {
+            "from": "url_content",
+            "localField": "_id",
+            "foreignField": "url",
+            "as": "contents"
+        }},
+        {"$match": {"contents.0": {"$exists": False}}},
+    ])
+    urls = list(urls)
+    urls = sorted(list(urls), key=lambda x: x['_id'] + str(x['year']))
+    length = len(urls)
+    urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
+    # End
+    
     random.shuffle(urls)
     for url in urls:
         q_in.put((url['url'], url['year']))
@@ -179,7 +208,7 @@ def compute_broken():
     tfidf = text_utils.TFidf(contents)
     print("tdidf init success!")
     available_urls = db.url_status.aggregate([
-        {"$match": {"status": re.compile('^[23]'), "similarity":{"$exist": False} }},
+        {"$match": {"status": re.compile('^[23]'), "similarity":{"$exists": False} }},
         {"$lookup": {
             "from": "url_content",
             "localField": "_id",
@@ -196,7 +225,7 @@ def compute_broken():
         similarities.append(simi)
         db.url_status.update_one({"_id": url['_id']}, {"$set": {"similarity": simi}})
         if i % 10000 == 0: print(i)
-    plot.plot_CDF([similarities], savefig='figs/similarities.png')
+    plot.plot_Scatter([similarities], savefig='fig/similarities.png')
 
 
 

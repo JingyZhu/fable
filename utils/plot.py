@@ -28,6 +28,29 @@ def plot_CDF(data, classname=[], savefig='', show=True, cut=1):
         plt.show()
 
 
+def plot_Scatter(data, classname=[], savefig='', show=True, cut=1):
+    """
+    Plot the CDF for different class
+    data should be a 2-dimensional list with each row a label
+    cut: Percent of CDF to show 1 means all
+    """
+    data = [sorted(datus) for datus in data]
+    size = [len(datus) for datus in data]
+    # data = [datus[: int(s*cut)] for datus, s in zip(data, size)]
+    if len(classname) != len(data):
+        classname = [ str(i + 1) for i in range(len(data))]
+    for datus, cn in zip(data, classname):
+        length = int(len(datus) * cut)
+        x = datus[: int(length*cut)]
+        y = [ (i + 1) / length for i in range(length)][:int(length*cut)]
+        plt.scatter(x, y, label=cn)
+    plt.legend()
+    if savefig:
+        plt.savefig(savefig)
+    elif show:
+        plt.show()
+
+
 def plot_bargroup(data, xname, barname, savefig='', show=True):
     """
     Plot grouped barplot
