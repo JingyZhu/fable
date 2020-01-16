@@ -39,10 +39,10 @@ def decide_content(html):
         except Exception as e:
             print(v, str(e))
             count += 1
+            if count >= 2: return ""
             continue
-        print(v, content, count)
         if content == '': count += 1
-        if count == 2: return ""
+        if count >= 2: return ""
         contents.append(content)
     if count > 0 and url_utils.find_link_density(html) >= 0.8: return ""
     return max(contents, key=lambda x: len(x.split()))
@@ -66,7 +66,6 @@ def get_wayback_cp(url, year):
     wayback = []
     for ts, cp in cps:
         html = crawl.requests_crawl(cp, proxies=proxy)
-        print(cp)
         if not html: continue
         content = decide_content(html)
         if content == '': continue
@@ -170,6 +169,7 @@ def crawl_pages_wrap(NUM_THREADS=5):
     urls = list(urls)
     urls = sorted(list(urls), key=lambda x: x['_id'] + str(x['year']))
     length = len(urls)
+    print(length // 4)
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     # End
     
@@ -230,4 +230,4 @@ def compute_broken():
 
 
 if __name__ == '__main__':
-    compute_broken()
+    crawl_pages_wrap(NUM_THREADS=10)
