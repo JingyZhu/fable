@@ -22,7 +22,6 @@ class TFidf:
         """
         self.vectorizer = TfidfVectorizer()
         self.tfidf = self.vectorizer.fit_transform(self.corpus)
-        self.simi = cosine_similarity(self.tfidf)
 
     def __init__(self, corpus):
         corpus = list(set(corpus))
@@ -30,7 +29,6 @@ class TFidf:
         self.corpus = corpus
         self.vectorizer = TfidfVectorizer()
         self.tfidf = self.vectorizer.fit_transform(corpus)
-        self.simi = cosine_similarity(self.tfidf)
     
     def similar(self, text1, text2):
         """
@@ -47,7 +45,8 @@ class TFidf:
             self.corpus.append(text2)
             need_reinit = True
         if need_reinit: self.re_init()
-        return self.simi[self.idx[text1], self.idx[text2]]
+        idx1, idx2 = self.idx[text1], self.idx[text2]
+        return cosine_similarity(self.tfidf[idx1].toarray(), self.tfidf[idx2].toarray())[0,0]
     
     def topN(self, text, N=5):
         """
@@ -154,14 +153,21 @@ def brotli_decompree(compressed):
     return brotli.decompress(compressed).decode()
 
 
-def goose_extract(html):
-    g = Goose()
+def goose_extract(html, lang=None):
+    if not lang:
+        g = Goose()
+    else:
+        g = Goose({'use_meta_language': False, 'target_language': lang})
     article = g.extract(raw_html=html)
+    if article.cleaned_text == "":
+        lang_code = detect_langs(html)[0].lang
+        g = Goose({'use_meta_language': False, 'target_language': lang_code})
+        article = g.extract(raw_html=html)
     return article.cleaned_text
 
 
-def justext_extract(html):
-    lang_code = detect_langs(html)[0].lang
+def justext_extract(html, lang=None):
+    lang_code = detect_langs(html)[0].lang if not lang else lang
     lang = Language.make(language=lang_code).language_name()
     try:
         stoplist = justext.get_stoplist(lang)
@@ -175,24 +181,38 @@ def justext_extract(html):
     return text
 
 
-def newspaper_extract(html):
-    article = Article('https://google.com') # Dummy urls to initialize the obj Can be anything able to wget
+def newspaper_extract(html, lang=None):
+    lang_code = detect_langs(html)[0].lang if not lang else lang
+    article = Article('https://google.com', language=lang_code) # Dummy urls to initialize the obj Can be anything able to wget
     article.download(input_html=html)
     article.parse()
     return article.text
+
+
+def lang_meta(html):
+    """
+    Grab the metadata of html
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    html = soup.find('html')
+    try:
+        return html['lang'][:2]
+    except:
+        return None
 
 
 def extract_body(html, version='justext'):
     """
     Wrapper functions for different version of html body extraction
     """
+    lang = lang_meta(html)
     if html == '': return ''
     func_dict = {
         "justext": justext_extract,
         "goose": goose_extract,
         "newspaper": newspaper_extract
     }
-    return func_dict[version](html)
+    return func_dict[version](html, lang=lang)
 
 
 def newspaper_title_extract(html):

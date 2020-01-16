@@ -40,6 +40,7 @@ def decide_content(html):
             print(v, str(e))
             count += 1
             continue
+        print(v, content, count)
         if content == '': count += 1
         if count == 2: return ""
         contents.append(content)
@@ -65,6 +66,7 @@ def get_wayback_cp(url, year):
     wayback = []
     for ts, cp in cps:
         html = crawl.requests_crawl(cp, proxies=proxy)
+        print(cp)
         if not html: continue
         content = decide_content(html)
         if content == '': continue
@@ -132,6 +134,7 @@ def crawl_pages_wrap(NUM_THREADS=5):
     Get all 2xx/3xx urls from sampled hosts
     """
     db.url_content.create_index([("url", pymongo.ASCENDING), ("src", pymongo.ASCENDING)], unique=True)
+    db.url_content.create_index([("url", pymongo.ASCENDING)])
     q_in = queue.Queue()
     sampled_hosts = db.host_sample.find()
     sampled_hosts = sorted(list(sampled_hosts), key=lambda x: x['hostname'] + str(x['year']))
@@ -172,7 +175,9 @@ def compute_broken():
     """
     contents = db.url_content.find({}, {'content': True})
     contents = [c['content'] for c in contents]
+    print("Got contents")
     tfidf = text_utils.TFidf(contents)
+    print("tdidf init success!")
     available_urls = db.url_status.aggregate([
         {"$match": {"status": re.compile('^[23]'), "similarity":{"$exist": False} }},
         {"$lookup": {
@@ -187,7 +192,7 @@ def compute_broken():
     similarities = []
     for i, url in enumerate(available_urls):
         content = url['contents']
-        simi = tfidf.simi(content[0]['content'], content[1]['content'])
+        simi = tfidf.similar(content[0]['content'], content[1]['content'])
         similarities.append(simi)
         db.url_status.update_one({"_id": url['_id']}, {"$set": {"similarity": simi}})
         if i % 10000 == 0: print(i)
