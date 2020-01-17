@@ -455,6 +455,51 @@ def total_broken_link():
 # create_host_status()
 
 
+def status_200_broken_frac_host():
+    """
+    Calculate fraction of broken links for different 200 details
+    Only for urls with similarity
+    """
+    data = [[] for _ in range(3)] # status, frac
+    no_redirection = db.url_status_implicit_broken.aggregate([
+        {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "no redirection"}},
+    ])
+    length, broken, good, unsure = 0, 0, 0, 0
+    for length, url in enumerate(no_redirection):
+        if url['similarity'] >= 0.8: good += 1
+        elif url['similarity'] <= 0.2: broken += 1
+        else: unsure += 1
+    length += 1
+    print(broken / length, unsure / length, good / length)
+    data[0] = [broken / length, unsure / length, good / length]
+
+    homepage = db.url_status_implicit_broken.aggregate([
+        {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "homepage redirection"}}
+    ])
+    length, broken, good, unsure = 0, 0, 0, 0
+    for length, url in enumerate(homepage):
+        if url['similarity'] >= 0.8: good += 1
+        elif url['similarity'] <= 0.2: broken += 1
+        else: unsure += 1
+    length += 1
+    print(broken / length, unsure / length, good / length)
+    data[1] = [broken / length, unsure / length, good / length]
+
+    non_homepage = db.url_status_implicit_broken.aggregate([
+        {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "non-home redirection"}}
+    ])
+    length, broken, good, unsure = 0, 0, 0, 0
+    for length, url in enumerate(non_homepage):
+        if url['similarity'] >= 0.8: good += 1
+        elif url['similarity'] <= 0.2: broken += 1
+        else: unsure += 1
+    length += 1
+    print(broken / length, unsure / length, good / length)
+    data[2] = [broken / length, unsure / length, good / length]
+    
+    return data
+
+
 def status_200_broken_frac_link():
     """
     Calculate fraction of broken links for different 200 details
@@ -511,4 +556,11 @@ def status_200_broken_frac_link():
 #     no_redir[0] = 
 
 if __name__ == '__main__':
-    pass
+    # create_url_status_implicit_broken()
+    years = [1999, 2004, 2009, 2014, 2019]
+    for y in years:
+        year = y
+        total_broken_host()
+    for y in years:
+        year = y
+        total_broken_link()

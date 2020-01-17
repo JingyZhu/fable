@@ -151,8 +151,13 @@ def crawl_pages_wrap(NUM_THREADS=5):
         {"$match": {"status": re.compile("^[23]")}},
         {"$lookup": {
             "from": "host_sample",
-            "localField": "hostname",
-            "foreignField": "hostname",
+            "let": {"hostname": "$hostname", "year": "$year"},
+            "pipeline": [
+                {"$match": {"$expr": {"$and": [
+                    {"$eq": ["$hostname", "$$hostname"]},
+                    {"$eq": ["$year", "$$year"]}
+                ]}}}
+            ],
             "as": "in_sample"
         }},
         {"$match": {"in_sample.0": {"$exists": True}}},

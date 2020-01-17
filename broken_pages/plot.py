@@ -49,6 +49,7 @@ def frac_DNS_links():
     plt.savefig('fig/dns_frac.png')
 
 
+
 def frac_200_broken_links():
     """
     Plot 3 stack barplots of fraction of good, broken, unsure

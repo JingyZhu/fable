@@ -8,6 +8,7 @@ from langcodes import Language
 from langdetect import detect_langs
 from goose3 import Goose
 from newspaper import Article
+from boilerpipe.extract import Extractor
 import brotli
 from bs4 import BeautifulSoup
 from dateutil import parser as dparser
@@ -189,6 +190,11 @@ def newspaper_extract(html, lang=None):
     return article.text
 
 
+def boilerpipe_extract(html, lang=None):
+    extractor = Extractor(extractor="ArticleExtractor", html=html)
+    return extractor.getText()
+
+
 def lang_meta(html):
     """
     Grab the metadata of html
@@ -210,7 +216,8 @@ def extract_body(html, version='justext'):
     func_dict = {
         "justext": justext_extract,
         "goose": goose_extract,
-        "newspaper": newspaper_extract
+        "newspaper": newspaper_extract,
+        "boilerpipe": boilerpipe_extract
     }
     return func_dict[version](html, lang=lang)
 
