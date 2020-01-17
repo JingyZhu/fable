@@ -61,7 +61,8 @@ Unique on (url + year)
     "hostname": "string",
     "year": ["int"],
     "status": "status (2/3/4/5xx / DNS / Other)",
-    "detail": "string"
+    "detail": "string",
+    "(similarity)": "TF-IDF similarity of page on liveweb vs. wayback machine"
 }
 ```
 
@@ -107,3 +108,8 @@ Sample host which contains 2xx/3xx status code
     "year": "int"
 }
 ```
+
+### url_status_implicit_broken
+The joined results between url_status and host_sample \
+In other word, all urls in url_status which hostname is sampled in host_sample\
+Format: Same as url_status

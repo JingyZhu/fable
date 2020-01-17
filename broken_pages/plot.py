@@ -2,6 +2,7 @@ from matplotlib import pyplot as plt
 import sys
 from pymongo import MongoClient
 import re
+import counts
 
 sys.path.append('../')
 from utils import plot
@@ -47,4 +48,36 @@ def frac_DNS_links():
     plt.title("#urls has DNSError")
     plt.savefig('fig/dns_frac.png')
 
-frac_DNS_links()
+
+def frac_200_broken_links():
+    """
+    Plot 3 stack barplots of fraction of good, broken, unsure
+    in terms of no redir, homepage, non-homepage
+    """
+    years = [1999, 2004, 2009, 2014, 2019]
+    total_data = [[[] for _ in range(3)] for _ in range(3)]
+    no_redir, homepage, nonhome = total_data
+    for y in years:
+        counts.year = y
+        data = counts.status_200_broken_frac_link()
+        for i in range(3):
+            for j in range(3):
+                total_data[i][j].append(data[i][j])
+    years = [str(y) for y in years]
+    plot.plot_stacked_bargroup(no_redir, xname=years, stackname=['Broken', "Unsure", "Good"], show=False)
+    plt.ylabel("Fraction")
+    plt.title("Breakdown for no redirection urls")
+    plt.savefig('fig/noredir_links.png')
+    plt.close()
+    plot.plot_stacked_bargroup(homepage, xname=years, stackname=['Broken', "Unsure", "Good"], show=False)
+    plt.ylabel("Fraction")
+    plt.title("Breakdown for homepage redirection urls")
+    plt.savefig('fig/homepage_links.png')
+    plt.close()
+    plot.plot_stacked_bargroup(nonhome, xname=years, stackname=['Broken', "Unsure", "Good"], show=False)
+    plt.ylabel("Fraction")
+    plt.title("Breakdown for non-homepage redirection urls")
+    plt.savefig('fig/nonhome_links.png')
+    plt.close()
+
+frac_200_broken_links()

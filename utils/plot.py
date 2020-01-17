@@ -55,8 +55,8 @@ def plot_bargroup(data, xname, barname, savefig='', show=True):
     """
     Plot grouped barplot
     data should be a N*K array. N: number of barnanme, K: number of x labels
-    xname: name of xaxis categories (put together one)
-    barname: name of groups 
+    xname: name of xaxis categories (put together one) size K
+    barname: name of groups (size N)
     """
     barWidth = 1/ (len(data) + 1)
     # Set position of bar on X axis
@@ -81,3 +81,33 @@ def plot_bargroup(data, xname, barname, savefig='', show=True):
     elif show:
         plt.show()
 
+
+def plot_stacked_bargroup(data, xname, stackname, savefig='', show=True):
+    """
+    Plot Stacked grouped barplot
+    data should be a S*K array. S: number of stack, K: number of x labels
+    xname: name of xaxis categories (put together one) size K
+    stackname: name of groups (size K)
+    """
+    # Set position of bar on X axis
+
+    S = len(data)
+    K = len(data[0])
+    zeros = [0 for _ in range(K)]
+    data.insert(0, zeros)
+    sums = [np.sum(data[:i], axis=0).tolist() for i in range(1, S+1)] # bottom requires total height
+
+    for idx, sn,summ in zip(range(1, S+1), stackname, sums):
+        datus = data[idx]
+        plt.bar(xname, datus, bottom=summ, label=sn, width=0.5)
+    
+    # Add xticks on the middle of the group bars
+    plt.xlabel('years', fontweight='bold')
+    
+    # Create legend & Show graphic
+    plt.legend()
+    if savefig:
+        plt.savefig(savefig)
+        plt.close()
+    elif show:
+        plt.show()
