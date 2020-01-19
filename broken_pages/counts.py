@@ -279,9 +279,9 @@ def create_url_status_implicit_broken():
     """
     Creating collection for url_status_implicit_broken
     """
-    urls = db.url_status.aggregate([
+    urls = db.host_sample.aggregate([
         {"$lookup": {
-            "from": "host_sample",
+            "from": "url_status",
             "let": {"hostname": "$hostname", "year": "$year"},
             "pipeline": [
                 {"$match": {"$expr": {"$and": [
@@ -292,7 +292,8 @@ def create_url_status_implicit_broken():
             "as": "in_sample"
         }},
         {"$match": {"in_sample.0": {"$exists": True}}},
-        {"$project": {"in_sample": False}},
+        {"$unwind": "$in_sample"},
+        {"$replaceRoot": { "newRoot": "$in_sample"} }
     ])
     db.url_status_implicit_broken.insert_many(list(urls), ordered=False)
 
@@ -445,7 +446,7 @@ def total_broken_link():
     not_sure = db.url_status_implicit_broken.aggregate([
         {"$match": {"year": year, "$or": [
             {"similarity": {"$exists": True, "$gt": 0.2, "$lt": 0.8}},
-            {"similarity": {"$exists": False}, "status": re.compile("^[2]")}
+            {"similarity": {"$exists": False}, "status": re.compile("^[23]")}
         ]}},
         {"$count": "count"}
     ])
@@ -556,11 +557,4 @@ def status_200_broken_frac_link():
 #     no_redir[0] = 
 
 if __name__ == '__main__':
-    # create_url_status_implicit_broken()
-    years = [1999, 2004, 2009, 2014, 2019]
-    for y in years:
-        year = y
-        total_broken_host()
-    for y in years:
-        year = y
-        total_broken_link()
+    create_url_status_implicit_broken()

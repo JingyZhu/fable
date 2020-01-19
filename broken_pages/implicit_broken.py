@@ -48,6 +48,11 @@ def decide_content(html):
     return max(contents, key=lambda x: len(x.split()))
 
 
+def decide_content_alt(html):
+    if url_utils.find_link_density(html) >= 0.8: return ""
+    return text_utils.extract_body(html, version='boilerpipe')
+
+
 def get_wayback_cp(url, year):
     """
     Get multiple wayback's copies in each year if possible.
@@ -67,7 +72,7 @@ def get_wayback_cp(url, year):
     for ts, cp in cps:
         html = crawl.requests_crawl(cp, proxies=proxy)
         if not html: continue
-        content = decide_content(html)
+        content = decide_content_alt(html)
         if content == '': continue
         wayback.append((ts, html, content))
     if len(wayback) == 0: return
@@ -91,7 +96,7 @@ def crawl_pages(q_in):
         ts, wm_html, wm_content = wayback_cp
         rw_html = crawl.requests_crawl(url)
         if not rw_html: rw_html = ''
-        rw_content = decide_content(rw_html)
+        rw_content = decide_content_alt(rw_html)
         rw_obj = {
             "url": url,
             "src": "realweb",
@@ -147,10 +152,9 @@ def crawl_pages_wrap(NUM_THREADS=5):
     #End
 
     #Temporary added
-    urls = db.url_status.aggregate([
-        {"$match": {"status": re.compile("^[23]")}},
+    urls = db.host_sample.aggregate([
         {"$lookup": {
-            "from": "host_sample",
+            "from": "url_status",
             "let": {"hostname": "$hostname", "year": "$year"},
             "pipeline": [
                 {"$match": {"$expr": {"$and": [
@@ -161,7 +165,9 @@ def crawl_pages_wrap(NUM_THREADS=5):
             "as": "in_sample"
         }},
         {"$match": {"in_sample.0": {"$exists": True}}},
-        {"$project": {"in_sample": False}},
+        {"$unwind": "$in_sample"},
+        {"$replaceRoot": { "newRoot": "$in_sample"} },
+        {"$match": {"status": re.compile("^[23]")}},
         # {"$count": "count"}
         {"$lookup": {
             "from": "url_content",
@@ -212,8 +218,8 @@ def compute_broken():
     print("Got contents")
     tfidf = text_utils.TFidf(contents)
     print("tdidf init success!")
-    available_urls = db.url_status.aggregate([
-        {"$match": {"status": re.compile('^[23]'), "similarity":{"$exists": False} }},
+    available_urls = db.url_status_implicit_broken.aggregate([
+        {"$match": {"status": re.compile('^[23]') }},
         {"$lookup": {
             "from": "url_content",
             "localField": "_id",
@@ -223,12 +229,14 @@ def compute_broken():
         {"$match": {"contents.0": {"$exists": 1}}},
         {"$project": {"contents.html": False, "contents._id": False}}
     ])
+    available_urls = list(available_urls)
+    print("Total:", len(available_urls))
     similarities = []
     for i, url in enumerate(available_urls):
         content = url['contents']
         simi = tfidf.similar(content[0]['content'], content[1]['content'])
         similarities.append(simi)
-        db.url_status.update_one({"_id": url['_id']}, {"$set": {"similarity": simi}})
+        db.url_status_implicit_broken.update_one({"_id": url['_id']}, {"$set": {"similarity": simi}})
         if i % 10000 == 0: print(i)
     plot.plot_Scatter([similarities], savefig='fig/similarities.png')
 
