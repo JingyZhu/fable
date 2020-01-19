@@ -559,9 +559,21 @@ def status_200_broken_frac_link():
     year = prev_year
     stackname = ['broken', 'unsure', 'good']
 
-    plot.plot_stacked_bargroup(no_redir, xname=years, stackname=stackname, savefig='fig/noredir_links.png')
-    plot.plot_stacked_bargroup(homepage, xname=years, stackname=stackname, savefig='fig/homepage_links.png')
-    plot.plot_stacked_bargroup(nonhome, xname=years, stackname=stackname, savefig='fig/nonhome_links.png')
+    plot.plot_stacked_bargroup(no_redir, xname=years, stackname=stackname, show=False)
+    plt.ylabel('Fraction')
+    plt.title('Breakdown for no redirection urls')
+    plt.savefig('fig/noredir_links.png')
+    plt.close()
+    plot.plot_stacked_bargroup(homepage, xname=years, stackname=stackname, show=False)
+    plt.ylabel('Fraction')
+    plt.title('Breakdown for homepage redirection urls')
+    plt.savefig('fig/homepage_links.png')
+    plt.close()
+    plot.plot_stacked_bargroup(nonhome, xname=years, stackname=stackname, show=False)
+    plt.ylabel('Fraction')
+    plt.title('Breakdown for non-homepage redirection urls')
+    plt.savefig('fig/nonhome_links.png')
+    plt.close()
 
 
 # # for y in years:
