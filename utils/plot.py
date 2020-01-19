@@ -90,7 +90,8 @@ def plot_stacked_bargroup(data, xname, stackname, savefig='', show=True):
     stackname: name of groups (size K)
     """
     # Set position of bar on X axis
-
+    
+    if isinstance(data, np.ndarray): data = data.tolist()
     S = len(data)
     K = len(data[0])
     zeros = [0 for _ in range(K)]

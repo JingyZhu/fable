@@ -11,6 +11,7 @@ from collections import defaultdict, Counter
 import matplotlib.pyplot as plt
 import whois
 import datetime
+import numpy as np
 
 sys.path.append('../')
 import config
@@ -505,48 +506,64 @@ def status_200_broken_frac_link():
     """
     Calculate fraction of broken links for different 200 details
     Only for urls with similarity
+    Plot stacked bar plots
+
+    Return: data[0]: noredir, data[1]: homepage, data[2]: non-homepage
     """
-    data = [[] for _ in range(3)] # status, frac
-    no_redirection = db.url_status_implicit_broken.aggregate([
-        {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "no redirection"}}
-    ])
-    length, broken, good, unsure = 0, 0, 0, 0
-    for length, url in enumerate(no_redirection):
-        if url['similarity'] >= 0.8: good += 1
-        elif url['similarity'] <= 0.2: broken += 1
-        else: unsure += 1
-    length += 1
-    print(broken / length, unsure / length, good / length)
-    data[0] = [broken / length, unsure / length, good / length]
+    global year
+    prev_year = year
+    years = [1999, 2004, 2009, 2014, 2019]
+    no_redir, homepage, nonhome = None, None, None
 
-    homepage = db.url_status_implicit_broken.aggregate([
-        {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "homepage redirection"}}
-    ])
-    length, broken, good, unsure = 0, 0, 0, 0
-    for length, url in enumerate(homepage):
-        if url['similarity'] >= 0.8: good += 1
-        elif url['similarity'] <= 0.2: broken += 1
-        else: unsure += 1
-    length += 1
-    print(broken / length, unsure / length, good / length)
-    data[1] = [broken / length, unsure / length, good / length]
+    for year in years:
+        no_redirection = db.url_status_implicit_broken.aggregate([
+            {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "no redirection"}}
+        ])
+        length, broken, good, unsure = 0, 0, 0, 0
+        for length, url in enumerate(no_redirection):
+            if url['similarity'] >= 0.8: good += 1
+            elif url['similarity'] <= 0.2: broken += 1
+            else: unsure += 1
+        length += 1
+        print(broken / length, unsure / length, good / length)
+        datus = [[broken / length], [unsure / length], [good / length]]
+        no_redir = np.array(datus) if no_redir is None else np.hstack((no_redir, datus))
 
-    non_homepage = db.url_status_implicit_broken.aggregate([
-        {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "non-home redirection"}}
-    ])
-    length, broken, good, unsure = 0, 0, 0, 0
-    for length, url in enumerate(non_homepage):
-        if url['similarity'] >= 0.8: good += 1
-        elif url['similarity'] <= 0.2: broken += 1
-        else: unsure += 1
-    length += 1
-    print(broken / length, unsure / length, good / length)
-    data[2] = [broken / length, unsure / length, good / length]
+        homepage_redir = db.url_status_implicit_broken.aggregate([
+            {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "homepage redirection"}}
+        ])
+        length, broken, good, unsure = 0, 0, 0, 0
+        for length, url in enumerate(homepage_redir):
+            if url['similarity'] >= 0.8: good += 1
+            elif url['similarity'] <= 0.2: broken += 1
+            else: unsure += 1
+        length += 1
+        print(broken / length, unsure / length, good / length)
+        datus = [[broken / length], [unsure / length], [good / length]]
+        homepage = np.array(datus) if homepage is None else np.hstack((homepage, datus))
+
+        non_homepage = db.url_status_implicit_broken.aggregate([
+            {"$match": {"year": year, "similarity": {"$exists": True}, "detail": "non-home redirection"}}
+        ])
+        length, broken, good, unsure = 0, 0, 0, 0
+        for length, url in enumerate(non_homepage):
+            if url['similarity'] >= 0.8: good += 1
+            elif url['similarity'] <= 0.2: broken += 1
+            else: unsure += 1
+        length += 1
+        print(broken / length, unsure / length, good / length)
+        datus = [[broken / length], [unsure / length], [good / length]]
+        nonhome = np.array(datus) if nonhome is None else np.hstack((nonhome, datus))
     
-    return data
+    years = [str(y) for y in years]
+    year = prev_year
+    stackname = ['broken', 'unsure', 'good']
+
+    plot.plot_stacked_bargroup(no_redir, xname=years, stackname=stackname, savefig='fig/noredir_links.png')
+    plot.plot_stacked_bargroup(homepage, xname=years, stackname=stackname, savefig='fig/homepage_links.png')
+    plot.plot_stacked_bargroup(nonhome, xname=years, stackname=stackname, savefig='fig/nonhome_links.png')
 
 
-# years = [1999, 2004, 2009, 2014, 2019]
 # # for y in years:
 # #     year = y
 # #     broken_200_breakdown_host()
@@ -557,4 +574,9 @@ def status_200_broken_frac_link():
 #     no_redir[0] = 
 
 if __name__ == '__main__':
-    create_url_status_implicit_broken()
+    years = [1999, 2004, 2009, 2014, 2019]
+    no_redir, homepage, nonhome = [[[] for _ in range(3)] for _ in range(3)]
+        # broken_200_breakdown_host()
+        # total_broken_link()
+    status_200_broken_frac_link()
+    
