@@ -179,4 +179,5 @@ def requests_crawl(url, timeout=20, sleep=True, html=True, proxies={}):
     content_type = headers['content-type'] if 'content-type' in headers else ''
     if html and 'html' not in content_type:
         return
+    r.encoding = r.apparent_encoding
     return r.text

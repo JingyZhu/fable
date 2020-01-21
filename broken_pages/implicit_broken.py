@@ -140,18 +140,6 @@ def crawl_pages_wrap(NUM_THREADS=5):
     db.url_content.create_index([("url", pymongo.ASCENDING), ("src", pymongo.ASCENDING)], unique=True)
     db.url_content.create_index([("url", pymongo.ASCENDING)])
     q_in = queue.Queue()
-    # Temporary commented
-    # sampled_hosts = db.host_sample.find()
-    # sampled_hosts = sorted(list(sampled_hosts), key=lambda x: x['hostname'] + str(x['year']))
-    # length = len(sampled_hosts)
-    # sampled_hosts = sampled_hosts[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
-    # urls = []
-    # for sampled_host in sampled_hosts:
-    #     host, year = sampled_host['hostname'], sampled_host['year']
-    #     urls += list(db.url_status.find({"hostname": host, "year": year, "status": re.compile("^[23]")}))
-    #End
-
-    #Temporary added
     urls = db.host_sample.aggregate([
         {"$lookup": {
             "from": "url_status",
@@ -182,7 +170,6 @@ def crawl_pages_wrap(NUM_THREADS=5):
     length = len(urls)
     print(length // 4)
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
-    # End
     
     random.shuffle(urls)
     for url in urls:

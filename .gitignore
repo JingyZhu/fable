@@ -11,3 +11,4 @@ logs/
 */json/
 
 temp.py
+broken_pages/*.yaml

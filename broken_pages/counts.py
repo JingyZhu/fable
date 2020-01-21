@@ -587,8 +587,9 @@ def status_200_broken_frac_link():
 
 if __name__ == '__main__':
     years = [1999, 2004, 2009, 2014, 2019]
-    no_redir, homepage, nonhome = [[[] for _ in range(3)] for _ in range(3)]
-        # broken_200_breakdown_host()
-        # total_broken_link()
+    # for year in years:
+    #     total_broken_host()
+    # for year in years:
+    #     total_broken_link()
     status_200_broken_frac_link()
     
