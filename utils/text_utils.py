@@ -29,11 +29,12 @@ except:
 
 def localserver_proc():
     tmp_path = join(dirname(__file__), '../', 'tmp')
+    cur_path = dirname(__file__)
     call(['mkdir', '-p', tmp_path)])
-
+    call(['cp', join(cur_path, 'domdistiller.js'), tmp_path)])
     port_occupied = re.compile.match(check_output(['netstat', '-nltp']), ":{}".format(config.LOCALSERVER_PORT))
     if not port_occupied:
-        Popen(['http-server', '-a', 'localhost', '-p', str(config.LOCALSERVER_PORT, tmp_path)])
+        Popen(['http-server', '-a', 'localhost', '-p', str(config.LOCALSERVER_PORT), tmp_path])
 
 proc = mp.Process(target=localserver_proc)
 proc.start()
