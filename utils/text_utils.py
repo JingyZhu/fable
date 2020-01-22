@@ -14,9 +14,9 @@ from bs4 import BeautifulSoup
 from dateutil import parser as dparser
 from dateparser.search import search_dates
 import dateparser, difflib
-from os.path import join, dirname
+from os.path import join, dirname, abspath
 from subprocess import call, Popen, check_output
-import re
+import re, os, time
 import sys
 import multiprocessing as mp
 
@@ -26,18 +26,25 @@ try:
 except:
     print("No config.py, Specify you own port")
 
+tmp_path = join(dirname(__file__), '../', 'tmp')
 
-def localserver_proc():
-    tmp_path = join(dirname(__file__), '../', 'tmp')
+PORT = config.LOCALSERVER_PORT # If no config.py, modify to self chosen port
+
+def localserver(PORT):
+    """
+    Create tmp dir at $PROJ_HOME, copy domdistiller.js into the repo
+    Serve a local server at port if it not occupied by any others
+    """
     cur_path = dirname(__file__)
-    call(['mkdir', '-p', tmp_path)])
-    call(['cp', join(cur_path, 'domdistiller.js'), tmp_path)])
-    port_occupied = re.compile.match(check_output(['netstat', '-nltp']), ":{}".format(config.LOCALSERVER_PORT))
-    if not port_occupied:
-        Popen(['http-server', '-a', 'localhost', '-p', str(config.LOCALSERVER_PORT), tmp_path])
+    call(['mkdir', '-p', tmp_path])
+    call(['cp', join(cur_path, 'domdistiller.js'), tmp_path])
+    port_occupied = re.compile(":{}".format(PORT)).findall(check_output(['netstat', '-nlt']).decode())
+    if len(port_occupied) <= 0:
+        Popen(['http-server', '-a', 'localhost', '-p', str(PORT), '-s', tmp_path])
+    else:
+        print("Port {} occupied by other process: {}".format(PORT))
 
-proc = mp.Process(target=localserver_proc)
-proc.start()
+localserver(PORT)
 
 class TFidf:
     def re_init(self):
@@ -218,6 +225,37 @@ def boilerpipe_extract(html, lang=None):
     return extractor.getText()
 
 
+def domdistiller_extract(html, lang=None):
+    """
+    Insert domdistiller js into the html
+    Filter out all src / href except for css
+    Write Page into $PROJ_HOME/tmp with pid+ts
+    Run chrome to load the page
+    Call org.chromium.distiller to get the content 
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    for tag in soup.find_all('', {'src': True}):
+        del(tag.attrs['src'])
+
+    new_script = soup.new_tag('script')
+    new_script.attrs.update({
+        'src': "http://localhost:{}/domdistiller.js".format(config.LOCALSERVER_PORT),
+        'type': 'text/javascript',
+        'language': 'javascript'
+    })
+    soup.head.append(new_script)
+    
+    html_id = "{}_{}.html".format(int(time.time()), os.getpid())
+    html_file = join(tmp_path, html_id)
+    file = open(html_file, 'w+')
+    file.write(str(soup))
+    url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
+    call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_id])
+    content = open(file, 'r').read()
+    os.remove(file)
+    return content
+
+
 def lang_meta(html):
     """
     Grab the metadata of html
@@ -240,7 +278,8 @@ def extract_body(html, version='justext'):
         "justext": justext_extract,
         "goose": goose_extract,
         "newspaper": newspaper_extract,
-        "boilerpipe": boilerpipe_extract
+        "boilerpipe": boilerpipe_extract,
+        "domdistiller": domdistiller_extract
     }
     return func_dict[version](html, lang=lang)
 
@@ -267,3 +306,9 @@ def extract_title(html, version='mine'):
         "mine": mine_title_extract
     }
     return func_dict[version](html)
+
+
+def exit():
+    global server
+    server.terminate()
+    server.kill()

@@ -11,6 +11,7 @@ from subprocess import call
 from pymongo import MongoClient
 from bs4 import BeautifulSoup
 import random
+import matplotlib.pyplot as plt
 
 sys.path.append('../')
 import config
@@ -224,7 +225,10 @@ def performance():
         t10 = max(t10) if len(t10) > 0 else 0
         top5.append(t5)
         top10.append(t10)
-    plot.plot_CDF([top5, top10], classname=['top5', 'top10'], show=False, savefig='fig/search_perf.png')
+    plot.plot_CDF([top5, top10], classname=['top5', 'top10'], show=False)
+    plt.xlabel("Pages")
+    plt.ylabel("Similarity")
+    plt.title("Search result similarities")
 
 
 if __name__ == '__main__':

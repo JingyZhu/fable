@@ -100,7 +100,7 @@ def plot_stacked_bargroup(data, xname, stackname, savefig='', show=True):
 
     for idx, sn,summ in zip(range(1, S+1), stackname, sums):
         datus = data[idx]
-        plt.bar(xname, datus, bottom=summ, label=sn, width=0.5)
+        plt.bar(xname, datus, bottom=sum˜m, label=sn, width=0.5)
     
     # Add xticks on the middle of the group bars
     plt.xlabel('years', fontweight='bold')
