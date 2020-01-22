@@ -13,8 +13,30 @@ import brotli
 from bs4 import BeautifulSoup
 from dateutil import parser as dparser
 from dateparser.search import search_dates
-import dateparser
-import difflib
+import dateparser, difflib
+from os.path import join, dirname
+from subprocess import call, Popen, check_output
+import re
+import sys
+import multiprocessing as mp
+
+sys.path.append('../')
+try:
+    import config
+except:
+    print("No config.py, Specify you own port")
+
+
+def localserver_proc():
+    tmp_path = join(dirname(__file__), '../', 'tmp')
+    call(['mkdir', '-p', tmp_path)])
+
+    port_occupied = re.compile.match(check_output(['netstat', '-nltp']), ":{}".format(config.LOCALSERVER_PORT))
+    if not port_occupied:
+        Popen(['http-server', '-a', 'localhost', '-p', str(config.LOCALSERVER_PORT, tmp_path)])
+
+proc = mp.Process(target=localserver_proc)
+proc.start()
 
 class TFidf:
     def re_init(self):

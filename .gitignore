@@ -9,6 +9,7 @@ logs/
 *.html
 *.json
 */json/
+tmp/
 
 temp.py
 broken_pages/*.yaml

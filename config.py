@@ -7,6 +7,9 @@ import os
 
 MONGO_HOSTNAME='redwings.eecs.umich.edu'
 
+LOCALSERVER_PORT=24680
+
+
 if not os.path.exists(os.path.join(os.path.dirname(__file__), 'config.yml')):
     print("No config yaml file find")
 else:
