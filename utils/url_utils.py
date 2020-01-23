@@ -23,11 +23,11 @@ class HostExtractor:
         return self.psl.get_public_suffix(hostname)
 
 
-def filter_separator(string):
-    separator = [' ', '\n']
-    for sep in separator:
-        string = string.replace(sep, '')
-    return string
+def get_num_words(string):
+    filter_str = ['', '\n', ' ']
+    string_list = string.split()
+    string_list = list(filter(lambda x: x not in filter_str, string_list))
+    return ' '.join(string_list)
 
 
 def find_link_density(html):
@@ -39,11 +39,11 @@ def find_link_density(html):
     for tag in filter_tags:
         for element in soup.findAll(tag):
             element.decompose()
-    total_text = filter_separator(soup.get_text())
+    total_text = get_num_words(soup.get_text(separator=' '))
     total_length = len(total_text)
     atag_length = 0
     for atag in soup.findAll('a'):
-        atag_text = filter_separator(atag.get_text())
+        atag_text = get_num_words(atag.get_text())
         atag_length += len(atag_text)
     return atag_length / total_length if total_length != 0 else 0
 

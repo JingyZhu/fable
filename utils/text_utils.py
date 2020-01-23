@@ -21,12 +21,15 @@ import sys
 import multiprocessing as mp
 
 sys.path.append('../')
+from utils import url_utils
 try:
     import config
 except:
     print("No config.py, Specify you own port")
 
-tmp_path = join(dirname(__file__), '../', 'tmp')
+tmp_path = join(dirname(abspath(__file__)), '../', 'tmp')
+
+NULL = open('/dev/null', 'w')
 
 PORT = config.LOCALSERVER_PORT # If no config.py, modify to self chosen port
 
@@ -40,7 +43,7 @@ def localserver(PORT):
     call(['cp', join(cur_path, 'domdistiller.js'), tmp_path])
     port_occupied = re.compile(":{}".format(PORT)).findall(check_output(['netstat', '-nlt']).decode())
     if len(port_occupied) <= 0:
-        Popen(['http-server', '-a', 'localhost', '-p', str(PORT), '-s', tmp_path])
+        Popen(['http-server', '-a', 'localhost', '-p', str(PORT), tmp_path], stdout=NULL, stderr=NULL)
     else:
         print("Port {} occupied by other process: {}".format(PORT))
 
@@ -250,9 +253,22 @@ def domdistiller_extract(html, lang=None):
     file = open(html_file, 'w+')
     file.write(str(soup))
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
-    call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_id])
-    content = open(file, 'r').read()
-    os.remove(file)
+    call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file])
+    content = open(html_file, 'r').read()
+    os.remove(html_file)
+    soup = BeautifulSoup(content, 'html.parser')
+
+    filter_tags = ['style', 'script', 'link', 'meta']
+    for tag in filter_tags:
+        for element in soup.findAll(tag):
+            element.decompose()
+
+    content = soup.get_text(separator=' ')
+    filter_str = ['\n', ' ']
+    for s in filter_str:
+        string_list = content.split(s)
+        string_list = list(filter(lambda x: x != s, string_list))
+        content = s.join(string_list)
     return content
 
 

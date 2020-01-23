@@ -15,12 +15,12 @@ const argv = require('yargs').argv;
 
 
 
-async function writeHTML(Runtime, filename) {
+async function writeContent(Runtime, filename) {
     const result = await Runtime.evaluate({
-        expression: 'document.documentElement.outerHTML'
+        expression: 'org.chromium.distiller.DomDistiller.apply()[2][1]'
     });
-    const html = result.result.value;
-    fs.writeFileSync(filename , html);
+    const content = result.result.value;
+    fs.writeFileSync(filename, content);
 }
 
 async function startChrome(){
@@ -45,12 +45,10 @@ async function startChrome(){
 
 (async function(){
     const chrome = await startChrome();
-    let filename = argv.filename != undefined ? argv.filename : "temp"
-    htmlname = `${filename}.html`;
+    let filename = argv.filename
 
     let screenshot = argv.screenshot; 
     
-    fs.writeFileSync(htmlname, chrome.pid);
     const client = await CDP({port: chrome.port});
     const { Network, Page, Security, Runtime} = client;
     // console.log(Security);
@@ -65,11 +63,7 @@ async function startChrome(){
         await Page.navigate({ url: process.argv[2] });
         await Page.loadEventFired();
 
-        let obj = await Runtime.evaluate({expression: 'org.chromium.distiller.DomDistiller.apply()[2][1]'})
-
-        console.log(obj)
-
-        await writeHTML(Runtime, htmlname);
+        await writeContent(Runtime, filename);
 
     } catch (err) {
         console.error(err);
