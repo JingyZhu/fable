@@ -255,10 +255,11 @@ def domdistiller_extract(html, lang=None):
     else:
         soup.insert(1, new_script)
     
-    html_id = "{}_{}.html".format(int(time.time()), os.getpid())
+    html_id = "{}_{}.html".format(time.time(), os.getpid())
     html_file = join(tmp_path, html_id)
     file = open(html_file, 'w+')
     file.write(str(soup))
+    file.close()
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file])
     content = open(html_file, 'r').read()

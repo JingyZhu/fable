@@ -163,7 +163,7 @@ def requests_crawl(url, timeout=20, sleep=True, html=True, proxies={}):
     html: Only return html if set to true
     sleep: Will sleep if get block
     """
-    requests_header = {'user-agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"}
+    requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
     while True:
         try:
             r = requests.get(url, timeout=timeout, proxies=proxies, headers=requests_header)
