@@ -239,6 +239,10 @@ def domdistiller_extract(html, lang=None):
     soup = BeautifulSoup(html, 'html.parser')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
+    filter_tags = ['script', 'link']
+    for tag in filter_tags:
+        for element in soup.find_all(tag):
+            element.decompose()
 
     new_script = soup.new_tag('script')
     new_script.attrs.update({
@@ -246,7 +250,10 @@ def domdistiller_extract(html, lang=None):
         'type': 'text/javascript',
         'language': 'javascript'
     })
-    soup.head.append(new_script)
+    if soup.head:
+        soup.head.append(new_script)
+    else:
+        soup.insert(1, new_script)
     
     html_id = "{}_{}.html".format(int(time.time()), os.getpid())
     html_file = join(tmp_path, html_id)
