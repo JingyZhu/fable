@@ -45,7 +45,7 @@ def localserver(PORT):
     if len(port_occupied) <= 0:
         Popen(['http-server', '-a', 'localhost', '-p', str(PORT), tmp_path], stdout=NULL, stderr=NULL)
     else:
-        print("Port {} occupied by other process: {}".format(PORT))
+        print("Port {} occupied by other process".format(PORT))
 
 localserver(PORT)
 
