@@ -22,7 +22,7 @@ counter = 0
 
 def decide_content_alt(html):
     if url_utils.find_link_density(html) >= 0.8: return ""
-    return text_utils.extract_body(html, version='boilerpipe')
+    return text_utils.extract_body(html, version='domdistiller')
 
 
 def crawl_pages(q_in):

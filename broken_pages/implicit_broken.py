@@ -23,34 +23,15 @@ proxy = config.PROXIES[idx]
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 counter = 0
 
+
 def decide_content(html):
     """
     Decide whether the page is a navigational page
     If it is, return content=empty
     Else, return the most confident content
     """
-    # TODO Implement this function
-    versions = ['justext', 'goose', 'newspaper']
-    count = 0
-    contents = []
-    for v in versions:
-        try:
-            content = text_utils.extract_body(html, version=v)
-        except Exception as e:
-            print(v, str(e))
-            count += 1
-            if count >= 2: return ""
-            continue
-        if content == '': count += 1
-        if count >= 2: return ""
-        contents.append(content)
-    if count > 0 and url_utils.find_link_density(html) >= 0.8: return ""
-    return max(contents, key=lambda x: len(x.split()))
-
-
-def decide_content_alt(html):
     if url_utils.find_link_density(html) >= 0.8: return ""
-    return text_utils.extract_body(html, version='boilerpipe')
+    return text_utils.extract_body(html, version='domdistiller')
 
 
 def get_wayback_cp(url, year):
@@ -140,6 +121,7 @@ def crawl_pages_wrap(NUM_THREADS=5):
     db.url_content.create_index([("url", pymongo.ASCENDING), ("src", pymongo.ASCENDING)], unique=True)
     db.url_content.create_index([("url", pymongo.ASCENDING)])
     q_in = queue.Queue()
+    # Get content of url_status join host_sample, which is not in url_content 
     urls = db.host_sample.aggregate([
         {"$lookup": {
             "from": "url_status",
@@ -230,4 +212,4 @@ def compute_broken():
 
 
 if __name__ == '__main__':
-    compute_broken()
+    crawl_pages_wrap(NUM_THREADS=10)
