@@ -19,7 +19,8 @@ async function writeContent(Runtime, filename) {
     const result = await Runtime.evaluate({
         expression: 'org.chromium.distiller.DomDistiller.apply()[2][1]'
     });
-    const content = result.result.value;
+    let content = result.result.value;
+    if (content == undefined) content = ''
     fs.writeFileSync(filename, content);
 }
 
