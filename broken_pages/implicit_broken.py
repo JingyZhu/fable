@@ -45,7 +45,8 @@ def get_wayback_cp(url, year):
     param_dict = {
         "from": str(year) + '0101',
         "to": str(year) + '1231',
-        "filter": ['statuscode:200', 'mimetype:text/html']
+        "filter": ['statuscode:200', 'mimetype:text/html'],
+        "limit": 20
     }
     cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, proxies=proxy)
     if len(cps) > 3: cps = random.sample(cps, 3)
@@ -53,7 +54,7 @@ def get_wayback_cp(url, year):
     for ts, cp in cps:
         html = crawl.requests_crawl(cp, proxies=proxy)
         if not html: continue
-        content = decide_content_alt(html)
+        content = decide_content(html)
         if content == '': continue
         wayback.append((ts, html, content))
     if len(wayback) == 0: return
@@ -77,7 +78,7 @@ def crawl_pages(q_in):
         ts, wm_html, wm_content = wayback_cp
         rw_html = crawl.requests_crawl(url)
         if not rw_html: rw_html = ''
-        rw_content = decide_content_alt(rw_html)
+        rw_content = decide_content(rw_html)
         rw_obj = {
             "url": url,
             "src": "realweb",

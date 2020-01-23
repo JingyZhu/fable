@@ -68,7 +68,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             break
         except Exception as e:
             try:
-                print(r.text.split('\n')[0])
+                print('Wayback index:', r.text.split('\n')[0])
             except:
                 count += 1
                 if count < 3:
