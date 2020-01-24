@@ -261,7 +261,15 @@ def domdistiller_extract(html, lang=None):
     file.write(str(soup))
     file.close()
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
-    call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file])
+    try:
+        call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file], timeout=30)
+    except:
+        except Exception as e:
+        print(str(e))
+        pid = open(html_file, 'r').read()
+        call(['kill', '-9', pid])
+        os.remove(html_file)
+        return ""
     content = open(html_file, 'r').read()
     os.remove(html_file)
     soup = BeautifulSoup(content, 'html.parser')

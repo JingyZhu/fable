@@ -50,6 +50,7 @@ async function startChrome(){
 
     let screenshot = argv.screenshot; 
     
+    fs.writeFileSync(filename, chrome.pid);
     const client = await CDP({port: chrome.port});
     const { Network, Page, Security, Runtime} = client;
     // console.log(Security);
