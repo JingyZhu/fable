@@ -20,9 +20,50 @@ proxy = config.PROXIES[idx]
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 counter = 0
 
-def decide_content_alt(html):
+def decide_content(html):
     if url_utils.find_link_density(html) >= 0.8: return ""
     return text_utils.extract_body(html, version='domdistiller')
+
+def reextract_content(NUM_THREADS=10):
+    """
+    Re-Extracting content from html using new method
+    If wayback has no conten, unset the content field.
+    """
+    q_in = queue.Queue()
+    counter = 0
+    # Get content of url_status join host_sample, which is not in url_content 
+    def thread_func(q_in):
+        nonlocal counter
+        while not q_in.empty():
+            obj = q_in.get()
+            counter += 1
+            print(counter, obj['url'])
+            html = brotli.decompress(obj['html']).decode()
+            try:
+                content = decide_content(html)
+            except Exception as e:
+                print('Decide content', str(e))
+                content = ""
+            if content == '' and obj['src'] == 'wayback':
+                db.url_content.update_one({'url': obj['url'], 'src': 'wayback'}, {"$unset": {"content": ""}})
+            else:
+                db.url_content.update_one({'url': obj['url'], 'src': obj['src']}, {"$set": {"content": content}})
+    
+    urls = list(db.url_content.find())
+    urls = sorted(urls, key=lambda x: x['url'])
+    length = len(urls)
+    print(length // 4)
+    urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
+    
+    random.shuffle(urls)
+    for obj in urls:
+        q_in.put(obj)
+    pools = []
+    for _ in range(NUM_THREADS):
+        pools.append(threading.Thread(target=thread_func, args=(q_in,)))
+        pools[-1].start()
+    for t in pools:
+        t.join()
 
 
 def crawl_pages(q_in):
@@ -37,7 +78,7 @@ def crawl_pages(q_in):
         print(counter, url)
         rw_html = crawl.requests_crawl(url)
         if not rw_html: rw_html = ''
-        rw_content = decide_content_alt(rw_html)
+        rw_content = decide_content(rw_html)
         rw_obj = {
             "url": url,
             "src": "realweb",
@@ -71,4 +112,5 @@ def fix(NUM_THREADS=10):
     for t in pools:
         t.join()
 
-fix()
+if __name__ == '__main__':
+    reextract_content()

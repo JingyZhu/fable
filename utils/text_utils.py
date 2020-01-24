@@ -27,12 +27,12 @@ try:
 except:
     print("No config.py, Specify you own port")
 
-tmp_path = join(dirname(abspath(__file__)), '../', 'tmp')
+# Need to be modified
+tmp_path = '/x/jingyz/tmp'
+PORT = config.LOCALSERVER_PORT # If no config.py, modify to self chosen port
+# Need to be modified
 
 NULL = open('/dev/null', 'w')
-
-PORT = config.LOCALSERVER_PORT # If no config.py, modify to self chosen port
-
 def localserver(PORT):
     """
     Create tmp dir at $PROJ_HOME, copy domdistiller.js into the repo
@@ -263,9 +263,8 @@ def domdistiller_extract(html, lang=None):
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
         call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file], timeout=30)
-    except:
-        except Exception as e:
-        print(str(e))
+    except Exception as e:
+        print('DomDistiller', str(e))
         pid = open(html_file, 'r').read()
         call(['kill', '-9', pid])
         os.remove(html_file)
