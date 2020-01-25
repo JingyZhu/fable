@@ -264,7 +264,7 @@ def domdistiller_extract(html, lang=None):
     file.close()
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
-        call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file, '--timeout', str(15)])
+        call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file, '--timeout', str(10)])
     except Exception as e:
         print('DomDistiller', str(e))
         os.remove(html_file)

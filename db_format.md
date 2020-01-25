@@ -113,3 +113,15 @@ Sample host which contains 2xx/3xx status code
 The joined results between url_status and host_sample \
 In other word, all urls in url_status which hostname is sampled in host_sample\
 Format: Same as url_status
+
+### url_update
+Record whether a url has high link density / update frequently on wayback
+```json
+{
+    "_id": "string (url)",
+    "url": "string",
+    "updating": "boolean, false means no / unknown (1 snapshot, similar, etc... )" ,
+    "timestamps": [],
+    "detail": "updating True: HLD, not similar, no contents. False: 1 snapshot, no content, similar, no html"
+}
+```

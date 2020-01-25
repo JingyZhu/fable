@@ -151,7 +151,7 @@ def crawl_pages_wrap(NUM_THREADS=5):
     urls = list(urls)
     urls = sorted(list(urls), key=lambda x: x['_id'] + str(x['year']))
     length = len(urls)
-    print(length // 4)
+    print(length // len(config.HOSTS))
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     
     random.shuffle(urls)

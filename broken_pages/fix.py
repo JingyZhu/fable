@@ -49,10 +49,21 @@ def reextract_content(NUM_THREADS=10):
             else:
                 db.url_content.update_one({'url': obj['url'], 'src': obj['src']}, {"$set": {"content": content}})
     
-    urls = list(db.url_content.find())
-    urls = sorted(urls, key=lambda x: x['url'])
+    urls = db.url_status_implicit_broken.aggregate([
+        {"$match": {"status": re.compile("^[23]")}},
+        {"$lookup": {
+            "from": "url_content",
+            "localField": "_id",
+            "foreignField": "url",
+            "as": "contents"
+        }},
+        {"$unwind": "$contents"},
+        {"$replaceRoot": { "newRoot": "$contents"} },
+        {"$project": {"content": False}},
+    ])
+    urls = sorted(list(urls), key=lambda x: x['url'])
     length = len(urls)
-    print(length // 4)
+    print(length // len(config.HOSTS))
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     
     random.shuffle(urls)
