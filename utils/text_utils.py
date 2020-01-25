@@ -267,9 +267,11 @@ def domdistiller_extract(html, lang=None):
         call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file], timeout=30)
     except Exception as e:
         print('DomDistiller', str(e))
-        pid = open(html_file, 'r').read()
+        pid_file = splitext(html_file)[0]
+        pid = open(pid_file, 'r').read()
         call(['kill', '-9', pid])
         os.remove(html_file)
+        os.remove(pid_file)
         return ""
     content = open(html_file, 'r').read()
     os.remove(html_file)
