@@ -264,19 +264,13 @@ def domdistiller_extract(html, lang=None):
     file.close()
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
-        call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file], timeout=30)
+        call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file, '--timeout', str(15)])
     except Exception as e:
         print('DomDistiller', str(e))
-        pid_file = splitext(html_file)[0]
-        pid = open(pid_file, 'r').read()
-        call(['kill', '-9', pid])
         os.remove(html_file)
-        os.remove(pid_file)
-        return ""
+        raise
     content = open(html_file, 'r').read()
     os.remove(html_file)
-    pid_file = splitext(html_file)[0]
-    os.remove(pid_file)
     soup = BeautifulSoup(content, 'html.parser')
 
     filter_tags = ['style', 'script', 'link', 'meta']

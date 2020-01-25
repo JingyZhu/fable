@@ -47,11 +47,12 @@ async function startChrome(){
 (async function(){
     const chrome = await startChrome();
     let filename = argv.filename
-    let pidname = filename.substr(0, filename.length-5)
+    const timeout = argv.timeout ? parseInt(argv.timeout) * 1000 : 10000;
+    // let pidname = filename.substr(0, filename.length-5)
 
     let screenshot = argv.screenshot; 
     
-    fs.writeFileSync(pidname, chrome.pid);
+    // fs.writeFileSync(pidname, chrome.pid);
     const client = await CDP({port: chrome.port});
     const { Network, Page, Security, Runtime} = client;
     // console.log(Security);
@@ -64,18 +65,25 @@ async function startChrome(){
         await Page.enable();
 
         await Page.navigate({ url: process.argv[2] });
-        await Page.loadEventFired();
-
+        
+        await Promise.race([
+            Page.loadEventFired(),
+            new Promise(function(_, reject) {
+                setTimeout(function() {
+                    reject(new Error(`run_content.js: Timeout after ${timeout}`));
+                }, timeout);
+            }),
+        ]).catch(function(err){
+            console.log(err.message)
+        })      
+    
         await writeContent(Runtime, filename);
 
     } catch (err) {
         console.error(err);
     } finally {
-        if (client){
-            client.close();
-            await chrome.kill();
-            process.exit(0);
-        }
+        if (client) client.close();
+        await chrome.kill();
+        process.exit(0);
     }
-
 })()
