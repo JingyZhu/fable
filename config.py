@@ -17,3 +17,4 @@ else:
         yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)['proxies']]
     PROXIES = PROXIES + [{}]  # One host do not have to use proxy
     HOSTS = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)['hosts']
+    TMPPATH = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)['tmp_path']

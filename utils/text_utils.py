@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 from dateutil import parser as dparser
 from dateparser.search import search_dates
 import dateparser, difflib
-from os.path import join, dirname, abspath
+from os.path import join, dirname, abspath, splitext
 from subprocess import call, Popen, check_output
 import re, os, time
 import sys
@@ -28,7 +28,7 @@ except:
     print("No config.py, Specify you own port")
 
 # Need to be modified
-tmp_path = '/x/jingyz/tmp'
+tmp_path = config.TMPPATH
 PORT = config.LOCALSERVER_PORT # If no config.py, modify to self chosen port
 # Need to be modified
 
@@ -239,6 +239,8 @@ def domdistiller_extract(html, lang=None):
     soup = BeautifulSoup(html, 'html.parser')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
+    for tag in soup.find_all('img', {'style': True}):
+        del(tag.attrs['style'])
     filter_tags = ['script', 'link']
     for tag in filter_tags:
         for element in soup.find_all(tag):
@@ -271,6 +273,8 @@ def domdistiller_extract(html, lang=None):
         return ""
     content = open(html_file, 'r').read()
     os.remove(html_file)
+    pid_file = splitext(html_file)[0]
+    os.remove(pid_file)
     soup = BeautifulSoup(content, 'html.parser')
 
     filter_tags = ['style', 'script', 'link', 'meta']
