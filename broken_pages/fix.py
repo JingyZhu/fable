@@ -43,7 +43,7 @@ def reextract_content(NUM_THREADS=10):
                 content = decide_content(html)
             except Exception as e:
                 print('Decide content', str(e))
-                content = ""
+                continue
             if content == '' and obj['src'] == 'wayback':
                 db.url_content.update_one({'url': obj['url'], 'src': 'wayback'}, {"$unset": {"content": ""}})
             else:
