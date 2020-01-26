@@ -13,7 +13,7 @@ import brotli
 import socket
 import random
 import re, time
-import itertools
+import itertools, collections
 
 sys.path.append('../')
 from utils import text_utils, crawl, url_utils, plot
@@ -42,6 +42,8 @@ def get_wayback_cp(url, year):
 
     If there is a best fit, return (ts, html, content)
     Else return None
+
+    return: data in certain year, data in all years, each data function (updating, represent ... )
     """
     param_dict = {
         "filter": ['statuscode:200', 'mimetype:text/html'],
@@ -58,39 +60,41 @@ def get_wayback_cp(url, year):
         sample = [c for c in cp_in_year if c not in set(cp_in_year_sample)]
         size = min(3 - len(cp_in_year_sample), len(cp_in_year_sample) - len(cp_in_year))
         cp_in_year_sample = cp_in_year_sample + random.sample(sample, size)
-    wayback = []
-    contents = []
-    tss = []
+    wayback_year = []
+    updating = []
     cp_in_year_dict = {c[0]: None for c in cp_in_year_sample} # ts: (ts, html, content)
+    functions = collections.defaultdict(list)
     for ts, cp in cp_sample:
         html = crawl.requests_crawl(cp, proxies=PS.select())
         if not html: continue
         if url_utils.find_link_density(html) >= 0.8:
-            contents = None
-            tss = None
+            updating = None
             if ts in cp_in_year_dict:
                 content = text_utils.extract_body(html, version='domdistiller')
                 cp_in_year_dict[ts] = (ts, html, content)
             break
         content = text_utils.extract_body(html, version='domdistiller')
-        contents.append(content)
-        tss.append(ts)
+        cp_in_year_dict[ts] = (ts, html, content)
+        updating.append((ts, html, content))
+        functions[ts].append('updating')
+
     for ts, cp in cp_in_year_sample:
         if cp_in_year_dict[ts] is not None:
-            tup = cp_in_year_dict[ts]
-            if tup[2] != "":
-                wayback.append((tup))
+            ts, html, content = cp_in_year_dict[ts]
         else:
             html = crawl.requests_crawl(cp, proxies=PS.select(), wait=True)
             if not html: continue
             content = decide_content(html)
-            if content == '': continue
-            wayback.append((ts, html, content))
-    wayback = None if len(wayback) == 0 else max(wayback, key=lambda x: len(x[2].split()))
-    return wayback, tss, contents
+        if content == '': continue
+        wayback_year.append((ts, html, content))
+    represent = None if len(wayback_year) == 0 else max(wayback_year, key=lambda x: len(x[2].split()))
+    if represent: functions[represent[0]].append('represent')
+    for w in wayback_year:
+        if w[0] != represent[0]: functions[represent[0]].append('archive')
+    return wayback_year, updating, functions
 
 
-def crawl_pages(q_in, tid, tfidf):
+def crawl_pages(q_in, tid):
     """
     Get content from both wayback and realweb
     Update content into db.url_content
@@ -98,79 +102,88 @@ def crawl_pages(q_in, tid, tfidf):
     Add into db.url_update
     """
     global counter
-    rw_objs, wm_objs, uu_objs = [], [], []
+    rw_objs, wm_objs, uu_objs, wu_objs = [], [], [], []
     while not q_in.empty():
         url, year = q_in.get()
         counter += 1
         print(counter, tid, url)
-        wayback_cp, ts, contents = get_wayback_cp(url, year)
-        if wayback_cp: # Possibliy not landing pages
-            ts, wm_html, wm_content = wayback_cp
+        wayback_year, wayback_update, functions = get_wayback_cp(url, year)
+        if len(wayback_year): # Possibliy not landing pages
             rw_html = crawl.requests_crawl(url)
             if not rw_html: rw_html = ''
             rw_content = decide_content(rw_html)
-            rw_obj = {
+            rw_objs.append({
                 "url": url,
                 "src": "realweb",
+                "ts": 20200126000000,
                 "html": brotli.compress(rw_html.encode()),
                 "content": rw_content
-            }
-            wm_obj = {
-                "url": url,
-                "src": "wayback",
-                "ts": ts,
-                "html": brotli.compress(wm_html.encode()),
-                "content": wm_content
-            }
-            rw_objs.append(rw_obj)
-            wm_objs.append(wm_obj)
+            })
+            for ts, html, content in wayback_year:
+                wm_objs.append({
+                    "url": url,
+                    "src": "wayback",
+                    "ts": ts,
+                    "html": brotli.compress(html.encode()),
+                    "content": content,
+                    "usage": ' '.join(sorted(functions[ts]))
+                })
             if len(rw_objs) >= 50 or len(wm_objs) >= 50:
                 try: db.url_content.insert_many(rw_objs, ordered=False)
                 except: pass
                 try: db.url_content.insert_many(wm_objs, ordered=False)
                 except: pass
                 rw_objs, wm_objs = [], []
-        if contents is None:
+        if wayback_update is None:
                 detail = 'HLD'
                 updating = True
-        elif len(contents) == 0:
+        elif len(wayback_update) == 0:
             detail = 'no html'
             updating = False
-        elif len(contents) == 1:
+        elif len(wayback_update) == 1:
             updating = False
-            if contents[0] == "": detail = "no content"
+            if wayback_update[0][2] == "": detail = "no content"
             else: detail = "1 snapshot"
-        elif len(list(filter(lambda x: x != "", contents))) == 0:
+        elif len(list(filter(lambda x: x[2] != "", wayback_update))) == 0:
             updating = True
             detail = "no contents"
         else:
             updating = True
-            detail = "not similar"
-            begin = time.time()
-            for c1, c2 in itertools.combinations(contents, 2):
-                if tfidf.similar(c1, c2) >= .8:
-                    updating = False
-                    detail = "similar"
-                    break
-            end = time.time()
-            print(end - begin, len(contents))
+            detail = "not similar?"
+        tss = [u[0] for u in wayback_update]
         uu_obj = {
             "_id": url,
             "url": url,
             "updating": updating,
-            "ts": ts,
+            "tss": tss,
             "detail": detail
         }
         uu_objs.append(uu_obj)
+        for ts, html, content in wayback_update:
+            if len(functions[ts]) > 1 or content == "": continue
+            wu_objs.append({
+                "url": url,
+                "src": "wayback",
+                "ts": ts,
+                "html": brotli.compress(html.encode()),
+                "content": content,
+                "usage": functions[ts][0]
+            })
         if len(uu_objs) >= 50:
             try: db.url_update.insert_many(uu_objs, ordered=False)
             except: pass
             uu_objs = []
+        if len(wu_objs) >= 50:
+            try: db.url_content.insert_many(wu_objs, ordered=False)
+            except: pass
+            wu_objs = []
     try: db.url_content.insert_many(rw_objs, ordered=False)
     except: pass
     try: db.url_content.insert_many(wm_objs, ordered=False)
     except: pass
     try: db.url_update.insert_many(uu_objs, ordered=False)
+    except: pass
+    try: db.url_content.insert_many(wu_objs, ordered=False)
     except: pass
 
 
@@ -179,15 +192,8 @@ def crawl_pages_wrap(NUM_THREADS=5):
     Get sampled hosts from db.host_sample
     Get all 2xx/3xx urls from sampled hosts
     """
-    db.url_content.create_index([("url", pymongo.ASCENDING), ("src", pymongo.ASCENDING)], unique=True)
+    db.url_content.create_index([("url", pymongo.ASCENDING), ("ts", pymongo.ASCENDING)], unique=True)
     db.url_content.create_index([("url", pymongo.ASCENDING)])
-    corpus = db.url_content.aggregate([
-        {"$match": {"content": {"$exists": True, "$ne": ""}}},
-        {"$sample": {"size": 10000}},
-        {"$project": {"content": True}}
-    ])
-    corpus = [c['content'] for c in corpus]
-    tfidf = text_utils.TFidf(corpus)
     q_in = queue.Queue()
     # Get content of url_status join host_sample, which is not in url_content 
     urls = db.host_sample.aggregate([
@@ -226,7 +232,7 @@ def crawl_pages_wrap(NUM_THREADS=5):
         q_in.put((url['url'], url['year']))
     pools = []
     for i in range(NUM_THREADS):
-        pools.append(threading.Thread(target=crawl_pages, args=(q_in, i, tfidf)))
+        pools.append(threading.Thread(target=crawl_pages, args=(q_in, i)))
         pools[-1].start()
     for t in pools:
         t.join()

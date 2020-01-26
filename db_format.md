@@ -89,14 +89,18 @@ only url in url_year_added with host has >=100 new urls in certain year
 ### url_content
 HTML and content of url, both from wayback machine and realweb \
 src defines the where the html was crawled \
-If src: wayback, ts is added.
+If src: wayback, ts, usage are added. \
+usage: represent --> represent the content \
+     archive --> Just archive for crawl
+     updating --> Used for deterct archiving
 ```json
 {
     "url": "string",
     "src": "string",
     "(ts)":"int",
     "html": "Bytes (compressed by brotli)",
-    "content": "string"
+    "content": "string",
+    "(usage)": "represent / archive | updating"
 }
 ```
 
@@ -121,7 +125,7 @@ Record whether a url has high link density / update frequently on wayback
     "_id": "string (url)",
     "url": "string",
     "updating": "boolean, false means no / unknown (1 snapshot, similar, etc... )" ,
-    "timestamps": [],
+    "tss": [],
     "detail": "updating True: HLD, not similar, no contents. False: 1 snapshot, no content, similar, no html"
 }
 ```
