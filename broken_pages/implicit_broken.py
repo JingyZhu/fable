@@ -32,7 +32,13 @@ def decide_content(html):
     Else, return the most confident content
     """
     if url_utils.find_link_density(html) >= 0.8: return ""
-    return text_utils.extract_body(html, version='domdistiller')
+    for v in ['domdistiller', 'boilerpipe']:
+        try:
+            return text_utils.extract_body(html, version='domdistiller')
+        except Exception as e: 
+            print("decide_content", v, str(e))
+            continue
+    return ""
 
 
 def get_wayback_cp(url, year):
@@ -51,17 +57,18 @@ def get_wayback_cp(url, year):
         "limit": 100
     }
     cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, proxies=PS.select())
-    cp_in_year = list(filter(lambda x: str(x)[0][:4] == str(year), cps))
+    cp_in_year = list(filter(lambda x: abs(int(str(x[0])[:4]) - year) <= 1, cps))
     # Updating sample
     cp_sample = random.sample(cps, 3) if len(cps) > 3 else cps
     # Overlap part of two samples
-    cp_in_year_sample = [c for c in cp_sample if str(c[0])[:4] == str(year)]
+    cp_in_year_sample = [c for c in cp_sample if abs(int(str(c[0])[:4]) - year) <= 1]
     if len(cp_in_year_sample) < 3 and len(cp_in_year_sample) < len(cp_in_year):
         sample = [c for c in cp_in_year if c not in set(cp_in_year_sample)]
-        size = min(3 - len(cp_in_year_sample), len(cp_in_year_sample) - len(cp_in_year))
+        size = min(3 - len(cp_in_year_sample), len(cp_in_year) - len(cp_in_year_sample))
         cp_in_year_sample = cp_in_year_sample + random.sample(sample, size)
     wayback_year = []
     updating = []
+    # print([t[0] for t in cp_in_year_sample], [t[0] for t in cp_sample])
     cp_in_year_dict = {c[0]: None for c in cp_in_year_sample} # ts: (ts, html, content)
     functions = collections.defaultdict(list)
     for ts, cp in cp_sample:
@@ -105,13 +112,14 @@ def crawl_pages(q_in, tid):
     rw_objs, wm_objs, uu_objs, wu_objs = [], [], [], []
     while not q_in.empty():
         url, year = q_in.get()
-        counter += 1
-        print(counter, tid, url)
         wayback_year, wayback_update, functions = get_wayback_cp(url, year)
+        counter += 1
+        print(counter, tid, url, len(wayback_year), len(wayback_update) if wayback_update else 0)
         if len(wayback_year): # Possibliy not landing pages
             rw_html = crawl.requests_crawl(url)
             if not rw_html: rw_html = ''
-            rw_content = decide_content(rw_html)
+            try: rw_content = decide_content(rw_html)
+            except: 
             rw_objs.append({
                 "url": url,
                 "src": "realweb",
@@ -150,6 +158,7 @@ def crawl_pages(q_in, tid):
         else:
             updating = True
             detail = "not similar?"
+        if not wayback_update: wayback_update = []
         tss = [u[0] for u in wayback_update]
         uu_obj = {
             "_id": url,
@@ -214,12 +223,12 @@ def crawl_pages_wrap(NUM_THREADS=5):
         {"$match": {"status": re.compile("^[23]")}},
         # {"$count": "count"}
         {"$lookup": {
-            "from": "url_content",
+            "from": "url_update",
             "localField": "_id",
             "foreignField": "url",
-            "as": "contents"
+            "as": "updates"
         }},
-        {"$match": {"contents.0": {"$exists": False}}},
+        {"$match": {"updates.0": {"$exists": False}}},
     ])
     urls = list(urls)
     urls = sorted(list(urls), key=lambda x: x['_id'] + str(x['year']))

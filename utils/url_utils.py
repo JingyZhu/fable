@@ -34,7 +34,10 @@ def find_link_density(html):
     """
     Find link density of a webpage given html
     """
-    soup = BeautifulSoup(html, 'html.parser')
+    try:
+        soup = BeautifulSoup(html, 'html.parser')
+    except:
+        return 0
     filter_tags = ['style', 'script']
     for tag in filter_tags:
         for element in soup.findAll(tag):
