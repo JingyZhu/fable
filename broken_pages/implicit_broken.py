@@ -12,14 +12,15 @@ import queue, threading
 import brotli
 import socket
 import random
-import re
+import re, time
+import itertools
 
 sys.path.append('../')
 from utils import text_utils, crawl, url_utils, plot
 import config
 
 idx = config.HOSTS.index(socket.gethostname())
-proxy = config.PROXIES[idx]
+PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 counter = 0
 
@@ -43,75 +44,134 @@ def get_wayback_cp(url, year):
     Else return None
     """
     param_dict = {
-        "from": str(year) + '0101',
-        "to": str(year) + '1231',
         "filter": ['statuscode:200', 'mimetype:text/html'],
-        "limit": 20
+        "collapse": "timestamp:8",
+        "limit": 100
     }
-    cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, proxies=proxy)
-    if len(cps) > 3: cps = random.sample(cps, 3)
+    cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, proxies=PS.select())
+    cp_in_year = list(filter(lambda x: str(x)[0][:4] == str(year), cps))
+    # Updating sample
+    cp_sample = random.sample(cps, 3) if len(cps) > 3 else cps
+    # Overlap part of two samples
+    cp_in_year_sample = [c for c in cp_sample if str(c[0])[:4] == str(year)]
+    if len(cp_in_year_sample) < 3 and len(cp_in_year_sample) < len(cp_in_year):
+        sample = [c for c in cp_in_year if c not in set(cp_in_year_sample)]
+        size = min(3 - len(cp_in_year_sample), len(cp_in_year_sample) - len(cp_in_year))
+        cp_in_year_sample = cp_in_year_sample + random.sample(sample, size)
     wayback = []
-    for ts, cp in cps:
-        html = crawl.requests_crawl(cp, proxies=proxy)
+    contents = []
+    tss = []
+    cp_in_year_dict = {c[0]: None for c in cp_in_year_sample} # ts: (ts, html, content)
+    for ts, cp in cp_sample:
+        html = crawl.requests_crawl(cp, proxies=PS.select())
         if not html: continue
-        content = decide_content(html)
-        if content == '': continue
-        wayback.append((ts, html, content))
-    if len(wayback) == 0: return
-    else: return max(wayback, key=lambda x: len(x[2].split()))
+        if url_utils.find_link_density(html) >= 0.8:
+            contents = None
+            tss = None
+            if ts in cp_in_year_dict:
+                content = text_utils.extract_body(html, version='domdistiller')
+                cp_in_year_dict[ts] = (ts, html, content)
+            break
+        content = text_utils.extract_body(html, version='domdistiller')
+        contents.append(content)
+        tss.append(ts)
+    for ts, cp in cp_in_year_sample:
+        if cp_in_year_dict[ts] is not None:
+            tup = cp_in_year_dict[ts]
+            if tup[2] != "":
+                wayback.append((tup))
+        else:
+            html = crawl.requests_crawl(cp, proxies=PS.select(), wait=True)
+            if not html: continue
+            content = decide_content(html)
+            if content == '': continue
+            wayback.append((ts, html, content))
+    wayback = None if len(wayback) == 0 else max(wayback, key=lambda x: len(x[2].split()))
+    return wayback, tss, contents
 
 
-def crawl_pages(q_in):
+def crawl_pages(q_in, tid, tfidf):
     """
     Get content from both wayback and realweb
     Update content into db.url_content
+    Get different cps see if the page is updating frequently
+    Add into db.url_update
     """
     global counter
-    rw_objs = []
-    wm_objs = []
+    rw_objs, wm_objs, uu_objs = [], [], []
     while not q_in.empty():
         url, year = q_in.get()
         counter += 1
-        print(counter, url)
-        wayback_cp = get_wayback_cp(url, year)
-        if not wayback_cp: continue # Definitely landing pages
-        ts, wm_html, wm_content = wayback_cp
-        rw_html = crawl.requests_crawl(url)
-        if not rw_html: rw_html = ''
-        rw_content = decide_content(rw_html)
-        rw_obj = {
+        print(counter, tid, url)
+        wayback_cp, ts, contents = get_wayback_cp(url, year)
+        if wayback_cp: # Possibliy not landing pages
+            ts, wm_html, wm_content = wayback_cp
+            rw_html = crawl.requests_crawl(url)
+            if not rw_html: rw_html = ''
+            rw_content = decide_content(rw_html)
+            rw_obj = {
+                "url": url,
+                "src": "realweb",
+                "html": brotli.compress(rw_html.encode()),
+                "content": rw_content
+            }
+            wm_obj = {
+                "url": url,
+                "src": "wayback",
+                "ts": ts,
+                "html": brotli.compress(wm_html.encode()),
+                "content": wm_content
+            }
+            rw_objs.append(rw_obj)
+            wm_objs.append(wm_obj)
+            if len(rw_objs) >= 50 or len(wm_objs) >= 50:
+                try: db.url_content.insert_many(rw_objs, ordered=False)
+                except: pass
+                try: db.url_content.insert_many(wm_objs, ordered=False)
+                except: pass
+                rw_objs, wm_objs = [], []
+        if contents is None:
+                detail = 'HLD'
+                updating = True
+        elif len(contents) == 0:
+            detail = 'no html'
+            updating = False
+        elif len(contents) == 1:
+            updating = False
+            if contents[0] == "": detail = "no content"
+            else: detail = "1 snapshot"
+        elif len(list(filter(lambda x: x != "", contents))) == 0:
+            updating = True
+            detail = "no contents"
+        else:
+            updating = True
+            detail = "not similar"
+            begin = time.time()
+            for c1, c2 in itertools.combinations(contents, 2):
+                if tfidf.similar(c1, c2) >= .8:
+                    updating = False
+                    detail = "similar"
+                    break
+            end = time.time()
+            print(end - begin, len(contents))
+        uu_obj = {
+            "_id": url,
             "url": url,
-            "src": "realweb",
-            "html": brotli.compress(rw_html.encode()),
-            "content": rw_content
-        }
-        wm_obj = {
-            "url": url,
-            "src": "wayback",
+            "updating": updating,
             "ts": ts,
-            "html": brotli.compress(wm_html.encode()),
-            "content": wm_content
+            "detail": detail
         }
-        rw_objs.append(rw_obj)
-        wm_objs.append(wm_obj)
-        if len(rw_objs) >= 50 or len(wm_objs) >= 50:
-            try:
-                db.url_content.insert_many(rw_objs, ordered=False)
-            except:
-                pass
-            try:
-                db.url_content.insert_many(wm_objs, ordered=False)
-            except:
-                pass
-            rw_objs, wm_objs = [], []
-    try:
-        db.url_content.insert_many(rw_objs, ordered=False)
-    except:
-        pass
-    try:
-        db.url_content.insert_many(wm_objs, ordered=False)
-    except:
-        pass
+        uu_objs.append(uu_obj)
+        if len(uu_objs) >= 50:
+            try: db.url_update.insert_many(uu_objs, ordered=False)
+            except: pass
+            uu_objs = []
+    try: db.url_content.insert_many(rw_objs, ordered=False)
+    except: pass
+    try: db.url_content.insert_many(wm_objs, ordered=False)
+    except: pass
+    try: db.url_update.insert_many(uu_objs, ordered=False)
+    except: pass
 
 
 def crawl_pages_wrap(NUM_THREADS=5):
@@ -121,6 +181,13 @@ def crawl_pages_wrap(NUM_THREADS=5):
     """
     db.url_content.create_index([("url", pymongo.ASCENDING), ("src", pymongo.ASCENDING)], unique=True)
     db.url_content.create_index([("url", pymongo.ASCENDING)])
+    corpus = db.url_content.aggregate([
+        {"$match": {"content": {"$exists": True, "$ne": ""}}},
+        {"$sample": {"size": 10000}},
+        {"$project": {"content": True}}
+    ])
+    corpus = [c['content'] for c in corpus]
+    tfidf = text_utils.TFidf(corpus)
     q_in = queue.Queue()
     # Get content of url_status join host_sample, which is not in url_content 
     urls = db.host_sample.aggregate([
@@ -158,8 +225,8 @@ def crawl_pages_wrap(NUM_THREADS=5):
     for url in urls:
         q_in.put((url['url'], url['year']))
     pools = []
-    for _ in range(NUM_THREADS):
-        pools.append(threading.Thread(target=crawl_pages, args=(q_in,)))
+    for i in range(NUM_THREADS):
+        pools.append(threading.Thread(target=crawl_pages, args=(q_in, i, tfidf)))
         pools[-1].start()
     for t in pools:
         t.join()

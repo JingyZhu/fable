@@ -10,6 +10,21 @@ import base64
 import threading, queue
 import itertools
 
+class ProxySelector:
+    """
+    Select Proxy from a pool
+    """
+    def __init__(self, proxies):
+        self.proxies = proxies
+        self.len = len(proxies)
+        self.idx = 0
+
+    def select(self):
+        """ Currently RR """
+        self.idx = self.idx + 1 if self.idx < self.len -1 else 0
+        return self.proxies[self.idx]
+
+
 def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     """
     Use chrome to load the page. Directly return the HTML text
@@ -156,18 +171,21 @@ def wayback_year_links(prefix, years, NUM_THREADS=3, max_limit=0, param_dict={},
     return {k: list(v) for k, v in total_r.items()}
 
 
-def requests_crawl(url, timeout=20, sleep=True, html=True, proxies={}):
+def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}):
     """
     Use requests to get the page
     Return None if fails to get the content
     html: Only return html if set to true
-    sleep: Will sleep if get block
+    wait: Will wait if get block
     """
     requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
+    count = 0
     while True:
         try:
             r = requests.get(url, timeout=timeout, proxies=proxies, headers=requests_header)
-            if r.status_code == 429:  # Requests limit
+            if wait and (r.status_code == 429 or r.status_code == 504) and count < 3:  # Requests limit
+                print('requests_crawl:', 'get status code', str(r.status_code))
+                count += 1
                 time.sleep(10)
                 continue
             break

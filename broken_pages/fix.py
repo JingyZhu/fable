@@ -32,12 +32,12 @@ def reextract_content(NUM_THREADS=10):
     q_in = queue.Queue()
     counter = 0
     # Get content of url_status join host_sample, which is not in url_content 
-    def thread_func(q_in):
+    def thread_func(q_in, tid):
         nonlocal counter
         while not q_in.empty():
             obj = q_in.get()
             counter += 1
-            print(counter, obj['url'])
+            print(counter, tid, obj['url'])
             html = brotli.decompress(obj['html']).decode()
             try:
                 content = decide_content(html)
@@ -45,6 +45,7 @@ def reextract_content(NUM_THREADS=10):
                 print('Decide content', str(e))
                 continue
             if content == '' and obj['src'] == 'wayback':
+                print("Wayback empty", obj['url'])
                 db.url_content.update_one({'url': obj['url'], 'src': 'wayback'}, {"$unset": {"content": ""}})
             else:
                 db.url_content.update_one({'url': obj['url'], 'src': obj['src']}, {"$set": {"content": content}})
@@ -70,8 +71,8 @@ def reextract_content(NUM_THREADS=10):
     for obj in urls:
         q_in.put(obj)
     pools = []
-    for _ in range(NUM_THREADS):
-        pools.append(threading.Thread(target=thread_func, args=(q_in,)))
+    for i in range(NUM_THREADS):
+        pools.append(threading.Thread(target=thread_func, args=(q_in, i)))
         pools[-1].start()
     for t in pools:
         t.join()
