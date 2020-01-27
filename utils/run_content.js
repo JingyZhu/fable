@@ -52,12 +52,11 @@ async function startChrome(){
 
     let screenshot = argv.screenshot; 
     
-    // fs.writeFileSync(pidname, chrome.pid);
-    const client = await CDP({port: chrome.port});
-    const { Network, Page, Security, Runtime} = client;
-    // console.log(Security);
 
     try {
+        const client = await CDP({port: chrome.port});
+        const { Network, Page, Security, Runtime} = client;
+
         await Security.setIgnoreCertificateErrors({ ignore: true });
         //Security.disable();
 
@@ -82,7 +81,7 @@ async function startChrome(){
     } catch (err) {
         console.error(err);
     } finally {
-        if (client) client.close();
+        if (typeof client !== 'undefined') client.close();
         await chrome.kill();
         process.exit(0);
     }

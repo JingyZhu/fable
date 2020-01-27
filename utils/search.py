@@ -4,6 +4,7 @@ Utils library for search
 import requests
 import json
 import sys
+from bs4 import BeautifulSoup
 
 sys.path.append('../')
 import config
@@ -24,6 +25,22 @@ headers = {"Ocp-Apim-Subscription-Key": '978290f3b37c48538596753b4d2be65f'}
 
 google_url = 'https://www.googleapis.com/customsearch/v1'
 bing_url = 'https://api.cognitive.microsoft.com/bing/v7.0/search'
+
+
+def get_headers(html):
+    soup = BeautifulSoup(html, 'html.parser')
+    possible = []
+    title = soup.find('title')
+    title = title.text if title.title != 'Wayback Machine' else ""
+    for i in range(1, 7):
+        tags = soup.find_all('h' + str(i))
+        for tag in tags:
+            if tag.text != "" and "Wayback Machine" not in tag.text: 
+                if tag.text in title:               
+                    return tag.text
+                else:
+                    possible.append(tag.text)
+    return possible[0]
 
 
 def google_search(query, end=0, param_dict={}):
