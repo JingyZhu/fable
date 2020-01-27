@@ -320,7 +320,7 @@ def extract_body(html, version='justext', handle_exception=True):
         else: raise
 
 
-def newspaper_title_extract(html):
+def newspaper_title_extract(html, lang=None):
     lang_code = detect_langs(html)[0].lang if not lang else lang
     article = Article('https://google.com', language=lang_code) # Dummy urls to initialize the obj Can be anything able to wget
     article.download(input_html=html)
@@ -328,27 +328,24 @@ def newspaper_title_extract(html):
     return article.title
 
 
-def mine_title_extract():
+def mine_title_extract(html, lang=None):
     # TODO Inplement this func
     pass
 
-def domdistiller_title_extract(html):
-    
+
+def domdistiller_title_extract(html, lang=None):
+    pass
+
 
 def extract_title(html, version='mine'):
     """
     Wrapper functions for different version of html body extraction
     """
+    lang = lang_meta(html)
     if html == '': return ''
     func_dict = {
         "newspaper": newspaper_title_extract,
         "mine": mine_title_extract,
         "domdistiller": domdistiller_title_extract
     }
-    return func_dict[version](html)
-
-
-def exit():
-    global server
-    server.terminate()
-    server.kill()
+    return func_dict[version](html, lang=lang)
