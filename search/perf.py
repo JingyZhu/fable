@@ -26,6 +26,8 @@ google_query_dict = {
     # "fileType": "HTML"
 }
 
+key = 'AIzaSyCFRLJg_4e7ZEWB72VGO_Fwi2PJIPhBIRw'
+
 
 requests_header = {'user-agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"}
 headers = {"Ocp-Apim-Subscription-Key": '978290f3b37c48538596753b4d2be65f'}

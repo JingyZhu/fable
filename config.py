@@ -13,8 +13,11 @@ LOCALSERVER_PORT=24680
 if not os.path.exists(os.path.join(os.path.dirname(__file__), 'config.yml')):
     print("No config yaml file find")
 else:
+    config_yml = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)
     PROXIES = [{'http': ip, 'https': ip } for ip in \
-        yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)['proxies']]
+                config_yml.get('proxies')]
     PROXIES = PROXIES + [{}]  # One host do not have to use proxy
-    HOSTS = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)['hosts']
-    TMPPATH = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)['tmp_path']
+    HOSTS = config_yml.get('hosts')
+    TMPPATH = config_yml.get('tmp_path')
+    SEARCH_CX = config_yml.get('search_cx')
+    SEARCH_KEY = config_yml.get('search_key')
