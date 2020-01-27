@@ -32,13 +32,7 @@ def decide_content(html):
     Else, return the most confident content
     """
     if url_utils.find_link_density(html) >= 0.8: return ""
-    for v in ['domdistiller', 'boilerpipe']:
-        try:
-            return text_utils.extract_body(html, version='domdistiller')
-        except Exception as e: 
-            print("decide_content", v, str(e))
-            continue
-    return ""
+    return text_utils.extract_body(html, version='domdistiller')
 
 
 def get_wayback_cp(url, year):
@@ -118,8 +112,7 @@ def crawl_pages(q_in, tid):
         if len(wayback_year): # Possibliy not landing pages
             rw_html = crawl.requests_crawl(url)
             if not rw_html: rw_html = ''
-            try: rw_content = decide_content(rw_html)
-            except: 
+            rw_content = decide_content(rw_html)
             rw_objs.append({
                 "url": url,
                 "src": "realweb",
@@ -225,7 +218,7 @@ def crawl_pages_wrap(NUM_THREADS=5):
         {"$lookup": {
             "from": "url_update",
             "localField": "_id",
-            "foreignField": "url",
+            "foreignField": "_id",
             "as": "updates"
         }},
         {"$match": {"updates.0": {"$exists": False}}},

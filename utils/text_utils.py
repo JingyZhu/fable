@@ -265,10 +265,10 @@ def domdistiller_extract(html, lang=None):
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
         call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file, '--timeout', str(10)])
-    except Exception as e:
-        print('DomDistiller', str(e))
+    except:
+        print('DomDistiller Failed')
         os.remove(html_file)
-        raise
+        return ""
     content = open(html_file, 'r').read()
     os.remove(html_file)
     soup = BeautifulSoup(content, 'html.parser')
@@ -299,7 +299,7 @@ def lang_meta(html):
         return None
 
 
-def extract_body(html, version='justext'):
+def extract_body(html, version='justext', handle_exception=True):
     """
     Wrapper functions for different version of html body extraction
     """
@@ -312,7 +312,12 @@ def extract_body(html, version='justext'):
         "boilerpipe": boilerpipe_extract,
         "domdistiller": domdistiller_extract
     }
-    return func_dict[version](html, lang=lang)
+    try:
+        return func_dict[version](html, lang=lang)
+    except Exception as e:
+        print("extract body:", str(e))
+        if handle_exception: return ""
+        else: raise
 
 
 def newspaper_title_extract(html):
