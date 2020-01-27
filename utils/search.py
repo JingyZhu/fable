@@ -43,6 +43,20 @@ def get_headers(html):
     return possible[0]
 
 
+def get_title(html):
+    """
+    Wrappers for getting decent title of a page
+    """
+    versions = ['newspaper', 'domdistiller']
+    for v in versions:
+        try:
+            title = text_utils.extract_title(html, version=v)
+            assert(title != "")
+            return title
+        except: pass
+    return get_headers(html)    
+
+
 def google_search(query, end=0, param_dict={}):
     """
     Search using google

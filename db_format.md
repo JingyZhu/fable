@@ -129,3 +129,37 @@ Record whether a url has high link density / update frequently on wayback
     "detail": "updating True: HLD, not similar, no contents. False: 1 snapshot, no content, similar, no html"
 }
 ```
+
+### url_broken
+Sampled broken urls. 1000 per cell: {year * status} \
+Subset of url_status_implicit_broken
+Format: Sampe as url_status 
+
+### search_meta
+For each broken page, record its html, content and queries for search
+Usage is like url_content
+```json
+{
+    "url": "string",
+    "html": "byte (brotli)",
+    "ts": "int",
+    "content": "string",
+    "topN": "string",
+    "titleMatch": "string",
+    "usage": "(represent | archive)"
+}
+```
+
+### search
+##### Index: url_from (unique)
+Search results for broken pages
+
+```json
+{
+    "url": "string",
+    "from": "string (url)",
+    "html": "byte (brotli)",
+    "content": "string",
+    "rank": "top5 / top10"
+}
+```

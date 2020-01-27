@@ -334,7 +334,52 @@ def mine_title_extract(html, lang=None):
 
 
 def domdistiller_title_extract(html, lang=None):
-    pass
+    """
+    Insert domdistiller js into the html
+    Filter out all src / href except for css
+    Write Page into $PROJ_HOME/tmp with pid+ts
+    Run chrome to load the page
+    Call org.chromium.distiller to get the title
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    for tag in soup.find_all('', {'src': True}):
+        del(tag.attrs['src'])
+    for tag in soup.find_all('img', {'style': True}):
+        del(tag.attrs['style'])
+    filter_tags = ['script', 'link']
+    for tag in filter_tags:
+        for element in soup.find_all(tag):
+            element.decompose()
+
+    new_script = soup.new_tag('script')
+    new_script.attrs.update({
+        'src': "http://localhost:{}/domdistiller.js".format(config.LOCALSERVER_PORT),
+        'type': 'text/javascript',
+        'language': 'javascript'
+    })
+    if soup.head:
+        soup.head.append(new_script)
+    else:
+        soup.insert(1, new_script)
+    
+    html_id = "{}_{}.html".format(time.time(), os.getpid())
+    html_file = join(tmp_path, html_id)
+    file = open(html_file, 'w+')
+    file.write(str(soup))
+    file.close()
+    file = open('temp.html', 'w+')
+    file.write(str(soup))
+    file.close()
+    url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
+    try:
+        call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)])
+    except:
+        print('DomDistiller Failed')
+        os.remove(html_file)
+        return ""
+    title = open(html_file, 'r').read()
+    os.remove(html_file)
+    return title
 
 
 def extract_title(html, version='mine'):
@@ -348,4 +393,6 @@ def extract_title(html, version='mine'):
         "mine": mine_title_extract,
         "domdistiller": domdistiller_title_extract
     }
-    return func_dict[version](html, lang=lang)
+    title = func_dict[version](html, lang=lang)
+    if "Wayback Machine" in title: return ""
+    return title
