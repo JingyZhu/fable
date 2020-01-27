@@ -31,7 +31,7 @@ def get_headers(html):
     soup = BeautifulSoup(html, 'html.parser')
     possible = []
     title = soup.find('title')
-    title = title.text if title.title != 'Wayback Machine' else ""
+    title = title.text if title and title.title != 'Wayback Machine' else ""
     for i in range(1, 7):
         tags = soup.find_all('h' + str(i))
         for tag in tags:
@@ -40,7 +40,7 @@ def get_headers(html):
                     return tag.text
                 else:
                     possible.append(tag.text)
-    return possible[0]
+    return possible[0] if len(possible) > 0 else ""
 
 
 def get_title(html):

@@ -63,10 +63,10 @@ def crawl_and_titlesearch(q_in, tid):
     while not q_in.empty():
         url, year = q_in.get()
         wayback_cp, usage = get_wayback_cp(url, year)
-        counter += 1
-        print(counter, tid, url)
+        title = ""
         for ts, html, content in wayback_cp:
-            title = search.get_title(html)
+            if usage[ts] == 'represent':
+                title = search.get_title(html)
             wm_objs.append({
                 "url": url,
                 "ts": ts,
@@ -75,13 +75,18 @@ def crawl_and_titlesearch(q_in, tid):
                 "titleMatch": title,
                 "usage": usage[ts]
             })
-            search_results = search.google_search('"{}"'.format(title))
-            for i, search_url in enumerate(search_results):
-                se_objs.append({
-                    "url": search_url,
-                    "from": url,
-                    "rank": "top5" if i < 5 else "top10"
-                })
+        if title == "": 
+            counter += 1
+            continue
+        search_results = search.google_search('"{}"'.format(title))
+        counter += 1
+        print(counter, tid, url, len(list(filter(lambda x: x[2] != "", wayback_cp))), len(search_results))
+        for i, search_url in enumerate(search_results):
+            se_objs.append({
+                "url": search_url,
+                "from": url,
+                "rank": "top5" if i < 5 else "top10"
+            })
         if len(wm_objs) >= 50:
             try: db.search_meta.insert_many(wm_objs, ordered=False)
             except: pass
@@ -95,7 +100,7 @@ def crawl_and_titlesearch(q_in, tid):
         except: pass
 
 
-def crawl_and_titlesearch_wrapper(NUM_THREADS=10):
+def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
     db.search_meta.create_index([("url", pymongo.ASCENDING), ("ts", pymongo.ASCENDING)], unique=True)
     db.search.create_index([("url", pymongo.ASCENDING), ("from", pymongo.ASCENDING)], unique=True)
     q_in = queue.Queue()
@@ -110,6 +115,7 @@ def crawl_and_titlesearch_wrapper(NUM_THREADS=10):
     ])
     urls = list(urls)
     urls = sorted(list(urls), key=lambda x: x['_id'] + str(x['year']))
+    urls = urls[:4800]
     length = len(urls)
     print(length // len(config.HOSTS))
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
