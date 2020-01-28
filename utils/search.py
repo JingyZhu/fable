@@ -3,7 +3,7 @@ Utils library for search
 """
 import requests
 import json
-import sys
+import sys, time
 from bs4 import BeautifulSoup
 
 sys.path.append('../')
@@ -64,17 +64,27 @@ def google_search(query, end=0, param_dict={}):
     """
     google_query_dict['q'] = query
     google_query_dict.update(param_dict)
-    try:
-        r = requests.get(google_url, params=google_query_dict)
-        status_code = r.status_code
-        r = r.json()
-    except Exception as e:
-        print(str(e))
-        return []
-    if "items" not in r:
-        return [] if status_code != 403 else None
-    end = len(r['items']) if end == 0 else min(len(r["items"]), end)
-    return [ u["link"] for u in r['items'][:end]]
+    count = 0
+    while count < 3:
+        try:
+            r = requests.get(google_url, params=google_query_dict)
+            status_code = r.status_code
+            r = r.json()
+        except Exception as e:
+            print(str(e))
+            return []
+        if "items" not in r:
+            if status_code != 403:
+                time.sleep(1)
+                return []
+            elif count < 3: 
+                count += 1
+                time.sleep(1)
+                continue
+            else: return None
+        end = len(r['items']) if end == 0 else min(len(r["items"]), end)
+        time.sleep(1)
+        return [ u["link"] for u in r['items'][:end]]
 
 
 def bing_search(query, end=0):

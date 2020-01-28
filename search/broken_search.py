@@ -79,30 +79,30 @@ def crawl_and_titlesearch(q_in, tid):
         if title == "": 
             counter += 1
             continue
-        search_results = search.google_search('"{}"'.format(title))
-        if search_results is None:
-            for _ in wayback_cp: del(wm_objs[-1])
-            print("No more access to google api")
-            break
+        # search_results = search.google_search('"{}"'.format(title))
+        # if search_results is None:
+        #     for _ in wayback_cp: del(wm_objs[-1])
+        #     print("No more access to google api")
+        #     break
         counter += 1
-        print(counter, tid, url, len(list(filter(lambda x: x[2] != "", wayback_cp))), len(search_results))
-        for i, search_url in enumerate(search_results):
-            se_objs.append({
-                "url": search_url,
-                "from": url,
-                "rank": "top5" if i < 5 else "top10"
-            })
+        print(counter, tid, url, len(list(filter(lambda x: x[2] != "", wayback_cp))))
+        # for i, search_url in enumerate(search_results):
+        #     se_objs.append({
+        #         "url": search_url,
+        #         "from": url,
+        #         "rank": "top5" if i < 5 else "top10"
+        #     })
         if len(wm_objs) >= 30:
             try: db.search_meta.insert_many(wm_objs, ordered=False)
             except: pass
-            try: db.search.insert_many(se_objs, ordered=False)
-            except: pass
+            # try: db.search.insert_many(se_objs, ordered=False)
+            # except: pass
             wm_objs, se_objs = [], []
         
     try: db.search_meta.insert_many(wm_objs, ordered=False)
     except: pass
-    try: db.search.insert_many(se_objs, ordered=False)
-    except: pass
+    # try: db.search.insert_many(se_objs, ordered=False)
+    # except: pass
 
 
 def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
@@ -123,7 +123,6 @@ def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
     length = len(urls)
     print(length // len(config.HOSTS))
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
-    urls = urls[:4000]
     random.shuffle(urls)
     for url in urls:
         q_in.put((url['url'], url['year']))
@@ -136,4 +135,4 @@ def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
 
 
 if __name__ == '__main__':
-    crawl_and_titlesearch_wrapper()
+    crawl_and_titlesearch_wrapper(NUM_THREADS=1)

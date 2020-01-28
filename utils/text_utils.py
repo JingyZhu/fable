@@ -367,9 +367,6 @@ def domdistiller_title_extract(html, lang=None):
     file = open(html_file, 'w+')
     file.write(str(soup))
     file.close()
-    file = open('temp.html', 'w+')
-    file.write(str(soup))
-    file.close()
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
         call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)])

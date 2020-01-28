@@ -28,7 +28,7 @@ def plot_CDF(data, classname=[], savefig='', show=True, cut=1):
         plt.show()
 
 
-def plot_Scatter(data, classname=[], savefig='', show=True, cut=1):
+def plot_CDF_Scatter(data, classname=[], savefig='', show=True, cut=1):
     """
     Plot the CDF for different class
     data should be a 2-dimensional list with each row a label
@@ -45,6 +45,26 @@ def plot_Scatter(data, classname=[], savefig='', show=True, cut=1):
         y = [ (i + 1) / length for i in range(length)][:int(length*cut)]
         plt.scatter(x, y, label=cn)
     plt.legend()
+    if savefig:
+        plt.savefig(savefig)
+    elif show:
+        plt.show()
+
+
+def plot_Scatter(x, y, nrows, ncols, xlabel='', ylabel='', classname=[], savefig='', show=True):
+    """
+    Plot the multipld scatter subplot into 1 plot.  
+    x, y: 2-dim stand for x, y
+    cut: Percent of CDF to show 1 means all
+    """
+    fig, axes = plt.subplots(nrows, ncols, figsize=(10, 40))
+    # data = [datus[: int(s*cut)] for datus, s in zip(data, size)]
+    if len(classname) != len(x):
+        classname = [ str(i + 1) for i in range(len(x))]
+    for idx, ax in enumerate(axes.flat):
+        ax.set(xlabel=xlabel, ylabel=ylabel)
+        ax.scatter(x[idx], y[idx], label=classname[idx], s=10)
+        ax.legend()
     if savefig:
         plt.savefig(savefig)
     elif show:

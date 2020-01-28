@@ -16,12 +16,12 @@ def frac_45xx_links():
     for year in years:
         print(year)
         missing_count = []
-        hosts = db.url_status.aggregate([
+        hosts = db.url_status_implicit_broken.aggregate([
             {"$match": {"year": year}},
             {"$group": {"_id": "$hostname"}}
         ])
         for host in hosts:
-            count = db.url_status.count_documents({"year": year, "hostname": host['_id'], "status": re.compile('^[45]')})
+            count = db.url_status_implicit_broken.count_documents({"year": year, "hostname": host['_id'], "status": re.compile('^[45]')})
             missing_count.append(count)
         missing_counts.append(missing_count)
     plot.plot_CDF(missing_counts, classname=[str(y) for y in years], show=False)
@@ -45,12 +45,12 @@ def frac_DNS_links():
     for year in years:
         print(year)
         missing_count = []
-        hosts = db.url_status.aggregate([
+        hosts = db.url_status_implicit_broken.aggregate([
             {"$match": {"year": year}},
             {"$group": {"_id": "$hostname"}}
         ])
         for host in hosts:
-            count = db.url_status.count_documents({"year": year, "hostname": host['_id'], "status": re.compile('DNSError')})
+            count = db.url_status_implicit_broken.count_documents({"year": year, "hostname": host['_id'], "status": re.compile('DNSError')})
             missing_count.append(count)
         missing_counts.append(missing_count)
     plot.plot_CDF(missing_counts, classname=[str(y) for y in years], show=False)
@@ -68,6 +68,63 @@ def frac_DNS_links():
     plt.close()
 
 
+def frac_broken_links():
+    years = [1999, 2004, 2009, 2014, 2019]
+    missing_counts = []
+    for year in years:
+        print(year)
+        missing_count = []
+        hosts = db.url_status_implicit_broken.aggregate([
+            {"$match": {"year": year}},
+            {"$group": {"_id": "$hostname"}}
+        ])
+        for host in hosts:
+            count = db.url_status_implicit_broken.count_documents({"year": year, "hostname": host['_id'], "status": re.compile('^[23]')})
+            missing_count.append(100 - count)
+        missing_counts.append(missing_count)
+    plot.plot_CDF(missing_counts, classname=[str(y) for y in years], show=False)
+    plt.xlabel("#urls Brokenr")
+    plt.ylabel("CDF across hosts")
+    plt.title("#urls Broken (all hosts)")
+    plt.savefig('fig/brokens_frac_all.png')
+    plt.close()
+    missing_counts = [list(filter(lambda x: x > 0, mc)) for mc in missing_counts]
+    plot.plot_CDF(missing_counts, classname=[str(y) for y in years], show=False)
+    plt.xlabel("#urls Brokenr")
+    plt.ylabel("CDF across hosts")
+    plt.title("#urls Broken (only broken)")
+    plt.savefig('fig/brokens_frac.png')
+    plt.close()
+
+
+def relateion_x_y_links(x, y, xlabel, ylabel):
+    """
+    x, y: regular expression to match the query
+    Plot the relation between #x vs. #DNSError links
+    """
+    years = [1999, 2004, 2009, 2014, 2019]
+    x_counts, y_counts = [], []
+    for year in years:
+        print(year)
+        x_count, y_count = [], []
+        hosts = db.url_status_implicit_broken.aggregate([
+            {"$match": {"year": year}},
+            {"$group": {"_id": "$hostname"}}
+        ])
+        for host in hosts:
+            count = db.url_status_implicit_broken.count_documents({"year": year, "hostname": host['_id'], "status": x})
+            x_count.append(count)
+            count = db.url_status_implicit_broken.count_documents({"year": year, "hostname": host['_id'], "status": y})
+            y_count.append(count)
+        x_counts.append(x_count)
+        y_counts.append(y_count)
+    plt.title('{} vs. {}'.format(xlabel, ylabel))
+    plot.plot_Scatter(x_counts, y_counts, nrows=5, ncols=1, xlabel=xlabel, ylabel=ylabel, \
+                    classname=[str(y) for y in years], show=False)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.savefig('fig/{}_{}_relation.png'.format(xlabel, ylabel))
+    
 
 def frac_200_broken_links():
     """
@@ -100,5 +157,4 @@ def frac_200_broken_links():
     plt.savefig('fig/nonhome_links.png')
     plt.close()
 
-frac_45xx_links()
-frac_DNS_links()
+relateion_x_y_links(re.compile('DNSError'), re.compile("OtherError"), "DNSError", "OtherError")

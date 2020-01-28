@@ -283,7 +283,7 @@ def compute_broken():
         similarities.append(simi)
         db.url_status_implicit_broken.update_one({"_id": url['_id']}, {"$set": {"similarity": simi}})
         if i % 10000 == 0: print(i)
-    plot.plot_Scatter([similarities], savefig='fig/similarities.png')
+    plot.plot_CDF_Scatter([similarities], savefig='fig/similarities.png')
 
 
 
