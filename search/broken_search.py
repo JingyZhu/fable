@@ -38,6 +38,7 @@ def get_wayback_cp(url, year):
     }
     cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, proxies=PS.select())
     if len(cps) > 3: cps = random.sample(cps, 3)
+    elif len(cps) <= 0: return [], {}
     wayback = []
     usage = {u[0]: 'archive' for u in cps}
     for ts, cp in cps:
@@ -79,6 +80,10 @@ def crawl_and_titlesearch(q_in, tid):
             counter += 1
             continue
         search_results = search.google_search('"{}"'.format(title))
+        if search_results is None:
+            for _ in wayback_cp: del(wm_objs[-1])
+            print("No more access to google api")
+            break
         counter += 1
         print(counter, tid, url, len(list(filter(lambda x: x[2] != "", wayback_cp))), len(search_results))
         for i, search_url in enumerate(search_results):
@@ -87,17 +92,17 @@ def crawl_and_titlesearch(q_in, tid):
                 "from": url,
                 "rank": "top5" if i < 5 else "top10"
             })
-        if len(wm_objs) >= 50:
+        if len(wm_objs) >= 30:
             try: db.search_meta.insert_many(wm_objs, ordered=False)
             except: pass
             try: db.search.insert_many(se_objs, ordered=False)
             except: pass
             wm_objs, se_objs = [], []
         
-        try: db.search_meta.insert_many(wm_objs, ordered=False)
-        except: pass
-        try: db.search.insert_many(se_objs, ordered=False)
-        except: pass
+    try: db.search_meta.insert_many(wm_objs, ordered=False)
+    except: pass
+    try: db.search.insert_many(se_objs, ordered=False)
+    except: pass
 
 
 def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
@@ -115,11 +120,10 @@ def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
     ])
     urls = list(urls)
     urls = sorted(list(urls), key=lambda x: x['_id'] + str(x['year']))
-    urls = urls[:4800]
     length = len(urls)
     print(length // len(config.HOSTS))
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
-    
+    urls = urls[:4000]
     random.shuffle(urls)
     for url in urls:
         q_in.put((url['url'], url['year']))

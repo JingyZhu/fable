@@ -60,17 +60,19 @@ def get_title(html):
 def google_search(query, end=0, param_dict={}):
     """
     Search using google
+    If get 403, return None
     """
     google_query_dict['q'] = query
     google_query_dict.update(param_dict)
     try:
         r = requests.get(google_url, params=google_query_dict)
+        status_code = r.status_code
         r = r.json()
     except Exception as e:
         print(str(e))
         return []
     if "items" not in r:
-        return []
+        return [] if status_code != 403 else None
     end = len(r['items']) if end == 0 else min(len(r["items"]), end)
     return [ u["link"] for u in r['items'][:end]]
 

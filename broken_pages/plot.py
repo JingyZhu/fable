@@ -14,6 +14,7 @@ def frac_45xx_links():
     years = [1999, 2004, 2009, 2014, 2019]
     missing_counts = []
     for year in years:
+        print(year)
         missing_count = []
         hosts = db.url_status.aggregate([
             {"$match": {"year": year}},
@@ -42,6 +43,7 @@ def frac_DNS_links():
     years = [1999, 2004, 2009, 2014, 2019]
     missing_counts = []
     for year in years:
+        print(year)
         missing_count = []
         hosts = db.url_status.aggregate([
             {"$match": {"year": year}},
