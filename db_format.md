@@ -136,6 +136,7 @@ Subset of url_status_implicit_broken
 Format: Sampe as url_status 
 
 ### search_meta
+##### Index: url_TS (unique)
 For each broken page, record its html, content and queries for search
 Usage is like url_content
 ```json

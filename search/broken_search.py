@@ -134,5 +134,18 @@ def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
         t.join()
 
 
+def calculate_topN():
+    corpus = db.search_meta.find({'content': {"$ne": ""}}, {'content': True})
+    corpus = [c['content'] for c in corpus]
+    tfidf = text_utils.TFidf(corpus)
+    print('tfidf initialized')
+    urls = list(db.search_meta.find({'content': {"$ne": ""}, 'topN': {"$exists": False}}))
+    for i, url in enumerate(urls):
+        words = tfidf.topN(url['content'])
+        query = ' '.join(words)
+        db.search_meta.update_one({"url": url['url'], "ts": url['ts']}, {"$set": {"topN": query}})
+        if i % 100 == 0: print(i)
+
+
 if __name__ == '__main__':
-    crawl_and_titlesearch_wrapper(NUM_THREADS=1)
+    calculate_topN()

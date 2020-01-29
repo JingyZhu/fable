@@ -82,7 +82,7 @@ class TFidf:
         idx1, idx2 = self.idx[text1], self.idx[text2]
         return cosine_similarity(self.tfidf[idx1].toarray(), self.tfidf[idx2].toarray())[0,0]
     
-    def topN(self, text, N=5):
+    def topN(self, text, N=10):
         """
         Get the highest weighted N words in a text
         If text is not in the corpus, it'll be added, and tfidf'll be recalculated
