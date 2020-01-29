@@ -157,4 +157,4 @@ def frac_200_broken_links():
     plt.savefig('fig/nonhome_links.png')
     plt.close()
 
-relateion_x_y_links(re.compile('DNSError'), re.compile("OtherError"), "DNSError", "OtherError")
+relateion_x_y_links(re.compile('^[45]'), re.compile("DNSError"), "45xx", "DNSError")

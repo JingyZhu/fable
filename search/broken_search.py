@@ -2,6 +2,8 @@
 Load broken page on the wayback machine
 Extract page metadata (title, topN words, etc)
 Search on google
+
+Pipeline: crawl_wayback_wrapper --> calculate_topN --> search_titleMatch_topN
 """
 import requests
 import sys
@@ -53,10 +55,10 @@ def get_wayback_cp(url, year):
     
 
 
-def crawl_and_titlesearch(q_in, tid):
+def crawl_wayback(q_in, tid):
     """
     crawl broken pages on wayback machine. Store in db.search
-    Extract title from html, do a google search on title. Store results (not crawled content yet) in db.metadata_search
+    Extract title from html
     """
     global counter
     se_objs = []
@@ -76,9 +78,6 @@ def crawl_and_titlesearch(q_in, tid):
                 "titleMatch": title,
                 "usage": usage[ts]
             })
-        if title == "": 
-            counter += 1
-            continue
         # search_results = search.google_search('"{}"'.format(title))
         # if search_results is None:
         #     for _ in wayback_cp: del(wm_objs[-1])
@@ -105,7 +104,7 @@ def crawl_and_titlesearch(q_in, tid):
     # except: pass
 
 
-def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
+def crawl_wayback_wrapper(NUM_THREADS=5):
     db.search_meta.create_index([("url", pymongo.ASCENDING), ("ts", pymongo.ASCENDING)], unique=True)
     db.search.create_index([("url", pymongo.ASCENDING), ("from", pymongo.ASCENDING)], unique=True)
     q_in = queue.Queue()
@@ -128,10 +127,62 @@ def crawl_and_titlesearch_wrapper(NUM_THREADS=5):
         q_in.put((url['url'], url['year']))
     pools = []
     for i in range(NUM_THREADS):
-        pools.append(threading.Thread(target=crawl_and_titlesearch, args=(q_in, i)))
+        pools.append(threading.Thread(target=crawl_wayback, args=(q_in, i)))
         pools[-1].start()
     for t in pools:
         t.join()
+
+
+def search_titleMatch_topN():
+    urls = db.search_meta.aggregate([
+        {"$match": {"usage": "represent"}},
+        {"$lookup":{
+            "from": "searched_titleMatch",
+            "localField": "url",
+            "foreignField": "_id",
+            "as": "hasSearched"
+        }},
+        {"$match": {"hasSearched.0": {"$exists": False}}},
+        {"$project": {"hasSearched": False}}
+    ])
+    se_objs = []
+    urls = list(urls)
+    print(len(urls))
+    for i, obj in enumerate(urls):
+        titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
+        db.searched_titleMatch.insert_one({"_id": url})
+        db.searched_topN.insert_one({"_id": url})
+        if titleMatch:
+            search_results = search.google_search('"{}"'.format(titleMatch))
+            if search_results is None:
+                print("No more access to google api")
+                break
+            print(i, len(search_results), url, titleMatch)
+            for j, search_url in enumerate(search_results):
+                se_objs.append({
+                    "url": search_url,
+                    "from": url,
+                    "rank": "top5" if j < 5 else "top10"
+                })
+        if topN:
+            search_results = search.google_search(topN)
+            if search_results is None:
+                print("No more access to google api")
+                break
+            print(i, len(search_results), url, topN)
+            for j, search_url in enumerate(search_results):
+                se_objs.append({
+                    "url": search_url,
+                    "from": url,
+                    "rank": "top5" if j < 5 else "top10"
+                })
+        if len(se_objs) >= 50:
+            try: db.search.insert_many(se_objs, ordered=False)
+            except: pass
+            se_objs = []
+
+    try: db.search.insert_many(se_objs, ordered=False)
+    except: pass
 
 
 def calculate_topN():
@@ -148,4 +199,4 @@ def calculate_topN():
 
 
 if __name__ == '__main__':
-    calculate_topN()
+    search_titleMatch_topN()
