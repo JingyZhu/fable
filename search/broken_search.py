@@ -61,7 +61,6 @@ def crawl_wayback(q_in, tid):
     Extract title from html
     """
     global counter
-    se_objs = []
     wm_objs = []
     while not q_in.empty():
         url, year = q_in.get()
@@ -78,30 +77,15 @@ def crawl_wayback(q_in, tid):
                 "titleMatch": title,
                 "usage": usage[ts]
             })
-        # search_results = search.google_search('"{}"'.format(title))
-        # if search_results is None:
-        #     for _ in wayback_cp: del(wm_objs[-1])
-        #     print("No more access to google api")
-        #     break
         counter += 1
         print(counter, tid, url, len(list(filter(lambda x: x[2] != "", wayback_cp))))
-        # for i, search_url in enumerate(search_results):
-        #     se_objs.append({
-        #         "url": search_url,
-        #         "from": url,
-        #         "rank": "top5" if i < 5 else "top10"
-        #     })
         if len(wm_objs) >= 30:
             try: db.search_meta.insert_many(wm_objs, ordered=False)
             except: pass
-            # try: db.search.insert_many(se_objs, ordered=False)
-            # except: pass
-            wm_objs, se_objs = [], []
+            wm_objs = []
         
     try: db.search_meta.insert_many(wm_objs, ordered=False)
     except: pass
-    # try: db.search.insert_many(se_objs, ordered=False)
-    # except: pass
 
 
 def crawl_wayback_wrapper(NUM_THREADS=5):

@@ -51,7 +51,7 @@ def plot_CDF_Scatter(data, classname=[], savefig='', show=True, cut=1):
         plt.show()
 
 
-def plot_Scatter(x, y, nrows, ncols, xlabel='', ylabel='', classname=[], savefig='', show=True):
+def plot_Scatter(x, y, nrows, ncols, xlabel='', ylabel='', title='', classname=[], savefig='', show=True):
     """
     Plot the multipld scatter subplot into 1 plot.  
     x, y: 2-dim stand for x, y
@@ -65,6 +65,7 @@ def plot_Scatter(x, y, nrows, ncols, xlabel='', ylabel='', classname=[], savefig
         ax.set(xlabel=xlabel, ylabel=ylabel)
         ax.scatter(x[idx], y[idx], label=classname[idx], s=10)
         ax.legend()
+        ax.title.set_text(title)
     if savefig:
         plt.savefig(savefig)
     elif show:
