@@ -118,6 +118,7 @@ def relateion_x_y_links(x, y, xlabel, ylabel):
             y_count.append(count)
         x_counts.append(x_count)
         y_counts.append(y_count)
+    plt.rc('font', size=20) 
     plot.plot_Scatter(x_counts, y_counts, nrows=5, ncols=1, xlabel=xlabel, ylabel=ylabel, \
                     title='{} vs. {}'.format(xlabel, ylabel), classname=[str(y) for y in years], show=False)
     plt.xlabel(xlabel)
@@ -157,3 +158,5 @@ def frac_200_broken_links():
     plt.close()
 
 relateion_x_y_links(re.compile('^[23]'), re.compile("DNSError"), "2xx", "DNSError")
+relateion_x_y_links(re.compile('^[23]'), re.compile("^[45]"), "2xx", "45xx")
+relateion_x_y_links(re.compile('^[45]'), re.compile("DNSError"), "45xx", "DNSError")

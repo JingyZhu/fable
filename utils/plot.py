@@ -63,7 +63,7 @@ def plot_Scatter(x, y, nrows, ncols, xlabel='', ylabel='', title='', classname=[
         classname = [ str(i + 1) for i in range(len(x))]
     for idx, ax in enumerate(axes.flat):
         ax.set(xlabel=xlabel, ylabel=ylabel)
-        ax.scatter(x[idx], y[idx], label=classname[idx], s=10)
+        ax.scatter(x[idx], y[idx], label=classname[idx], s=15)
         ax.legend()
         ax.title.set_text(title)
     if savefig:
