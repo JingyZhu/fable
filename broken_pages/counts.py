@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import whois
 import datetime
 import numpy as np
+import json
 
 sys.path.append('../')
 import config
@@ -591,10 +592,10 @@ def dirname_fate():
         urls = db.url_status_implicit_broken.find({"hostname": host['_id']})
         for url in urls:
             up = urlparse(url['url'])
-            path, query = up.path, up.query
+            subhost, path, query = up.netloc, up.path, up.query
             if path == '': path = '/'
             dirname = os.path.dirname(path)
-            host_fate[dirname].append(url_utils.status_categories(url['status'], url['detail']))
+            host_fate["{}|{}".format(subhost, dirname)].append(url_utils.status_categories(url['status'], url['detail']))
         dir_count = {}
         for dirname, statuss in host_fate.items():
             if len(statuss) >= 3:
@@ -604,8 +605,15 @@ def dirname_fate():
     for hostname, dir_count in fate.items():
         for dirname, statuss in dir_count.items():
             fate_list.append(len(statuss))
+    fate = {h: {d: list(s) for d, s in ds.items() if len(s) > 1} for h, ds in fate.items()}
+    fate = {h: ds for h, ds in fate.items() if len(ds) > 0}
+    json.dump(fate, open('fate.json', 'w+'))
     print(len(fate_list))
-    plot.plot_CDF([fate_list], show=False, savefig='fig/fate.png')
+    plot.plot_CDF([fate_list], show=False)
+    plt.xlabel("# status")
+    plt.ylabel("CDF across (subhost, path_dir)")
+    plt.title("Whether url with same dirname share the fate")
+    plt.savefig('fig/fate.png')
 
 
 

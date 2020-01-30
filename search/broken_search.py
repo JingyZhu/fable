@@ -27,6 +27,7 @@ idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 counter = mp.Value('i', 0)
+q_in = mp.Queue()
 
 def get_wayback_cp(url, year):
     """
@@ -145,11 +146,11 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
     Crawl the searched results from the db.search
     Update each record with html (byte) and content
     """
-    q_in = mp.Queue()
     urls = db.search.find({'html': {"$exists": False}})
-    urls = list(urls)
+    urls = sorted(list(urls), key=lambda x: x['url'] + str(x['from']))
     length = len(urls)
-    print(length)
+    print(length // len(config.HOSTS))
+    urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     random.shuffle(urls)
     for url in urls:
         q_in.put((url['url'], url['from']))
@@ -228,4 +229,4 @@ def calculate_topN():
 
 
 if __name__ == '__main__':
-    crawl_realweb_wrapper(NUM_THREADS=16)
+    crawl_realweb_wrapper(NUM_THREADS=10)
