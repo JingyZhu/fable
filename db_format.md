@@ -154,7 +154,6 @@ Usage is like url_content
 ### search
 ##### Index: url_from (unique)
 Search results for broken pages
-
 ```json
 {
     "url": "string",

@@ -17,6 +17,7 @@ import socket
 import random
 import re, time
 import itertools, collections
+import multiprocessing as mp
 
 sys.path.append('../')
 from utils import text_utils, crawl, url_utils, search
@@ -25,7 +26,7 @@ import config
 idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-counter = 0
+counter = mp.Value('i', 0)
 
 def get_wayback_cp(url, year):
     """
@@ -117,6 +118,50 @@ def crawl_wayback_wrapper(NUM_THREADS=5):
         t.join()
 
 
+def crawl_realweb(q_in, tid):
+    se_ops = []
+    db = MongoClient(config.MONGO_HOSTNAME).web_decay
+    while not q_in.empty():
+        url, fromm = q_in.get()
+        html = crawl.requests_crawl(url)
+        if html is None: html = ''
+        content = text_utils.extract_body(html, version='domdistiller')
+        with counter.get_lock():
+            counter.value += 1
+            print(counter.value, tid, url)
+        se_ops.append(pymongo.UpdateOne(
+            {"url": url, "from": fromm}, 
+            {"$set": {"html": brotli.compress(html.encode()), "content": content}}
+        ))
+        if len(se_ops) >= 20:
+            db.search.bulk_write(se_ops)
+            se_ops = []
+    db.search.bulk_write(se_ops)
+
+
+
+def crawl_realweb_wrapper(NUM_THREADS=10):
+    """
+    Crawl the searched results from the db.search
+    Update each record with html (byte) and content
+    """
+    q_in = mp.Queue()
+    urls = db.search.find({'html': {"$exists": False}})
+    urls = list(urls)
+    length = len(urls)
+    print(length)
+    random.shuffle(urls)
+    for url in urls:
+        q_in.put((url['url'], url['from']))
+    pools = []
+    for i in range(NUM_THREADS):
+        pools.append(mp.Process(target=crawl_realweb, args=(q_in, i)))
+        pools[-1].start()
+    for p in pools:
+        p.join()
+
+
+
 def search_titleMatch_topN():
     urls = db.search_meta.aggregate([
         {"$match": {"usage": "represent"}},
@@ -183,4 +228,4 @@ def calculate_topN():
 
 
 if __name__ == '__main__':
-    search_titleMatch_topN()
+    crawl_realweb_wrapper(NUM_THREADS=16)

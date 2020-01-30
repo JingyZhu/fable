@@ -3,7 +3,7 @@
 """
 from pymongo import MongoClient
 import pymongo
-import sys
+import sys, os
 import re
 import json
 from urllib.parse import urlparse
@@ -576,14 +576,38 @@ def status_200_broken_frac_link():
     plt.close()
 
 
-# # for y in years:
-# #     year = y
-# #     broken_200_breakdown_host()
-# no_redir, homepage, nonhome = [[[] for _ in range(3)] for _ in range(3)]
-# for y in years:
-#     year = y
-#     data = status_200_broken_frac_link()
-#     no_redir[0] = 
+def dirname_fate():
+    """
+    See the fate of each directories
+    Only counts dirname with >= 3 samples
+    """
+    fate = defaultdict(dict)
+    hosts = db.url_status_implicit_broken.aggregate([
+        {"$group": {"_id": "$hostname"}}
+    ])
+    for i, host in enumerate(list(hosts)):
+        if i % 100 == 0: print(i)
+        host_fate = defaultdict(list)
+        urls = db.url_status_implicit_broken.find({"hostname": host['_id']})
+        for url in urls:
+            up = urlparse(url['url'])
+            path, query = up.path, up.query
+            if path == '': path = '/'
+            dirname = os.path.dirname(path)
+            host_fate[dirname].append(url_utils.status_categories(url['status'], url['detail']))
+        dir_count = {}
+        for dirname, statuss in host_fate.items():
+            if len(statuss) >= 3:
+                dir_count[dirname] = set(statuss)
+        fate[host['_id']] = dir_count
+    fate_list = []
+    for hostname, dir_count in fate.items():
+        for dirname, statuss in dir_count.items():
+            fate_list.append(len(statuss))
+    print(len(fate_list))
+    plot.plot_CDF([fate_list], show=False, savefig='fig/fate.png')
+
+
 
 if __name__ == '__main__':
     years = [1999, 2004, 2009, 2014, 2019]
@@ -591,5 +615,5 @@ if __name__ == '__main__':
     #     total_broken_host()
     # for year in years:
     #     total_broken_link()
-    status_200_broken_frac_link()
+    dirname_fate()
     
