@@ -601,10 +601,12 @@ def dirname_fate():
             if len(statuss) >= 3:
                 dir_count[dirname] = set(statuss)
         fate[host['_id']] = dir_count
-    fate_list = []
+    fate_list, fate_count = [], defaultdict(int)
     for hostname, dir_count in fate.items():
         for dirname, statuss in dir_count.items():
             fate_list.append(len(statuss))
+            if len(statuss) > 1:
+                fate_count[tuple(sorted(list(statuss)))] += 1
     fate = {h: {d: list(s) for d, s in ds.items() if len(s) > 1} for h, ds in fate.items()}
     fate = {h: ds for h, ds in fate.items() if len(ds) > 0}
     json.dump(fate, open('fate.json', 'w+'))
@@ -614,6 +616,10 @@ def dirname_fate():
     plt.ylabel("CDF across (subhost, path_dir)")
     plt.title("Whether url with same dirname share the fate")
     plt.savefig('fig/fate.png')
+
+    fate_count = [list(k) + [v] for k, v in fate_count.items()]
+    fate_count.sort(key=lambda x: x[-1], reverse=True)
+    json.dump(fate_count, open('fate_count.json', 'w+') )
 
 
 

@@ -1,0 +1,11 @@
+pymongo
+langdetect
+langcodes
+justext
+publicsuffix
+newspaper3k
+goose3
+whois
+BeautifulSoup4
+brotli
+dateparser

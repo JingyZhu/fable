@@ -10,6 +10,8 @@ logs/
 *.json
 */json/
 tmp/
+.ipynb_checkpoints/
 
 temp.py
+test.ipynb
 broken_pages/*.yaml

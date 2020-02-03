@@ -3,7 +3,7 @@ Load broken page on the wayback machine
 Extract page metadata (title, topN words, etc)
 Search on google
 
-Pipeline: crawl_wayback_wrapper --> calculate_topN --> search_titleMatch_topN
+Pipeline: crawl_wayback_wrapper --> calculate_topN --> search_titleMatch_topN --> calculate_similarity
 """
 import requests
 import sys
@@ -26,8 +26,7 @@ import config
 idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-counter = mp.Value('i', 0)
-q_in = mp.Queue()
+counter = 0
 
 def get_wayback_cp(url, year):
     """
@@ -120,6 +119,7 @@ def crawl_wayback_wrapper(NUM_THREADS=5):
 
 
 def crawl_realweb(q_in, tid):
+    global counter
     se_ops = []
     db = MongoClient(config.MONGO_HOSTNAME).web_decay
     while not q_in.empty():
@@ -127,9 +127,8 @@ def crawl_realweb(q_in, tid):
         html = crawl.requests_crawl(url)
         if html is None: html = ''
         content = text_utils.extract_body(html, version='domdistiller')
-        with counter.get_lock():
-            counter.value += 1
-            print(counter.value, tid, url)
+        counter += 1
+        print(counter, tid, url)
         se_ops.append(pymongo.UpdateOne(
             {"url": url, "from": fromm}, 
             {"$set": {"html": brotli.compress(html.encode()), "content": content}}
@@ -146,6 +145,7 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
     Crawl the searched results from the db.search
     Update each record with html (byte) and content
     """
+    q_in = queue.Queue()
     urls = db.search.find({'html': {"$exists": False}})
     urls = sorted(list(urls), key=lambda x: x['url'] + str(x['from']))
     length = len(urls)
@@ -156,10 +156,10 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
         q_in.put((url['url'], url['from']))
     pools = []
     for i in range(NUM_THREADS):
-        pools.append(mp.Process(target=crawl_realweb, args=(q_in, i)))
+        pools.append(threading.Thread(target=crawl_realweb, args=(q_in, i)))
         pools[-1].start()
-    for p in pools:
-        p.join()
+    for t in pools:
+        t.join()
 
 
 
@@ -228,5 +228,45 @@ def calculate_topN():
         if i % 100 == 0: print(i)
 
 
+def calculate_similarity():
+    """
+    Calcuate the (highest) similarity of each searched pages
+    Update similarity and searched_urls to db.search_meta
+    """
+    corpus1 = db.search_meta.find({'content': {"$ne": ""}}, {'content': True})
+    corpus2 = db.search.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
+    corpus = [c['content'] for c in corpus1] + [c['content'] for c in corpus2]
+    tfidf = text_utils.TFidf(corpus)
+    print("tfidf init success!")
+    searched_urls = db.search_meta.aggregate([
+        {"$match": {"usage": "represent"}},
+        {"$lookup": {
+            "from": "search",
+            "localField": "url",
+            "foreignField": "from",
+            "as": "searched"
+        }},
+        {"$project": {"searched.html": False, "searched._id": False, "_id": False, "html": False}},
+        {"$match": {"searched.content": {"$exists": True, "$ne": ""}}},
+        {"$unwind": "$searched"}
+    ])
+    searched_urls = list(searched_urls)
+    simi_dict = collections.defaultdict(lambda: {'ts': 0, 'simi': -1, 'searched_url': ''})
+    print('total comparison:', len(searched_urls))
+    for i, searched_url in enumerate(searched_urls):
+        if i % 1000 == 0: print(i)
+        url, ts, content = searched_url['url'], searched_url['ts'], searched_url['content']
+        searched = searched_url['searched']
+        simi = tfidf.similar(content, searched['content'])
+        simi_dict[url]['ts'] = ts
+        if simi > simi_dict[url]['simi']:
+            simi_dict[url]['simi'] = simi
+            simi_dict[url]['searched_url'] = searched['url']
+    for url, value in simi_dict.items():    
+        db.search_meta.update_one({'url': url, 'ts': value['ts']}, \
+            {'$set': {'similarity': value['simi'], 'searched_url': value['searched_url']}})
+
+
+
 if __name__ == '__main__':
-    crawl_realweb_wrapper(NUM_THREADS=10)
+    calculate_similarity()

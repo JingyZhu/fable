@@ -147,7 +147,9 @@ Usage is like url_content
     "content": "string",
     "topN": "string",
     "titleMatch": "string",
-    "usage": "(represent | archive)"
+    "usage": "(represent | archive)",
+    "similarity": "float (-1 means no search result found)",
+    "searched_url": "string, urls that has highest simi"
 }
 ```
 

@@ -11,6 +11,8 @@ def plot_CDF(data, classname=[], savefig='', show=True, cut=1):
     data should be a 2-dimensional list with each row a label
     cut: Percent of CDF to show 1 means all
     """
+    plt.figure(figsize=(12, 8))
+    plt.rc('font', size=16)
     data = [sorted(datus) for datus in data]
     size = [len(datus) for datus in data]
     # data = [datus[: int(s*cut)] for datus, s in zip(data, size)]
