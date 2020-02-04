@@ -256,7 +256,7 @@ def test_45xx(q_in):
                 {"$set": {"status": status, "detail": detail}}
             ))
             search_ops.append(pymongo.DeleteMany({"url": url}))
-        if len(write_ops) >= 30:
+        if len(url_ops) >= 30:
             try: db.url_status_implicit_broken.bulk_write(url_ops)
             except: pass
             try: db.url_broken.bulk_write(url_ops)
@@ -264,12 +264,12 @@ def test_45xx(q_in):
             try: db.search_meta.bulk_write(search_ops)
             except: pass
             url_ops, search_ops = [], []
-        try: db.url_status_implicit_broken.bulk_write(url_ops)
-        except: pass
-        try: db.url_broken.bulk_write(url_ops)
-        except: pass
-        try: db.search_meta.bulk_write(search_ops)
-        except: pass
+    try: db.url_status_implicit_broken.bulk_write(url_ops)
+    except: pass
+    try: db.url_broken.bulk_write(url_ops)
+    except: pass
+    try: db.search_meta.bulk_write(search_ops)
+    except: pass
 
 
 def fix_45xx_status(NUM_THREADS=10):
