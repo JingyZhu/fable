@@ -247,23 +247,26 @@ def calculate_similarity():
             "as": "searched"
         }},
         {"$project": {"searched.html": False, "searched._id": False, "_id": False, "html": False}},
-        {"$match": {"searched.content": {"$exists": True, "$ne": ""}}},
-        {"$unwind": "$searched"}
+        {"$unwind": "$searched"},
+        {"$match": {"searched.content": {"$exists": True, "$ne": ""}}}
     ])
     searched_urls = list(searched_urls)
-    simi_dict = collections.defaultdict(lambda: {'ts': 0, 'simi': -1, 'searched_url': ''})
+    simi_dict = collections.defaultdict(lambda: {'ts': 0, 'simi': 0, 'searched_url': ''})
     print('total comparison:', len(searched_urls))
     for i, searched_url in enumerate(searched_urls):
-        if i % 1000 == 0: print(i)
+        if i % 100 == 0: print(i)
         url, ts, content = searched_url['url'], searched_url['ts'], searched_url['content']
         searched = searched_url['searched']
         simi = tfidf.similar(content, searched['content'])
         simi_dict[url]['ts'] = ts
-        if simi > simi_dict[url]['simi']:
+        if simi >= simi_dict[url]['simi']:
             simi_dict[url]['simi'] = simi
             simi_dict[url]['searched_url'] = searched['url']
-    for url, value in simi_dict.items():    
-        db.search_meta.update_one({'url': url, 'ts': value['ts']}, \
+    search_meta = db.search_meta.find({"usage": "represent"}, {'url': True, 'ts': True})
+    for obj in list(search_meta):
+        url, ts = obj['url'], obj['ts']
+        value = simi_dict[url]    
+        db.search_meta.update_one({'url': url, 'ts': ts}, \
             {'$set': {'similarity': value['simi'], 'searched_url': value['searched_url']}})
 
 

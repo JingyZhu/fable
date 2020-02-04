@@ -40,11 +40,12 @@ def plot_CDF(df, xtitle="", ytitle="", title="", clear_bound=True):
         ),
     )
     for name, col in df.iteritems():
-        y = np.linspace(0, 1, len(col))
-        sorted_col = col.sort_values()
+        sorted_col = col.sort_values()[col.notnull()]
+        y = np.linspace(0, 1, len(sorted_col))
         min_v = min(min_v, sorted_col.iloc[0])
         max_v = max(max_v, sorted_col.iloc[-1])
         fig.add_trace(go.Scatter(x=sorted_col, y=y,  \
                                  mode='lines', name=name, line={'width': 3}))
-    if clear_bound: fig.update_xaxes(range=[min_v - 1, max_v + 1])
+    diff = (max_v - min_v) / 100
+    if clear_bound: fig.update_xaxes(range=[min_v - diff, max_v + diff])
     fig.show()

@@ -54,6 +54,7 @@ class TFidf:
         """
         Re calculated the tfidf from the self.corpus
         """
+        print("re_init")
         self.vectorizer = TfidfVectorizer()
         self.tfidf = self.vectorizer.fit_transform(self.corpus)
 
@@ -69,6 +70,8 @@ class TFidf:
         Get similarity of 2 text
         If any of the text is not in the corpus, TFIDF matrix will be recalculated
         """
+        if text1 == "" or text2 == "":
+            return 0
         need_reinit = False
         if text1 not in self.idx:
             self.idx[text1] = len(self.corpus)
