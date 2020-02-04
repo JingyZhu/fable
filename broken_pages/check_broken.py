@@ -36,7 +36,7 @@ def send_request(url):
     '''
 
     resp = None
-    requests_header = {'user-agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"}
+    requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
 
     # TODO: look into the fail reason in ConnectionError and find which other ones are related to DNS.
     req_failed = True
@@ -110,6 +110,49 @@ def other_error(url):
     return r_str
 
 
+def get_status(url, resp, msg):
+    status, detail = "", ""
+    if msg == 'SUCCESSFUL':
+        final_url, status_code = resp.url, resp.status_code
+        url_path = urlparse(url).path
+        final_url_path = urlparse(final_url).path
+        # remove the last '/' if it exists
+        if url_path.endswith('/'):
+            url_path = url_path[:-1]
+        if final_url_path.endswith('/'):
+            final_url_path = final_url_path[:-1]
+        
+        status = str(status_code)
+        # if the response status code is 400 or 500 level, brokem
+        if int(status_code / 100) >= 4:
+            detail = status_code
+        # if status code is 200 level and no redirection
+        elif (int(status_code/100) == 2 or int(status_code/100) == 3) and final_url_path == url_path:
+            detail = 'no redirection'
+        # if a non-hompage redirects to a homepage, considered broken
+        elif final_url_path == '' and url_path != '':
+            detail = 'homepage redirection'
+        # if it redirects to another path, we are unsure.
+        elif final_url_path != url_path:
+            detail = 'non-home redirection'
+
+        # do not know what redirection happens
+        else:
+            # this list should be empty
+            detail = 'unknown redirection'
+    else:
+        if 'ConnectionError_DNSLookupError' in msg:
+            status = 'DNSError'
+        elif msg == 'TooManyRedirects':
+            status = 'OtherError'
+            detail = 'TooManyRedirects'
+        else:
+            status = 'OtherError'
+            detail = other_error(url)
+            if "DNS" in detail: status = "DNSError"
+    return status, detail
+
+
 def test_links(q_in):
     '''Send requests to each link and log their status.'''
     global counter
@@ -119,46 +162,7 @@ def test_links(q_in):
         counter += 1
         print(counter, url)
         resp, msg = send_request(url)
-        status, detail = "", ""
-        if msg == 'SUCCESSFUL':
-            final_url, status_code = resp.url, resp.status_code
-            url_path = urlparse(url).path
-            final_url_path = urlparse(final_url).path
-            # remove the last '/' if it exists
-            if url_path.endswith('/'):
-                url_path = url_path[:-1]
-            if final_url_path.endswith('/'):
-                final_url_path = final_url_path[:-1]
-            
-            status = str(status_code)
-            # if the response status code is 400 or 500 level, brokem
-            if int(status_code / 100) >= 4:
-                detail = status_code
-            # if status code is 200 level and no redirection
-            elif (int(status_code/100) == 2 or int(status_code/100) == 3) and final_url_path == url_path:
-                detail = 'no redirection'
-            # if a non-hompage redirects to a homepage, considered broken
-            elif final_url_path == '' and url_path != '':
-                detail = 'homepage redirection'
-            # if it redirects to another path, we are unsure.
-            elif final_url_path != url_path:
-                detail = 'non-home redirection'
-
-            # do not know what redirection happens
-            else:
-                # this list should be empty
-                detail = 'unknown redirection'
-        else:
-            if 'ConnectionError_DNSLookupError' in msg:
-                status = 'DNSError'
-            elif msg == 'TooManyRedirects':
-                status = 'OtherError'
-                detail = 'TooManyRedirects'
-            else:
-                status = 'OtherError'
-                detail = other_error(url)
-                if msg == "Timeout" and "Ping" not in detail: errors.append(url)
-                if "DNS" in detail: status = "DNSError"
+        status, detail = get_status(url, resp, msg)
         # .Temp added
         db.url_status.update_one({"_id": url}, {"$set": {"status": status, "detail": detail}})
         # End
@@ -232,6 +236,56 @@ def collect_status():
     pools = []
     for _ in range(NUM_THREADS):
         pools.append(threading.Thread(target=test_links, args=(q_in,)))
+        pools[-1].start()
+    for t in pools:
+        t.join()
+
+
+def test_45xx(q_in):
+    global counter
+    url_ops, search_ops = [], []
+    while not q_in.empty():
+        url, old_status = q_in.get()
+        counter += 1
+        print(counter, url)
+        resp, msg = send_request(url)
+        status, detail = get_status(url, resp, msg)
+        if status != old_status:
+            url_ops.append(pymongo.UpdateOne(
+                {"_id": url}, 
+                {"$set": {"status": status, "detail": detail}}
+            ))
+            search_ops.append(pymongo.DeleteMany({"url": url}))
+        if len(write_ops) >= 30:
+            try: db.url_status_implicit_broken.bulk_write(url_ops)
+            except: pass
+            try: db.url_broken.bulk_write(url_ops)
+            except: pass
+            try: db.search_meta.bulk_write(search_ops)
+            except: pass
+            url_ops, search_ops = [], []
+        try: db.url_status_implicit_broken.bulk_write(url_ops)
+        except: pass
+        try: db.url_broken.bulk_write(url_ops)
+        except: pass
+        try: db.search_meta.bulk_write(search_ops)
+        except: pass
+
+
+def fix_45xx_status(NUM_THREADS=10):
+    """
+    For 45xx urls, it could be temporal 45xx and considered as robot that causing the error
+    Using new header and doing the crawl for 3 times. Consider 45xx only if all 3 times are the same
+    Otherwise, update url_status_implicit_broken, url_broken, and delete search_meta
+    """
+    q_in = queue.Queue()
+    urls = list(db.url_status_implicit_broken.find({'status': re.compile("^[45]")}))
+    random.shuffle(urls)
+    urls = urls + urls + urls
+    for url in urls: q_in.put((url['url'], url['status']))
+    pools = []
+    for _ in range(NUM_THREADS):
+        pools.append(threading.Thread(target=test_45xx, args=(q_in,)))
         pools[-1].start()
     for t in pools:
         t.join()
@@ -318,4 +372,6 @@ def dns_more_host_investigation():
         t.join()
     json.dump(host_status, open('dns_host.json', 'w+'))
 
-collect_status()
+
+if __name__ == '__main__':
+    collect_status()
