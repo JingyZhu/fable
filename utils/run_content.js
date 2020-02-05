@@ -15,7 +15,7 @@ const argv = require('yargs').argv;
 
 
 
-async function writeContent(Runtime, filename) {
+async function writeContent(Runtime, filename) {      
     const result = await Runtime.evaluate({
         expression: 'org.chromium.distiller.DomDistiller.apply()[2][1]'
     });
@@ -74,9 +74,19 @@ async function startChrome(){
             }),
         ]).catch(function(err){
             console.log(err.message)
-        })      
-    
-        await writeContent(Runtime, filename);
+        })
+
+        await Promise.race([
+            writeContent(Runtime, filename),
+            new Promise(function(_, reject) {
+                setTimeout(function() {
+                    reject(new Error(`run_content.js: Got content timeout`));
+                }, 3000);
+            }),
+        ]).catch(function(err){
+            console.log(err.message)
+            fs.writeFileSync(filename, '');
+        })
 
     } catch (err) {
         console.error(err);

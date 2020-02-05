@@ -255,7 +255,8 @@ def test_45xx(q_in):
                 {"_id": url}, 
                 {"$set": {"status": status, "detail": detail}}
             ))
-            search_ops.append(pymongo.DeleteMany({"url": url}))
+            if url_utils.status_categories(status, detail) != '4/5xx':  
+                search_ops.append(pymongo.DeleteMany({"url": url}))
         if len(url_ops) >= 30:
             try: db.url_status_implicit_broken.bulk_write(url_ops)
             except: pass
@@ -263,12 +264,16 @@ def test_45xx(q_in):
             except: pass
             try: db.search_meta.bulk_write(search_ops)
             except: pass
+            try: db.url_broken.bulk_write(search_ops)
+            except: pass
             url_ops, search_ops = [], []
     try: db.url_status_implicit_broken.bulk_write(url_ops)
     except: pass
     try: db.url_broken.bulk_write(url_ops)
     except: pass
     try: db.search_meta.bulk_write(search_ops)
+    except: pass
+    try: db.url_broken.bulk_write(search_ops)
     except: pass
 
 
@@ -283,6 +288,7 @@ def fix_45xx_status(NUM_THREADS=10):
     random.shuffle(urls)
     urls = urls + urls + urls
     for url in urls: q_in.put((url['url'], url['status']))
+    print('total requests:', len(urls))
     pools = []
     for _ in range(NUM_THREADS):
         pools.append(threading.Thread(target=test_45xx, args=(q_in,)))
@@ -374,4 +380,4 @@ def dns_more_host_investigation():
 
 
 if __name__ == '__main__':
-    collect_status()
+    fix_45xx_status(NUM_THREADS=10)

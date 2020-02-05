@@ -86,14 +86,14 @@ def frac_broken_links():
     plt.xlabel("#urls Brokenr")
     plt.ylabel("CDF across hosts")
     plt.title("#urls Broken (all hosts)")
-    plt.savefig('fig/brokens_frac_all.png')
+    plt.savefig('fig/broken_frac_all.png')
     plt.close()
     missing_counts = [list(filter(lambda x: x > 0, mc)) for mc in missing_counts]
     plot.plot_CDF(missing_counts, classname=[str(y) for y in years], show=False)
     plt.xlabel("#urls Brokenr")
     plt.ylabel("CDF across hosts")
     plt.title("#urls Broken (only broken)")
-    plt.savefig('fig/brokens_frac.png')
+    plt.savefig('fig/broken_frac.png')
     plt.close()
 
 
@@ -157,6 +157,8 @@ def frac_200_broken_links():
     plt.savefig('fig/nonhome_links.png')
     plt.close()
 
-relateion_x_y_links(re.compile('^[23]'), re.compile("DNSError"), "2xx", "DNSError")
-relateion_x_y_links(re.compile('^[23]'), re.compile("^[45]"), "2xx", "45xx")
-relateion_x_y_links(re.compile('^[45]'), re.compile("DNSError"), "45xx", "DNSError")
+# relateion_x_y_links(re.compile('^[23]'), re.compile("DNSError"), "2xx", "DNSError")
+# relateion_x_y_links(re.compile('^[23]'), re.compile("^[45]"), "2xx", "45xx")
+# relateion_x_y_links(re.compile('^[45]'), re.compile("DNSError"), "45xx", "DNSError")
+
+frac_broken_links()

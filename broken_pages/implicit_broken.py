@@ -14,6 +14,7 @@ import socket
 import random
 import re, time
 import itertools, collections
+import multiprocessing as mp
 
 sys.path.append('../')
 from utils import text_utils, crawl, url_utils, plot
@@ -22,7 +23,7 @@ import config
 idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-counter = 0
+counter = mp.Value('i', 0)
 
 
 def decide_content(html):
@@ -103,12 +104,14 @@ def crawl_pages(q_in, tid):
     Add into db.url_update
     """
     global counter
+    db = MongoClient(config.MONGO_HOSTNAME).web_decay
     rw_objs, wm_objs, uu_objs, wu_objs = [], [], [], []
     while not q_in.empty():
         url, year = q_in.get()
         wayback_year, wayback_update, functions = get_wayback_cp(url, year)
-        counter += 1
-        print(counter, tid, url, len(wayback_year), len(wayback_update) if wayback_update else 0)
+        with counter.get_lock():
+            counter.value += 1
+            print(counter.value, tid, url, len(wayback_year), len(wayback_update) if wayback_update else 0)
         if len(wayback_year): # Possibliy not landing pages
             rw_html = crawl.requests_crawl(url)
             if not rw_html: rw_html = ''
@@ -131,9 +134,9 @@ def crawl_pages(q_in, tid):
                 })
             if len(rw_objs) >= 50 or len(wm_objs) >= 50:
                 try: db.url_content.insert_many(rw_objs, ordered=False)
-                except: pass
+                except: print(tid, "db operation failed")
                 try: db.url_content.insert_many(wm_objs, ordered=False)
-                except: pass
+                except: print(tid, "db operation failed")
                 rw_objs, wm_objs = [], []
         if wayback_update is None:
                 detail = 'HLD'
@@ -173,11 +176,11 @@ def crawl_pages(q_in, tid):
             })
         if len(uu_objs) >= 50:
             try: db.url_update.insert_many(uu_objs, ordered=False)
-            except: pass
+            except: print(tid, "db operation failed")
             uu_objs = []
         if len(wu_objs) >= 50:
             try: db.url_content.insert_many(wu_objs, ordered=False)
-            except: pass
+            except: print(tid, "db operation failed")
             wu_objs = []
     try: db.url_content.insert_many(rw_objs, ordered=False)
     except: pass
@@ -196,7 +199,7 @@ def crawl_pages_wrap(NUM_THREADS=5):
     """
     db.url_content.create_index([("url", pymongo.ASCENDING), ("ts", pymongo.ASCENDING)], unique=True)
     db.url_content.create_index([("url", pymongo.ASCENDING)])
-    q_in = queue.Queue()
+    q_in = mp.Queue()
     # Get content of url_status join host_sample, which is not in url_content 
     urls = db.host_sample.aggregate([
         {"$lookup": {
@@ -230,11 +233,12 @@ def crawl_pages_wrap(NUM_THREADS=5):
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     
     random.shuffle(urls)
+    # urls = [('https://cnn.com', 2019)]
     for url in urls:
         q_in.put((url['url'], url['year']))
     pools = []
     for i in range(NUM_THREADS):
-        pools.append(threading.Thread(target=crawl_pages, args=(q_in, i)))
+        pools.append(mp.Process(target=crawl_pages, args=(q_in, i)))
         pools[-1].start()
     for t in pools:
         t.join()
@@ -288,4 +292,4 @@ def compute_broken():
 
 
 if __name__ == '__main__':
-    crawl_pages_wrap(NUM_THREADS=10)
+    crawl_pages_wrap(NUM_THREADS=1)
