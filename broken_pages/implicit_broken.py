@@ -5,6 +5,7 @@ This scipt is used for checking 2/3xx status code
 import requests
 import sys
 from pymongo import MongoClient
+from pymongo.errors import BulkWriteError
 import pymongo
 import json
 import os
@@ -15,6 +16,7 @@ import random
 import re, time
 import itertools, collections
 import multiprocessing as mp
+from pprint import pprint, pformat
 
 sys.path.append('../')
 from utils import text_utils, crawl, url_utils, plot
@@ -134,9 +136,9 @@ def crawl_pages(q_in, tid):
                 })
             if len(rw_objs) >= 50 or len(wm_objs) >= 50:
                 try: db.url_content.insert_many(rw_objs, ordered=False)
-                except: print(tid, "db operation failed")
+                except Exception as e: print(tid, "db operation failed", str(e))
                 try: db.url_content.insert_many(wm_objs, ordered=False)
-                except: print(tid, "db operation failed")
+                except Exception as e: print(tid, "db operation failed", str(e))
                 rw_objs, wm_objs = [], []
         if wayback_update is None:
                 detail = 'HLD'
@@ -183,13 +185,13 @@ def crawl_pages(q_in, tid):
             except: print(tid, "db operation failed")
             wu_objs = []
     try: db.url_content.insert_many(rw_objs, ordered=False)
-    except: pass
+    except Exception as e: print(tid, "db operation failed", str(e))
     try: db.url_content.insert_many(wm_objs, ordered=False)
-    except: pass
+    except Exception as e: print(tid, "db operation failed", str(e))
     try: db.url_update.insert_many(uu_objs, ordered=False)
-    except: pass
+    except Exception as e: print(tid, "db operation failed", str(e))
     try: db.url_content.insert_many(wu_objs, ordered=False)
-    except: pass
+    except Exception as e: print(tid, "db operation failed", str(e))
 
 
 def crawl_pages_wrap(NUM_THREADS=5):
@@ -201,21 +203,7 @@ def crawl_pages_wrap(NUM_THREADS=5):
     db.url_content.create_index([("url", pymongo.ASCENDING)])
     q_in = mp.Queue()
     # Get content of url_status join host_sample, which is not in url_content 
-    urls = db.host_sample.aggregate([
-        {"$lookup": {
-            "from": "url_status",
-            "let": {"hostname": "$hostname", "year": "$year"},
-            "pipeline": [
-                {"$match": {"$expr": {"$and": [
-                    {"$eq": ["$hostname", "$$hostname"]},
-                    {"$eq": ["$year", "$$year"]}
-                ]}}}
-            ],
-            "as": "in_sample"
-        }},
-        {"$match": {"in_sample.0": {"$exists": True}}},
-        {"$unwind": "$in_sample"},
-        {"$replaceRoot": { "newRoot": "$in_sample"} },
+    urls = db.url_status_implicit_broken.aggregate([
         {"$match": {"status": re.compile("^[23]")}},
         # {"$count": "count"}
         {"$lookup": {
@@ -233,7 +221,6 @@ def crawl_pages_wrap(NUM_THREADS=5):
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
     
     random.shuffle(urls)
-    # urls = [('https://cnn.com', 2019)]
     for url in urls:
         q_in.put((url['url'], url['year']))
     pools = []
@@ -268,28 +255,32 @@ def compute_broken():
     tfidf = text_utils.TFidf(contents)
     print("tdidf init success!")
     available_urls = db.url_status_implicit_broken.aggregate([
-        {"$match": {"status": re.compile('^[23]') }},
+        {"$match": {"status": re.compile('^[23]'), 'similarity': {"$exists": False} }},
         {"$lookup": {
             "from": "url_content",
-            "localField": "_id",
-            "foreignField": "url",
+            "let": {"id": "$_id"},
+            "pipeline": [
+                {"$match": {"$or": [{"src": 'wayback', "usage": re.compile('represent')}, {"src": 'realweb'}]}},
+                {"$match": {"$expr": {"$and": [
+                    {"$eq": ["$url", "$$id"]}
+                ]}}}
+            ],
             "as": "contents"
         }},
-        {"$match": {"contents.0": {"$exists": 1}}},
+        {"$match": {"contents.0": {"$exists": True}}},
         {"$project": {"contents.html": False, "contents._id": False}}
     ])
     available_urls = list(available_urls)
     print("Total:", len(available_urls))
-    similarities = []
     for i, url in enumerate(available_urls):
         content = url['contents']
         simi = tfidf.similar(content[0]['content'], content[1]['content'])
-        similarities.append(simi)
         db.url_status_implicit_broken.update_one({"_id": url['_id']}, {"$set": {"similarity": simi}})
         if i % 10000 == 0: print(i)
-    plot.plot_CDF_Scatter([similarities], savefig='fig/similarities.png')
+    # plot.plot_CDF_Scatter([similarities], savefig='fig/similarities.png')
 
 
 
 if __name__ == '__main__':
-    crawl_pages_wrap(NUM_THREADS=1)
+    # compute_broken()
+    crawl_pages_wrap(NUM_THREADS=10)
