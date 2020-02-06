@@ -161,4 +161,4 @@ def frac_200_broken_links():
 # relateion_x_y_links(re.compile('^[23]'), re.compile("^[45]"), "2xx", "45xx")
 # relateion_x_y_links(re.compile('^[45]'), re.compile("DNSError"), "45xx", "DNSError")
 
-frac_broken_links()
+frac_200_broken_links()

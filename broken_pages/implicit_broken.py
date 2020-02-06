@@ -282,5 +282,5 @@ def compute_broken():
 
 
 if __name__ == '__main__':
-    # compute_broken()
-    crawl_pages_wrap(NUM_THREADS=10)
+    compute_broken()
+    # crawl_pages_wrap(NUM_THREADS=10)

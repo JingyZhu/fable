@@ -126,7 +126,9 @@ Record whether a url has high link density / update frequently on wayback
     "url": "string",
     "updating": "boolean, false means no / unknown (1 snapshot, similar, etc... )" ,
     "tss": [],
-    "detail": "updating True: HLD, not similar, no contents. False: 1 snapshot, no content, similar, no html"
+    "detail": "updating True: HLD, not similar, no contents. False: 1 snapshot, no content, similar, no html",
+    "(simiarity)": "float (only if similar/not similar)",
+    "(recordts)": []
 }
 ```
 
