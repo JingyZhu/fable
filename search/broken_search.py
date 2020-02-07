@@ -3,7 +3,7 @@ Load broken page on the wayback machine
 Extract page metadata (title, topN words, etc)
 Search on google
 
-Pipeline: crawl_wayback_wrapper --> calculate_topN --> search_titleMatch_topN --> calculate_similarity
+Pipeline: crawl_wayback_wrapper --> calculate_topN --> search_titleMatch_topN --> crawl_realweb_wrapper --> calculate_similarity
 """
 import requests
 import sys
@@ -216,7 +216,7 @@ def search_titleMatch_topN():
 
 
 def calculate_topN():
-    corpus = db.search_meta.find({'content': {"$ne": ""}}, {'content': True})
+    corpus = db.search_meta.find({}, {'content': True})
     corpus = [c['content'] for c in corpus]
     tfidf = text_utils.TFidf(corpus)
     print('tfidf initialized')
@@ -272,4 +272,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    calculate_similarity()
+    crawl_wayback_wrapper(NUM_THREADS=10)
