@@ -26,7 +26,7 @@ import config
 idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-counter = 0
+counter = mp.Value('i', 0)
 
 def get_wayback_cp(url, year):
     """
@@ -118,48 +118,44 @@ def crawl_wayback_wrapper(NUM_THREADS=5):
         t.join()
 
 
-def crawl_realweb(q_in, tid):
+def crawl_realweb(q_in):
     global counter
-    se_ops = []
-    db = MongoClient(config.MONGO_HOSTNAME).web_decay
-    while not q_in.empty():
-        url, fromm = q_in.get()
-        html = crawl.requests_crawl(url)
-        if html is None: html = ''
-        content = text_utils.extract_body(html, version='domdistiller')
-        counter += 1
-        print(counter, tid, url)
-        se_ops.append(pymongo.UpdateOne(
-            {"url": url, "from": fromm}, 
-            {"$set": {"html": brotli.compress(html.encode()), "content": content}}
-        ))
-        if len(se_ops) >= 20:
-            db.search.bulk_write(se_ops)
-            se_ops = []
-    db.search.bulk_write(se_ops)
+    url, fromm = q_in
+    html = crawl.requests_crawl(url)
+    if html is None: html = ''
+    content = text_utils.extract_body(html, version='domdistiller')
+    with counter.get_lock():
+        counter.value += 1
+        print(counter.value, url)
+    return pymongo.UpdateOne(
+        {"url": url, "from": fromm}, 
+        {"$set": {"html": brotli.compress(html.encode()), "content": content}}
+    )
 
 
 
-def crawl_realweb_wrapper(NUM_THREADS=10):
+def crawl_realweb_wrapper(NUM_PROCESSES=10):
     """
     Crawl the searched results from the db.search
     Update each record with html (byte) and content
     """
-    q_in = queue.Queue()
     urls = db.search.find({'html': {"$exists": False}})
     urls = sorted(list(urls), key=lambda x: x['url'] + str(x['from']))
     length = len(urls)
     print(length // len(config.HOSTS))
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
+    urls = [(u['url'], u['from']) for u in urls]
     random.shuffle(urls)
-    for url in urls:
-        q_in.put((url['url'], url['from']))
-    pools = []
-    for i in range(NUM_THREADS):
-        pools.append(threading.Thread(target=crawl_realweb, args=(q_in, i)))
-        pools[-1].start()
-    for t in pools:
-        t.join()
+    pool = mp.Pool(processes=NUM_PROCESSES)
+    length = len(urls)
+    for i in range(100):
+        start, end = i * length // 100, (i + 1) * length // 100
+        result = pool.map_async(crawl_realweb, urls[start: end])
+        result = result.get()
+        db.search.bulk_write(result)
+        print(end, "finished, Written to db")
+    pool.close()
+    pool.join()
 
 
 
@@ -177,7 +173,7 @@ def search_titleMatch_topN():
     ])
     se_objs = []
     urls = list(urls)
-    print(len(urls))
+    print('total:', len(urls))
     for i, obj in enumerate(urls):
         titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
         db.searched_titleMatch.insert_one({"_id": url})
@@ -206,7 +202,7 @@ def search_titleMatch_topN():
                     "from": url,
                     "rank": "top5" if j < 5 else "top10"
                 })
-        if len(se_objs) >= 50:
+        if len(se_objs) >= 10:
             try: db.search.insert_many(se_objs, ordered=False)
             except: pass
             se_objs = []
@@ -220,7 +216,8 @@ def calculate_topN():
     corpus = [c['content'] for c in corpus]
     tfidf = text_utils.TFidf(corpus)
     print('tfidf initialized')
-    urls = list(db.search_meta.find({'content': {"$ne": ""}, 'topN': {"$exists": False}}))
+    urls = list(db.search_meta.find({'topN': {"$exists": False}}))
+    print('total:', len(urls))
     for i, url in enumerate(urls):
         words = tfidf.topN(url['content'])
         query = ' '.join(words)
@@ -272,4 +269,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    crawl_wayback_wrapper(NUM_THREADS=10)
+   crawl_realweb_wrapper(NUM_PROCESSES=10)
