@@ -9,7 +9,7 @@ from os.path import abspath, dirname, join
 import base64
 import threading, queue
 import itertools
-
+import cchardet
 class ProxySelector:
     """
     Select Proxy from a pool
@@ -178,7 +178,9 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}):
     html: Only return html if set to true
     wait: Will wait if get block
     """
+    filter_ext = ['.pdf']
     requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
+    if os.path.splitext(url)[1] in filter_ext: return
     count = 0
     while True:
         try:
@@ -190,6 +192,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}):
                 continue
             break
         except:
+            print("There is an exception with requests_crawl")
             return
     if r.status_code >= 400:
         return
@@ -198,4 +201,5 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}):
     if html and 'html' not in content_type:
         return
     r.encoding = r.apparent_encoding
-    return r.text
+    text = r.text
+    return text

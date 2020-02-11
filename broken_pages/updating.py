@@ -58,7 +58,7 @@ def is_updating():
     tfidf = text_utils.TFidf(corpus)
     print("tfidf init success")
     rvals = db.url_update.aggregate([
-        {"$match": {"detail": 'not similar?'}},
+        {"$match": {"detail": re.compile("similar")}},
         {"$lookup": {
             "from": "url_content",
             "let": {"id": "$_id"},
@@ -76,16 +76,17 @@ def is_updating():
     print('total:', len(rvals))
     for i, similarity in enumerate(rvals):
         if i % 1000 == 0: print(i)
-        max_simi = [(0, ("00000000000000", "00000000000000"))]
+        min_simi = [(1, ("00000000000000", "00000000000000"))]
         contents = similarity['contents']
         for content1, content2 in itertools.combinations(contents, 2):
             simi = tfidf.similar(content1['content'], content2['content'])
-            max_simi.append((simi, (content1['ts'], content2['ts'])))
-        max_simi = max(max_simi, key=lambda x: x[0])
-        updating = True if max_simi[0] < 0.8 else False
+            min_simi.append((simi, (content1['ts'], content2['ts'])))
+        min_simi = min(min_simi, key=lambda x: x[0])
+        updating = True if min_simi[0] < 0.8 else False
         detail = 'similar' if not updating else "not similar"
         db.url_update.update_one({"_id": similarity['_id']}, {"$set": \
-            {"similarity": max_simi[0], "recordts": list(max_simi[1]), "updating": updating, "detail": detail }})
+            {"similarity": min_simi[0], "recordts": list(min_simi[1]), "updating": updating, "detail": detail }})
 
 
-is_updating()
+if __name__ == '__main__':
+    is_updating()

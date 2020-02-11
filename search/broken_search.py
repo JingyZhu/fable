@@ -18,6 +18,7 @@ import random
 import re, time
 import itertools, collections
 import multiprocessing as mp
+import signal
 
 sys.path.append('../')
 from utils import text_utils, crawl, url_utils, search
@@ -27,6 +28,11 @@ idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 counter = mp.Value('i', 0)
+
+def timeout_handler(signum, frame):
+    print(mp.current_process().name, signum, frame)
+    raise Exception("Timeout")
+
 
 def get_wayback_cp(url, year):
     """
@@ -118,44 +124,49 @@ def crawl_wayback_wrapper(NUM_THREADS=5):
         t.join()
 
 
-def crawl_realweb(q_in):
+def crawl_realweb(q_in, tid):
     global counter
-    url, fromm = q_in
-    html = crawl.requests_crawl(url)
-    if html is None: html = ''
-    content = text_utils.extract_body(html, version='domdistiller')
-    with counter.get_lock():
-        counter.value += 1
-        print(counter.value, url)
-    return pymongo.UpdateOne(
-        {"url": url, "from": fromm}, 
-        {"$set": {"html": brotli.compress(html.encode()), "content": content}}
-    )
+    se_ops = []
+    db = MongoClient(config.MONGO_HOSTNAME).web_decay
+    while not q_in.empty():
+        url, fromm = q_in.get()
+        with counter.get_lock():
+            counter.value += 1
+            print(counter.value, tid, url)
+        html = crawl.requests_crawl(url)
+        if html is None: html = ''
+        content = text_utils.extract_body(html, version='domdistiller')
+        se_ops.append(pymongo.UpdateOne(
+            {"url": url, "from": fromm}, 
+            {"$set": {"html": brotli.compress(html.encode()), "content": content}}
+        ))
+        if len(se_ops) >= 1:
+            db.search.bulk_write(se_ops)
+            se_ops = []
+    db.search.bulk_write(se_ops)
 
 
 
-def crawl_realweb_wrapper(NUM_PROCESSES=10):
+def crawl_realweb_wrapper(NUM_THREADS=10):
     """
     Crawl the searched results from the db.search
     Update each record with html (byte) and content
     """
+    q_in = mp.Queue()
     urls = db.search.find({'html': {"$exists": False}})
     urls = sorted(list(urls), key=lambda x: x['url'] + str(x['from']))
     length = len(urls)
     print(length // len(config.HOSTS))
     urls = urls[idx*length//len(config.HOSTS): (idx+1)*length//len(config.HOSTS)]
-    urls = [(u['url'], u['from']) for u in urls]
     random.shuffle(urls)
-    pool = mp.Pool(processes=NUM_PROCESSES)
-    length = len(urls)
-    for i in range(100):
-        start, end = i * length // 100, (i + 1) * length // 100
-        result = pool.map_async(crawl_realweb, urls[start: end])
-        result = result.get()
-        db.search.bulk_write(result)
-        print(end, "finished, Written to db")
-    pool.close()
-    pool.join()
+    for url in urls:
+        q_in.put((url['url'], url['from']))
+    pools = []
+    for i in range(NUM_THREADS):
+        pools.append(mp.Process(target=crawl_realweb, args=(q_in, i)))
+        pools[-1].start()
+    for t in pools:
+        t.join()
 
 
 
@@ -236,7 +247,7 @@ def calculate_similarity():
     tfidf = text_utils.TFidf(corpus)
     print("tfidf init success!")
     searched_urls = db.search_meta.aggregate([
-        {"$match": {"usage": "represent"}},
+        {"$match": {"usage": "represent", "similarity": {"$exists": False}}},
         {"$lookup": {
             "from": "search",
             "localField": "url",
@@ -259,7 +270,7 @@ def calculate_similarity():
         if simi >= simi_dict[url]['simi']:
             simi_dict[url]['simi'] = simi
             simi_dict[url]['searched_url'] = searched['url']
-    search_meta = db.search_meta.find({"usage": "represent"}, {'url': True, 'ts': True})
+    search_meta = db.search_meta.find({"usage": "represent", "similarity": {"$exists": False}}, {'url': True, 'ts': True})
     for obj in list(search_meta):
         url, ts = obj['url'], obj['ts']
         value = simi_dict[url]    
@@ -269,4 +280,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-   crawl_realweb_wrapper(NUM_PROCESSES=10)
+    calculate_similarity()
