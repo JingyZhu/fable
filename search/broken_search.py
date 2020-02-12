@@ -222,6 +222,36 @@ def search_titleMatch_topN():
     except: pass
 
 
+def calculate_titleMatch(NUM_THREADS=10):
+    urls = list(db.search_meta.find({'titleMatch': {"$exists": False}}))
+    print('total:', len(urls))
+    q_in = mp.Queue()
+    count = mp.Value('i', 0)
+    def proc_func(q_in, pid):
+        nonlocal count
+        db = MongoClient(config.MONGO_HOSTNAME).web_decay
+        while not q_in.empty():
+            with count.get_lock():
+                count.value += 1
+                print(count.value, pid)
+            url, ts, html = q_in.get()
+            title = search.get_title(html)
+            db.search_meta.update_one({"url": url, "ts": ts}, {"$set": {"titleMatch": title}})
+    for url in urls:
+        try: html = brotli.decompress(url['html']).decode()
+        except:
+            print("fail to decode")
+            continue
+        q_in.put((url['url'], url['ts'], html))
+    pools = []
+    print(os.getpid())
+    for i in range(NUM_THREADS):
+        pools.append(mp.Process(target=proc_func, args=(q_in, i)))
+        pools[-1].start()
+    for p in pools:
+        p.join()
+
+
 def calculate_topN():
     corpus = db.search_meta.find({}, {'content': True})
     corpus = [c['content'] for c in corpus]
@@ -280,4 +310,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    calculate_similarity()
+    calculate_titleMatch()

@@ -63,6 +63,6 @@ def status_categories(status, detail):
     elif re.compile("^DNSError").match(status): return status
     elif  re.compile("^OtherError").match(status): return "OtherError_" + detail
     else:
-        raise
+        raise Exception("Unknown categories")
 
 
