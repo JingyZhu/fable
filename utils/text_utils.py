@@ -131,7 +131,7 @@ def mine_date(html):
     """
     Mine way of trying to get date
     """
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, 'lxml')
     dates = set()
     filter_tags = ['script', 'a', 'style']
     for tag in filter_tags:
@@ -239,7 +239,7 @@ def domdistiller_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the content 
     """
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
     for tag in soup.find_all('img', {'style': True}):
@@ -274,7 +274,7 @@ def domdistiller_extract(html, lang=None):
         return ""
     content = open(html_file, 'r').read()
     os.remove(html_file)
-    soup = BeautifulSoup(content, 'html.parser')
+    soup = BeautifulSoup(content, 'lxml')
 
     filter_tags = ['style', 'script', 'link', 'meta']
     for tag in filter_tags:
@@ -294,7 +294,7 @@ def lang_meta(html):
     """
     Grab the metadata of html
     """
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, 'lxml')
     html = soup.find('html')
     try:
         return html['lang'][:2]
@@ -344,7 +344,7 @@ def domdistiller_title_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the title
     """
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
     for tag in soup.find_all('img', {'style': True}):

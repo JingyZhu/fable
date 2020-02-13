@@ -44,7 +44,7 @@ def topN(url):
 
 
 def get_headers(html):
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html)
     possible = []
     title = soup.find('title')
     title = title.text if title.title != 'Wayback Machine' else ""

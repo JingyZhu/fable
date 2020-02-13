@@ -28,7 +28,7 @@ bing_url = 'https://api.cognitive.microsoft.com/bing/v7.0/search'
 
 
 def get_headers(html):
-    soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup(html, 'lxml')
     possible = []
     title = soup.find('title')
     title = title.text if title and title.title != 'Wayback Machine' else ""
