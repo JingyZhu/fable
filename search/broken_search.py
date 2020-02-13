@@ -128,12 +128,6 @@ def crawl_realweb(q_in, tid):
     global counter
     se_ops = []
     db = MongoClient(config.MONGO_HOSTNAME).web_decay
-    def segfault_handler(signum, frame):
-        if not q_in.empty:
-            p = mp.Process(target=crawl_realweb, args=(q_in, tid))
-            p.start()
-            p.join()
-    signal.signal(signal.SIGSEGV, segfault_handler) 
     while not q_in.empty():
         url, fromm = q_in.get()
         with counter.get_lock():
@@ -146,10 +140,12 @@ def crawl_realweb(q_in, tid):
             {"url": url, "from": fromm}, 
             {"$set": {"html": brotli.compress(html.encode()), "content": content}}
         ))
-        if len(se_ops) >= 1:
-            db.search.bulk_write(se_ops)
+        if len(se_ops) >= 20:
+            try: db.search.bulk_write(se_ops)
+            except: print("db bulk write failed")
             se_ops = []
-    db.search.bulk_write(se_ops)
+    try: db.search.bulk_write(se_ops)
+    except: print("db bulk write failed")
 
 
 
@@ -171,6 +167,13 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
     for i in range(NUM_THREADS):
         pools.append(mp.Process(target=crawl_realweb, args=(q_in, i)))
         pools[-1].start()
+    def segfault_handler(signum, frame):
+        print("Seg Fault on process")
+        if not q_in.empty():
+            pools.append(mp.Process(target=crawl_realweb, args=(q_in, len(pools))))
+            pools[-1].start()
+            pools[-1].join()
+    signal.signal(signal.SIGSEGV, segfault_handler) 
     for t in pools:
         t.join()
 
@@ -316,4 +319,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    crawl_realweb_wrapper(NUM_THREADS=1)
+    crawl_realweb_wrapper(NUM_THREADS=16)
