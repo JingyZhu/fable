@@ -30,7 +30,7 @@ db = MongoClient(config.MONGO_HOSTNAME).web_decay
 counter = mp.Value('i', 0)
 
 def timeout_handler(signum, frame):
-    print(mp.current_process().name, signum, frame)
+    print(mp.current_process().name)
     raise Exception("Timeout")
 
 
@@ -128,6 +128,12 @@ def crawl_realweb(q_in, tid):
     global counter
     se_ops = []
     db = MongoClient(config.MONGO_HOSTNAME).web_decay
+    def segfault_handler(signum, frame):
+        if not q_in.empty:
+            p = mp.Process(target=crawl_realweb, args=(q_in, tid))
+            p.start()
+            p.join()
+    signal.signal(signal.SIGSEGV, segfault_handler) 
     while not q_in.empty():
         url, fromm = q_in.get()
         with counter.get_lock():
@@ -183,7 +189,7 @@ def search_titleMatch_topN():
         {"$project": {"hasSearched": False}}
     ])
     se_objs = []
-    urls = list(urls)
+    urls = list(urls)[:4900]
     print('total:', len(urls))
     for i, obj in enumerate(urls):
         titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
@@ -310,4 +316,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    calculate_titleMatch()
+    crawl_realweb_wrapper(NUM_THREADS=1)
