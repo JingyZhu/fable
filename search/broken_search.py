@@ -140,7 +140,7 @@ def crawl_realweb(q_in, tid):
             {"url": url, "from": fromm}, 
             {"$set": {"html": brotli.compress(html.encode()), "content": content}}
         ))
-        if len(se_ops) >= 20:
+        if len(se_ops) >= 1:
             try: db.search.bulk_write(se_ops)
             except: print("db bulk write failed")
             se_ops = []
@@ -319,4 +319,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    crawl_realweb_wrapper(NUM_THREADS=16)
+    calculate_similarity()
