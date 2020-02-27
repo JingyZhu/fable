@@ -183,3 +183,7 @@ Similar to search_meta
     "searched_url": "string, urls that has highest simi"
 }
 ```
+
+### search_sanity
+Search results for good pages \
+Format similar to search

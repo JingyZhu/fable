@@ -182,18 +182,66 @@ def calculate_titleMatch_topN():
     corpus2 = [c['content'] for c in corpus2]
     corpus = corpus1 + corpus2
     tfidf = text_utils.TFidf(corpus)
+    print("TD-IDF initialized success!")
     urls = list(db.search_sanity_meta.find())
     for i, url in enumerate(urls):
         html = brotli.decompress(url['html']).decode()
         title = search.get_title(html)
         topN = tfidf.topN(url['content'])
         topN = ' '.join(topN)
-        db.search_sanity_meta.update_one({'url': url['url']}, {'$set': {"topN": topN}, "titleMatch": title})
+        db.search_sanity_meta.update_one({'url': url['url']}, {'$set': {"topN": topN, "titleMatch": title}})
         if i % 100 == 0: print(i)
 
 
 def search_titleMatch_topN():
-    pass
+    urls = db.search_sanity_meta.aggregate([
+        {"$lookup":{
+            "from": "searched_titleMatch",
+            "localField": "url",
+            "foreignField": "_id",
+            "as": "hasSearched"
+        }},
+        {"$match": {"hasSearched.0": {"$exists": False}}},
+        {"$project": {"hasSearched": False}}
+    ])
+    se_objs = []
+    print('total:', len(urls))
+    exit(0)
+    for i, obj in enumerate(urls):
+        titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
+        db.searched_titleMatch.insert_one({"_id": url})
+        db.searched_topN.insert_one({"_id": url})
+        if titleMatch:
+            search_results = search.google_search('"{}"'.format(titleMatch))
+            if search_results is None:
+                print("No more access to google api")
+                break
+            print(i, len(search_results), url, titleMatch)
+            for j, search_url in enumerate(search_results):
+                se_objs.append({
+                    "url": search_url,
+                    "from": url,
+                    "rank": "top5" if j < 5 else "top10"
+                })
+        if topN:
+            search_results = search.google_search(topN)
+            if search_results is None:
+                print("No more access to google api")
+                break
+            print(i, len(search_results), url, topN)
+            for j, search_url in enumerate(search_results):
+                se_objs.append({
+                    "url": search_url,
+                    "from": url,
+                    "rank": "top5" if j < 5 else "top10"
+                })
+        if len(se_objs) >= 10:
+            try: db.search_sanity.insert_many(se_objs, ordered=False)
+            except: pass
+            se_objs = []
+
+    try: db.search_sanity.insert_many(se_objs, ordered=False)
+    except: pass
     
 
 
