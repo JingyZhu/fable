@@ -10,3 +10,5 @@ BeautifulSoup4
 brotli
 dateparser
 python-nmap
+Unidecode
+reppy

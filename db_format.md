@@ -139,7 +139,7 @@ Format: Sampe as url_status
 
 ### search_meta
 ##### Index: url_ts (unique)
-For each broken page, record its html, content and queries for search
+For each broken page, record its html, content and queries for search \
 Usage is like url_content
 ```json
 {
@@ -165,5 +165,21 @@ Search results for broken pages
     "html": "byte (brotli)",
     "content": "string",
     "rank": "top5 / top10"
+}
+```
+
+
+### search_sanity_meta
+For sampled good page \
+Similar to search_meta
+```json
+{
+    "url": "string",
+    "html": "byte (brotli)",
+    "content": "string",
+    "topN": "string",
+    "titleMatch": "string",
+    "similarity": "float (-1 means no search result found)",
+    "searched_url": "string, urls that has highest simi"
 }
 ```

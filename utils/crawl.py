@@ -10,6 +10,9 @@ import base64
 import threading, queue
 import itertools
 import cchardet
+from reppy.robots import Robots
+from urllib.parse import urlparse
+
 class ProxySelector:
     """
     Select Proxy from a pool
@@ -203,3 +206,27 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}):
     r.encoding = r.apparent_encoding
     text = r.text
     return text
+
+
+def get_sitemaps(hostname):
+    """
+    Trying to find the sitemap of a site
+    TODO Iterate over sitemap trees to find all the urls
+    """
+    requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
+    try:
+        r = requests.get('http://{}/'.format(hostname), headers=requests_header, timeout=10)
+    except: return None
+    hostname = urlparse(r.url).netloc
+    robots_url = 'http://{}/robots.txt'.format(hostname)
+    try:
+        rp = Robots.fetch(robots_url, headers=requests_header, timeout=10)
+        sitemaps = rp.sitemaps
+    except: sitemaps = []
+    if len(sitemaps) > 0: return sitemaps
+    sitemap_url = 'http://{}/sitemap.xml'.format(hostname)
+    try:
+        r = requests.get(sitemap_url, headers=requests_header, timeout=10)
+        if r.status_code >= 400: return None
+        else: return [sitemap_url]
+    except: return None

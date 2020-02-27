@@ -15,33 +15,10 @@ import matplotlib.pyplot as plt
 
 sys.path.append('../')
 import config
-from utils import text_utils, plot
+from utils import text_utils, plot, search
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 
-google_query_dict = {
-    "q": None,
-    "key" : "AIzaSyCq145QuNtIRGsluXo4n6lUbrvdOLA_hCY",
-    "cx" : "006035121867626378213:tutaxpqyro8",
-    # "fileType": "HTML"
-}
-
-key = 'AIzaSyCFRLJg_4e7ZEWB72VGO_Fwi2PJIPhBIRw'
-
-
-requests_header = {'user-agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"}
-headers = {"Ocp-Apim-Subscription-Key": '978290f3b37c48538596753b4d2be65f'}
-
-bing_query_dict = {
-    "q": None
-}
-
-google_url = 'https://www.googleapis.com/customsearch/v1'
-bing_url = 'https://api.cognitive.microsoft.com/bing/v7.0/search'
-
-#corpus = list(db.test_search.find({"content": {"$exists": True}}, {"content": True}))
-#corpus = [e['content'] for e in corpus]
-#TFidf = text_utils.TFidf(corpus)
 
 def topN(url):
     content = db.test_search.find_one({"_id": url})
@@ -96,41 +73,6 @@ def title_match(url, SE='google'):
     searchtext = "{}\"{}\"".format(anchor, searchtext)
     return searchtext
 
-
-def google_search(query, end=0, param_dict={}):
-    """
-    Search using google
-    """
-    google_query_dict['q'] = query
-    google_query_dict.update(param_dict)
-    try:
-        r = requests.get(google_url, params=google_query_dict)
-        r = r.json()
-    except Exception as e:
-        print(str(e))
-        return []
-    if "items" not in r:
-        return []
-    end = len(r['items']) if end == 0 else min(len(r["items"]), end)
-    return [ u["link"] for u in r['items'][:end]]
-
-
-def bing_search(query, end=0):
-    """
-    Search using bing
-    """
-    bing_query_dict["q"] = query
-    try:
-        r = requests.get(bing_url, params=bing_query_dict, headers=headers)
-        r = r.json()
-    except Exception as e:
-        print(str(e))
-        return []
-    if "webPages" not in r or 'value' not in r['webPages']:
-        return []
-    values = r["webPages"]['value']
-    end = len(values) if end == 0 else min(len(values), end)
-    return [u['url'] for u in values[:end]]
 
 
 def trend_search():
@@ -206,7 +148,7 @@ def metadata_search():
             print(str(e))
 
 
-def performance():
+def performance_trend():
     """
     Get the maximum similarity of the google search query
     Top5 and Top10
@@ -233,5 +175,38 @@ def performance():
     plt.title("Search result similarities")
 
 
+def calculate_titleMatch_topN():
+    corpus1 = db.search_sanity_meta.find({}, {'content': True})
+    corpus1 = [c['content'] for c in corpus1]
+    corpus2 = db.search_meta.find({}, {'content': True})
+    corpus2 = [c['content'] for c in corpus2]
+    corpus = corpus1 + corpus2
+    tfidf = text_utils.TFidf(corpus)
+    urls = list(db.search_sanity_meta.find())
+    for i, url in enumerate(urls):
+        html = brotli.decompress(url['html']).decode()
+        title = search.get_title(html)
+        topN = tfidf.topN(url['content'])
+        topN = ' '.join(topN)
+        db.search_sanity_meta.update_one({'url': url['url']}, {'$set': {"topN": topN}, "titleMatch": title})
+        if i % 100 == 0: print(i)
+
+
+def search_titleMatch_topN():
+    pass
+    
+
+
+def performance_nonbroken():
+    """
+    Sanity check for search engine
+    Search for copies for surely nonbroken pages
+    Pipeline: calculate_titleMatch_topN --> search_titleMatch_topN --> compute_similarity
+    """
+    pass
+    
+
+
+
 if __name__ == '__main__':
-    performance()
+    calculate_titleMatch_topN()
