@@ -12,13 +12,15 @@ from pymongo import MongoClient
 from bs4 import BeautifulSoup
 import random
 import matplotlib.pyplot as plt
+import multiprocessing as mp
+import pymongo
 
 sys.path.append('../')
 import config
-from utils import text_utils, plot, search
+from utils import text_utils, plot, search, crawl
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-
+counter = mp.Value('i', 0)
 
 def topN(url):
     content = db.test_search.find_one({"_id": url})
@@ -193,6 +195,49 @@ def calculate_titleMatch_topN():
         if i % 100 == 0: print(i)
 
 
+def crawl_realweb(q_in, tid):
+    global counter
+    se_ops = []
+    db = MongoClient(config.MONGO_HOSTNAME).web_decay
+    while not q_in.empty():
+        url, fromm = q_in.get()
+        with counter.get_lock():
+            counter.value += 1
+            print(counter.value, tid, url)
+        html = crawl.requests_crawl(url)
+        if html is None: html = ''
+        content = text_utils.extract_body(html, version='domdistiller')
+        se_ops.append(pymongo.UpdateOne(
+            {"url": url, "from": fromm}, 
+            {"$set": {"html": brotli.compress(html.encode()), "content": content}}
+        ))
+        if len(se_ops) >= 1:
+            try: db.search_sanity.bulk_write(se_ops)
+            except: print("db bulk write failed")
+            se_ops = []
+    try: db.search_sanity.bulk_write(se_ops)
+    except: print("db bulk write failed")
+
+
+def crawl_realweb_wrapper(NUM_THREADS=10):
+    """
+    Crawl the searched results from the db.search_sanity
+    Update each record with html (byte) and content
+    """
+    q_in = mp.Queue()
+    urls = db.search_sanity.find({'html': {"$exists": False}})
+    urls = list(urls)
+    print(len(urls))
+    for url in urls:
+        q_in.put((url['url'], url['from']))
+    pools = []
+    for i in range(NUM_THREADS):
+        pools.append(mp.Process(target=crawl_realweb, args=(q_in, i)))
+        pools[-1].start()
+    for t in pools:
+        t.join()
+
+
 def search_titleMatch_topN():
     urls = db.search_sanity_meta.aggregate([
         {"$lookup":{
@@ -205,8 +250,8 @@ def search_titleMatch_topN():
         {"$project": {"hasSearched": False}}
     ])
     se_objs = []
+    urls = list(urls)
     print('total:', len(urls))
-    exit(0)
     for i, obj in enumerate(urls):
         titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
         db.searched_titleMatch.insert_one({"_id": url})
@@ -257,4 +302,4 @@ def performance_nonbroken():
 
 
 if __name__ == '__main__':
-    calculate_titleMatch_topN()
+    crawl_realweb_wrapper()
