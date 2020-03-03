@@ -21,3 +21,4 @@ else:
     TMPPATH = config_yml.get('tmp_path')
     SEARCH_CX = config_yml.get('search_cx')
     SEARCH_KEY = config_yml.get('search_key')
+    BING_SEARCH_KEY = config_yml.get('bing_search_key')

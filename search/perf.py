@@ -14,13 +14,15 @@ import random
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import pymongo
+import collections
 
 sys.path.append('../')
 import config
-from utils import text_utils, plot, search, crawl
+from utils import text_utils, plot, search, crawl, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 counter = mp.Value('i', 0)
+host_extractor = url_utils.HostExtractor()
 
 def topN(url):
     content = db.test_search.find_one({"_id": url})
@@ -200,7 +202,7 @@ def crawl_realweb(q_in, tid):
     se_ops = []
     db = MongoClient(config.MONGO_HOSTNAME).web_decay
     while not q_in.empty():
-        url, fromm = q_in.get()
+        url, fromm, idd = q_in.get()
         with counter.get_lock():
             counter.value += 1
             print(counter.value, tid, url)
@@ -208,11 +210,11 @@ def crawl_realweb(q_in, tid):
         if html is None: html = ''
         content = text_utils.extract_body(html, version='domdistiller')
         se_ops.append(pymongo.UpdateOne(
-            {"url": url, "from": fromm}, 
+            {"_id": idd}, 
             {"$set": {"html": brotli.compress(html.encode()), "content": content}}
         ))
         if len(se_ops) >= 1:
-            try: db.search_sanity.bulk_write(se_ops)
+            try: db.search_sanity.bulk_write(se_ops, ordered=False)
             except: print("db bulk write failed")
             se_ops = []
     try: db.search_sanity.bulk_write(se_ops)
@@ -227,9 +229,10 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
     q_in = mp.Queue()
     urls = db.search_sanity.find({'html': {"$exists": False}})
     urls = list(urls)
+    random.shuffle(urls)
     print(len(urls))
     for url in urls:
-        q_in.put((url['url'], url['from']))
+        q_in.put((url['url'], url['from'], url["_id"]))
     pools = []
     for i in range(NUM_THREADS):
         pools.append(mp.Process(target=crawl_realweb, args=(q_in, i)))
@@ -238,7 +241,7 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
         t.join()
 
 
-def search_titleMatch_topN():
+def search_titleMatch_topN_google():
     urls = db.search_sanity_meta.aggregate([
         {"$lookup":{
             "from": "searched_titleMatch",
@@ -287,7 +290,105 @@ def search_titleMatch_topN():
 
     try: db.search_sanity.insert_many(se_objs, ordered=False)
     except: pass
+
+
+def search_titleMatch_topN_bing():
+    urls = db.search_sanity_meta.aggregate([
+        {"$lookup":{
+            "from": "searched_titleMatch",
+            "localField": "url",
+            "foreignField": "_id",
+            "as": "hasSearched"
+        }},
+        {"$match": {"hasSearched.0": {"$exists": False}}},
+        {"$project": {"hasSearched": False}}
+    ])
+    se_objs = []
+    urls = list(urls)
+    print('total:', len(urls))
+    for i, obj in enumerate(urls):
+        titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
+        db.searched_titleMatch.insert_one({"_id": url})
+        db.searched_topN.insert_one({"_id": url})
+        try:
+            today_url = requests.get(url).url
+            sitename = host_extractor.extract(today_url)
+        except: sitename = None
+        if titleMatch:
+            query = '+"{}"'.format(titleMatch)
+            if sitename: query += " site:{}".format(sitename)
+            search_results = search.bing_search(query)
+            if search_results is None:
+                print("No more access to search api")
+                break
+            print(i, len(search_results), url, query)
+            for j, search_url in enumerate(search_results):
+                se_objs.append({
+                    "url": search_url,
+                    "from": url,
+                    "rank": "top5" if j < 5 else "top10"
+                })
+        if topN:
+            if sitename: topN += " site:{}".format(sitename)
+            search_results = search.bing_search(topN)
+            if search_results is None:
+                print("No more access to bing api")
+                break
+            print(i, len(search_results), url, topN)
+            for j, search_url in enumerate(search_results):
+                se_objs.append({
+                    "url": search_url,
+                    "from": url,
+                    "rank": "top5" if j < 5 else "top10"
+                })
+        if len(se_objs) >= 10:
+            try: db.search_sanity.insert_many(se_objs, ordered=False)
+            except: pass
+            se_objs = []
+
+    try: db.search_sanity.insert_many(se_objs, ordered=False)
+    except: pass
     
+
+def calculate_similarity():
+    """
+    Calcuate the (highest) similarity of each searched pages
+    Update similarity and searched_urls to db.search_meta
+    """
+    corpus1 = db.search_sanity_meta.find({'content': {"$ne": ""}}, {'content': True})
+    corpus2 = db.search_sanity.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
+    corpus = [c['content'] for c in corpus1] + [c['content'] for c in corpus2]
+    tfidf = text_utils.TFidf(corpus)
+    print("tfidf init success!")
+    searched_urls = db.search_sanity_meta.aggregate([
+        {"$match": {"similarity": {"$exists": False}}},
+        {"$lookup": {
+            "from": "search_sanity",
+            "localField": "_id",
+            "foreignField": "from",
+            "as": "searched"
+        }},
+        {"$project": {"searched.html": False, "searched._id": False, "_id": False, "html": False}},
+        {"$unwind": "$searched"},
+        {"$match": {"searched.content": {"$exists": True, "$ne": ""}}}
+    ])
+    searched_urls = list(searched_urls)
+    simi_dict = collections.defaultdict(lambda: { 'simi': 0, 'searched_url': ''})
+    print('total comparison:', len(searched_urls))
+    for i, searched_url in enumerate(searched_urls):
+        if i % 100 == 0: print(i)
+        url, content = searched_url['url'], searched_url['content']
+        searched = searched_url['searched']
+        simi = tfidf.similar(content, searched['content'])
+        if simi >= simi_dict[url]['simi']:
+            simi_dict[url]['simi'] = simi
+            simi_dict[url]['searched_url'] = searched['url']
+    search_meta = db.search_sanity_meta.find({ "similarity": {"$exists": False}}, {'url': True})
+    for obj in list(search_meta):
+        url = obj['url']
+        value = simi_dict[url]    
+        db.search_sanity_meta.update_one({'_id': url}, \
+            {'$set': {'similarity': value['simi'], 'searched_url': value['searched_url']}})
 
 
 def performance_nonbroken():
@@ -299,7 +400,5 @@ def performance_nonbroken():
     pass
     
 
-
-
 if __name__ == '__main__':
-    crawl_realweb_wrapper()
+    calculate_similarity()

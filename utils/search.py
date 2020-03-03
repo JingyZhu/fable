@@ -21,7 +21,7 @@ bing_query_dict = {
 }
 
 requests_header = {'user-agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36"}
-headers = {"Ocp-Apim-Subscription-Key": '978290f3b37c48538596753b4d2be65f'}
+headers = {"Ocp-Apim-Subscription-Key": config.BING_SEARCH_KEY}
 
 google_url = 'https://www.googleapis.com/customsearch/v1'
 bing_url = 'https://api.cognitive.microsoft.com/bing/v7.0/search'
@@ -87,11 +87,12 @@ def google_search(query, end=0, param_dict={}):
         return [ u["link"] for u in r['items'][:end]]
 
 
-def bing_search(query, end=0):
+def bing_search(query, end=0, param_dict={}):
     """
     Search using bing
     """
     bing_query_dict["q"] = query
+    bing_query_dict.update(param_dict)
     try:
         r = requests.get(bing_url, params=bing_query_dict, headers=headers)
         r = r.json()
@@ -102,4 +103,5 @@ def bing_search(query, end=0):
         return []
     values = r["webPages"]['value']
     end = len(values) if end == 0 else min(len(values), end)
+    time.sleep(1)
     return [u['url'] for u in values[:end]]
