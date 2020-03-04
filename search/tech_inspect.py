@@ -52,17 +52,17 @@ def crawl_analyze_sanity():
     """
     Crawl wayback and realweb of db.wappalyzer_sanity, and update dict into collection
     """
-    urls = db.wappalyzer_sanity.find({"$or": [{"tech": {"$exists": False}}, {"tech": {}}, {"_id": re.compile('web.archive.org')}]})
+    urls = db.wappalyzer_sanity.find({"tech": {"$exists": False}})
     urls = list(urls)
     print("total:", len(urls))
-    exit(0)
     for i, obj in enumerate(urls):
         url = obj['_id']
         print(i, url)
         try:
             if 'web.archive.org' in url: tech = crawl.wappalyzer_analyze(url, proxy=PS.select_url())
             else: tech = crawl.wappalyzer_analyze(url, proxy=PS.select_url())
-        except:
+        except Exception as e:
+            print(str(e))
             continue
         db.wappalyzer_sanity.update_one({"_id": url}, {"$set": {"tech": tech}})
 
@@ -114,4 +114,4 @@ def take_differences_intersect_sanity():
     json.dump(sample, open('../tmp/tech_delta.json', 'w+'))
 
 
-crawl_analyze_sanity()
+crawl_analyze_reorg()
