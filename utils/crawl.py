@@ -256,8 +256,8 @@ def wappalyzer_analyze(url, proxy=None):
         "64": "Reverse proxies"
     }
     tech = defaultdict(list)
-    if proxy: cmd = "wappalyzer --proxy {} {}".format(proxy, url)
-    else: cmd = "wappalyzer {}".format(url)
+    if proxy: cmd = "wappalyzer -b zombie --proxy {} {}".format(proxy, url)
+    else: cmd = "wappalyzer -b zombie {}".format(url)
     output = check_output(cmd, shell=True)
     result = json.loads(output.decode())
     for obj in result['applications']:
