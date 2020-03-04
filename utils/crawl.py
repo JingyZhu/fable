@@ -1,7 +1,7 @@
 """
 Utilities for crawling a page
 """
-from subprocess import call
+from subprocess import call, check_output
 import requests 
 import os
 import time
@@ -12,6 +12,8 @@ import itertools
 import cchardet
 from reppy.robots import Robots
 from urllib.parse import urlparse
+import json
+from collections import defaultdict
 
 class ProxySelector:
     """
@@ -26,6 +28,12 @@ class ProxySelector:
         """ Currently RR """
         self.idx = self.idx + 1 if self.idx < self.len -1 else 0
         return self.proxies[self.idx]
+    
+    def select_url(self, scheme='http'):
+        """ Directly return url instead of dict """
+        proxy = self.select()
+        if proxy == {}: return
+        else: return "{}://{}".format(scheme, proxy[scheme] )
 
 
 def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
@@ -230,3 +238,31 @@ def get_sitemaps(hostname):
         if r.status_code >= 400: return None
         else: return [sitemap_url]
     except: return None
+
+
+def wappalyzer_analyze(url, proxy=None):
+    """
+    Use wappalyzer to analyze the tech used by this website
+    """
+    focus_categories = {
+        "1": "CMS", 
+        "6": "Ecommerce",
+        "18": "Web frameworks",
+        "19": "Miscellaneous",
+        "22": "Web servers", 
+        "27": "Programming Languages", 
+        "28": "Operating Systems",
+        "34": "Databases", 
+        "64": "Reverse proxies"
+    }
+    tech = defaultdict(list)
+    if proxy: cmd = "wappalyzer --proxy {} {}".format(proxy, url)
+    else: cmd = "wappalyzer {}".format(url)
+    output = check_output(cmd, shell=True)
+    result = json.loads(output.decode())
+    for obj in result['applications']:
+        for cate in obj['categories']:
+            key = list(cate.keys())[0]
+            if key in focus_categories:
+                tech[focus_categories[key]].append(obj['name'])
+    return tech

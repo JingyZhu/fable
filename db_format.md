@@ -187,3 +187,25 @@ Similar to search_meta
 ### search_sanity
 Search results for good pages \
 Format similar to search
+
+### wappaplyzer_sanity
+URLs are no redirection non-broken urls
+```json
+{
+    "_id": "crawl url (wayback / realweb)",
+    "url": "belong to url",
+    "year": "int",
+    "tech": "dict",
+}
+```
+
+### wappalyzer_reorg
+URLs are ones with copies and no DNSError
+```json
+{
+    "_id": "crawl url (wayback / realweb copy)",
+    "url": "belong to url",
+    "year": "int",
+    "tech": "dict",
+}
+```
