@@ -117,14 +117,15 @@ def take_differences_intersect_sanity():
 def take_differences_intersect_reorg(transfer_record=False):
     sample = []
     host_extractor = url_utils.HostExtractor()
-    transfer = defaultdict(list)
+    transfer, transfer_link_count = defaultdict(list), 0
     urls = db.wappalyzer_reorg.aggregate([
         {"$match": {"tech": {"$exists": True}}},
         {"$group": {"_id": "$url",  "total": {"$sum":1}, "techs": {"$push":{"url": "$_id", "year": "$year", "tech": "$tech", "searched_url": "$searched_url"}}}},
         {"$match": {"total": 2}},
-        {"$sample": {"size": 300}}
+        # {"$sample": {"size": 300}}
     ])
     for obj in urls:
+        transferred = False
         techs = obj['techs']
         year = techs[0]['year']
         searched_url = techs[0]['searched_url']
@@ -142,8 +143,10 @@ def take_differences_intersect_reorg(transfer_record=False):
         if transfer_record:
             shared_keys = set(add_a.keys()).intersection(set(add_b.keys()))
             shared_keys = shared_keys.union(['CMS', 'Web frameworks'])
+            print(shared_keys)
             for shared_key in shared_keys:
                 if len(add_a[shared_key]) == 0 and  len(add_b[shared_key]) == 0: continue
+                transferred = True
                 transfer[shared_key].append([add_a[shared_key], add_b[shared_key]])
         intersection = intersect_dict(wayback_tech, search_tech)
         sample.append({
@@ -154,10 +157,12 @@ def take_differences_intersect_reorg(transfer_record=False):
             "realweb delta": add_b,
             "intersect": intersection
         })
-    json.dump(sample, open('../tmp/tech_delta.json', 'w+'))
+        if transferred: transfer_link_count += 1
+    # json.dump(sample, open('../tmp/tech_delta.json', 'w+'))
     if transfer_record:
         json.dump(transfer, open('../tmp/tech_transfer.json', 'w+'))
-
+    print(len(sample), transfer_link_count)
 
 if __name__ == '__main__':
-    take_differences_intersect_reorg()
+    # take_differences_intersect_sanity()
+    take_differences_intersect_reorg(transfer_record=True)

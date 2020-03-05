@@ -22,12 +22,13 @@ class ZombieBrowser extends Browser {
 
     // jingyz: Added for detect tech used from wayback
     this.browser.pipeline.addHandler(function(browser, request, response){
+      if (!response._url.includes('web.archive.org')) return response
+      let new_headers = [];
       for (let li in response.headers._headers){
         let [k, v] = response.headers._headers[li];
-        
         if(k.match(/x-archive-orig/gi)) {
           let realHeader = k.toLowerCase().replace('x-archive-orig-', '')
-          response.headers._headers[li] = [realHeader, v]
+          new_headers.push([realHeader, v])
           if (realHeader == 'set-cookie'){ // Mannually set the cookie for x-archive-orig-set-cookie
             const wayback_cookie = setCookie.parse(v);
             for (let idx in wayback_cookie){
@@ -44,7 +45,8 @@ class ZombieBrowser extends Browser {
             }
           }
         }
-      }
+      } 
+      response.headers._headers = new_headers;
       return response
     });
 
@@ -56,7 +58,7 @@ class ZombieBrowser extends Browser {
         this.browser.visit(url, () => {
           const resource = this.browser.resources.length
             ? this.browser.resources.filter(_resource => _resource.response).shift() : null;
-
+  
           this.window = this.browser.window;
           this.document = this.browser.document;
           this.headers = this.getHeaders();
@@ -70,6 +72,7 @@ class ZombieBrowser extends Browser {
     
 
           resolve();
+          
         });
       } catch (error) {
         reject(error.message);
