@@ -14,6 +14,7 @@ from reppy.robots import Robots
 from urllib.parse import urlparse
 import json
 from collections import defaultdict
+from itertools import product
 
 class ProxySelector:
     """
@@ -244,6 +245,7 @@ def wappalyzer_analyze(url, proxy=None):
     """
     Use wappalyzer to analyze the tech used by this website
     """
+    agent_string = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
     focus_categories = {
         "1": "CMS", 
         "6": "Ecommerce",
@@ -256,22 +258,18 @@ def wappalyzer_analyze(url, proxy=None):
         "64": "Reverse proxies"
     }
     tech = defaultdict(list)
-    try:
-        if proxy: cmd = 'wappalyzer -b zombie --proxy {} {}'.format(proxy, url)
-        else: cmd = 'wappalyzer -b zombie {}'.format(url)
-        output = check_output(cmd, shell=True)
-        result = json.loads(output.decode())
-    except Exception as e:
-        print('Wappalyzer in crawl:', str(e))
-        if proxy: cmd = 'wappalyzer -b zombie --proxy {} "{}"'.format(proxy, url)
-        else: cmd = 'wappalyzer -b zombie "{}"'.format(url)
-        output = check_output(cmd, shell=True)
-        result = json.loads(output.decode())
-    if len(result['applications']) == 0: # URL may contain shell reserve cahr e.g. &
-        if proxy: cmd = 'wappalyzer -b zombie --proxy {} "{}"'.format(proxy, url)
-        else: cmd = 'wappalyzer -b zombie "{}"'.format(url)
-        output = check_output(cmd, shell=True)
-        result = json.loads(output.decode())
+    browsers = ['zombie', 'puppeteer']
+    for browser in browsers:
+        try:
+            if proxy: cmd = ['wappalyzer', '-b', browser, '-a', agent_string,  '--proxy', proxy, url]
+            else: cmd = cmd = ['wappalyzer', '-b', browser, '-a', agent_string, url]
+            output = check_output(cmd, timeout=15)
+            result = json.loads(output.decode())
+        except Exception as e:
+            print('Wappalyzer in crawl:', str(e))
+            continue
+        if len(result['applications']) > 0: break
+        print('continue', browser, url)
     for obj in result['applications']:
         for cate in obj['categories']:
             key = list(cate.keys())[0]
