@@ -256,10 +256,22 @@ def wappalyzer_analyze(url, proxy=None):
         "64": "Reverse proxies"
     }
     tech = defaultdict(list)
-    if proxy: cmd = "wappalyzer -b zombie --proxy {} {}".format(proxy, url)
-    else: cmd = "wappalyzer -b zombie {}".format(url)
-    output = check_output(cmd, shell=True)
-    result = json.loads(output.decode())
+    try:
+        if proxy: cmd = 'wappalyzer -b zombie --proxy {} {}'.format(proxy, url)
+        else: cmd = 'wappalyzer -b zombie {}'.format(url)
+        output = check_output(cmd, shell=True)
+        result = json.loads(output.decode())
+    except Exception as e:
+        print('Wappalyzer in crawl:', str(e))
+        if proxy: cmd = 'wappalyzer -b zombie --proxy {} "{}"'.format(proxy, url)
+        else: cmd = 'wappalyzer -b zombie "{}"'.format(url)
+        output = check_output(cmd, shell=True)
+        result = json.loads(output.decode())
+    if len(result['applications']) == 0: # URL may contain shell reserve cahr e.g. &
+        if proxy: cmd = 'wappalyzer -b zombie --proxy {} "{}"'.format(proxy, url)
+        else: cmd = 'wappalyzer -b zombie "{}"'.format(url)
+        output = check_output(cmd, shell=True)
+        result = json.loads(output.decode())
     for obj in result['applications']:
         for cate in obj['categories']:
             key = list(cate.keys())[0]

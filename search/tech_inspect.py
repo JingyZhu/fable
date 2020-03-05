@@ -114,4 +114,5 @@ def take_differences_intersect_sanity():
     json.dump(sample, open('../tmp/tech_delta.json', 'w+'))
 
 
-crawl_analyze_reorg()
+if __name__ == '__main__':
+    take_differences_intersect_sanity()
