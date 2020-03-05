@@ -114,5 +114,50 @@ def take_differences_intersect_sanity():
     json.dump(sample, open('../tmp/tech_delta.json', 'w+'))
 
 
+def take_differences_intersect_reorg(transfer_record=False):
+    sample = []
+    host_extractor = url_utils.HostExtractor()
+    transfer = defaultdict(list)
+    urls = db.wappalyzer_reorg.aggregate([
+        {"$match": {"tech": {"$exists": True}}},
+        {"$group": {"_id": "$url",  "total": {"$sum":1}, "techs": {"$push":{"url": "$_id", "year": "$year", "tech": "$tech", "searched_url": "$searched_url"}}}},
+        {"$match": {"total": 2}},
+        {"$sample": {"size": 300}}
+    ])
+    for obj in urls:
+        techs = obj['techs']
+        year = techs[0]['year']
+        searched_url = techs[0]['searched_url']
+        if 'web.archive.org' in techs[0]['url']:
+            if host_extractor.extract(techs[0]['url'], wayback=True) != host_extractor.extract(techs[1]['url']):
+                continue
+            wayback_tech = techs[0]['tech']
+            search_tech = techs[1]['tech']
+        else:
+            if host_extractor.extract(techs[1]['url'], wayback=True) != host_extractor.extract(techs[0]['url']):
+                continue
+            wayback_tech = techs[1]['tech']
+            search_tech = techs[0]['tech']
+        add_a, add_b = dict_diff(wayback_tech, search_tech)
+        if transfer_record:
+            shared_keys = set(add_a.keys()).intersection(set(add_b.keys()))
+            shared_keys = shared_keys.union(['CMS', 'Web frameworks'])
+            for shared_key in shared_keys:
+                if len(add_a[shared_key]) == 0 and  len(add_b[shared_key]) == 0: continue
+                transfer[shared_key].append([add_a[shared_key], add_b[shared_key]])
+        intersection = intersect_dict(wayback_tech, search_tech)
+        sample.append({
+            "url": obj['_id'],
+            "year": year,
+            "searched_url": searched_url,
+            "wayback delta": add_a,
+            "realweb delta": add_b,
+            "intersect": intersection
+        })
+    json.dump(sample, open('../tmp/tech_delta.json', 'w+'))
+    if transfer_record:
+        json.dump(transfer, open('../tmp/tech_transfer.json', 'w+'))
+
+
 if __name__ == '__main__':
-    take_differences_intersect_sanity()
+    take_differences_intersect_reorg()

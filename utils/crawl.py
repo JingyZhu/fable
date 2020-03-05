@@ -263,7 +263,7 @@ def wappalyzer_analyze(url, proxy=None):
         try:
             if proxy: cmd = ['wappalyzer', '-b', browser, '-a', agent_string,  '--proxy', proxy, url]
             else: cmd = cmd = ['wappalyzer', '-b', browser, '-a', agent_string, url]
-            output = check_output(cmd, timeout=15)
+            output = check_output(cmd, timeout=20)
             result = json.loads(output.decode())
         except Exception as e:
             print('Wappalyzer in crawl:', str(e))
