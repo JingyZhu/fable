@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import multiprocessing as mp
 import pymongo
 import collections
+from urllib.parse import urlparse
 
 sys.path.append('../')
 import config
@@ -398,7 +399,40 @@ def performance_nonbroken():
     Pipeline: calculate_titleMatch_topN --> search_titleMatch_topN --> compute_similarity
     """
     pass
-    
+
+
+def se_level_of_indexing():
+    """
+    For urls without indexing, find whether there exists other urls at the same dir
+    """
+    not_indexed_urls = db.search_sanity_meta.find({"similarity": {"$lt": 0.8}}, {"url": True})
+    not_indexed_urls = list(not_indexed_urls)
+    print("Total: ", len(not_indexed_urls))
+    for i, url in enumerate(not_indexed_urls):
+        today_url = requests.get(url['url']).url
+        up, today_up = urlparse(url['url']), urlparse(today_url)
+        netloc, path, query = today_up.netloc, up.path, up.query
+        if path == '' or os.path.dirname(path) == '/':
+            continue
+        dirname = path
+        for _ in range(3):
+            dirname = os.path.dirname(dirname)
+            site = netloc + dirname
+            print('Search on google:', dirname)
+            google_urls = search.google_search("", param_dict={'siteSearch': site})
+            if len(google_urls) > 0:
+                db.search_sanity_prefix.update_one({"_id": url['_id']}, {"$set": {"google_dir": dirname, 'google_urls': google_urls}})
+                break
+        dirname = path
+        for _ in range(3):
+            dirname = os.path.dirname(dirname)
+            site = netloc + dirname
+            print('Search on bing:', dirname)
+            bing_urls = search.bing_search("site:{}".format(site))
+            if len(bing_urls) > 0:
+                db.search_sanity_prefix.update_one({"_id": url['_id']}, {"$set": {"bing_dir": dirname, 'bing_urls': bing_urls}})
+                break
+
 
 if __name__ == '__main__':
-    calculate_similarity()
+    se_level_of_indexing()

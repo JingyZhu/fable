@@ -164,5 +164,4 @@ def take_differences_intersect_reorg(transfer_record=False):
     print(len(sample), transfer_link_count)
 
 if __name__ == '__main__':
-    # take_differences_intersect_sanity()
-    take_differences_intersect_reorg(transfer_record=True)
+    crawl_analyze_reorg()

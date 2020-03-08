@@ -209,3 +209,17 @@ URLs are ones with copies and no DNSError
     "tech": "dict",
 }
 ```
+
+
+### search_sanity_prefix
+Prefix for urls where search engine can get prefix search
+```json
+{
+    "_id": "url",
+    "url": "url",
+    "google_dir": "dirname find results",
+    "google_urls": "list",
+    "bing_dir": "dirname find results",
+    "bing_urls": "list", 
+}
+```

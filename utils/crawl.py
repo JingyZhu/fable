@@ -248,9 +248,7 @@ def wappalyzer_analyze(url, proxy=None):
     agent_string = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
     focus_categories = {
         "1": "CMS", 
-        # "6": "Ecommerce",
         "18": "Web frameworks",
-        "19": "Miscellaneous",
         "22": "Web servers", 
         "27": "Programming Languages", 
         "28": "Operating Systems",
