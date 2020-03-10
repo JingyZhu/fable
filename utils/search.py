@@ -98,8 +98,10 @@ def bing_search(query, end=0, param_dict={}):
         r = r.json()
     except Exception as e:
         print(str(e))
+        time.sleep(1)
         return []
     if "webPages" not in r or 'value' not in r['webPages']:
+        time.sleep(1)
         return []
     values = r["webPages"]['value']
     end = len(values) if end == 0 else min(len(values), end)

@@ -210,7 +210,6 @@ URLs are ones with copies and no DNSError
 }
 ```
 
-
 ### search_sanity_prefix
 Prefix for urls where search engine can get prefix search
 ```json

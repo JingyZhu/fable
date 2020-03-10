@@ -163,5 +163,6 @@ def take_differences_intersect_reorg(transfer_record=False):
         json.dump(transfer, open('../tmp/tech_transfer.json', 'w+'))
     print(len(sample), transfer_link_count)
 
+
 if __name__ == '__main__':
     crawl_analyze_reorg()

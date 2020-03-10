@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 
-def plot_CDF(df, xtitle="", ytitle="", title="", clear_bound=True):
+def plot_CDF(df, xtitle="", ytitle="", title="", cut=1, clear_bound=True):
     """
     Plot the CDF for different class
     data should be a pandas dataframe, where each row is a set of data. 
@@ -40,7 +40,9 @@ def plot_CDF(df, xtitle="", ytitle="", title="", clear_bound=True):
         ),
     )
     for name, col in df.iteritems():
+        length = len(col)
         sorted_col = col.sort_values()[col.notnull()]
+        sorted_col = sorted_col[: int(length*cut)]
         y = np.linspace(0, 1, len(sorted_col))
         min_v = min(min_v, sorted_col.iloc[0])
         max_v = max(max_v, sorted_col.iloc[-1])

@@ -77,7 +77,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     wait: wait unitl not getting block
     total_link: Returned url are in full links
 
-    return: ( [(timestamp, url)], SUCCESS/EMPTY/ERROR_MSG)
+    return: ( [(timestamp, url, stauts_code)], SUCCESS/EMPTY/ERROR_MSG)
     """
     wayback_home = 'http://web.archive.org/web/'
     params = {
@@ -106,9 +106,9 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
                 return [], str(e)
             time.sleep(10)
     if total_link:
-        r = [(i[1], "{}{}/{}".format(wayback_home, i[1], i[2])) for i in r[1:]]
+        r = [(i[1], "{}{}/{}".format(wayback_home, i[1], i[2]), i[4]) for i in r[1:]]
     else:
-        r = [(i[1], i[2]) for i in r[1:]]
+        r = [(i[1], i[2], i[4]) for i in r[1:]]
     if len(r) != 0:
         return r, "Success",
     else:
@@ -251,8 +251,9 @@ def wappalyzer_analyze(url, proxy=None):
         "18": "Web frameworks",
         "22": "Web servers", 
         "27": "Programming Languages", 
-        "28": "Operating Systems",
+        # "28": "Operating Systems",
         "34": "Databases", 
+        "62": "Paas",
         "64": "Reverse proxies"
     }
     tech = defaultdict(list)

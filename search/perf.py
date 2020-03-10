@@ -405,17 +405,22 @@ def se_level_of_indexing():
     """
     For urls without indexing, find whether there exists other urls at the same dir
     """
-    not_indexed_urls = db.search_sanity_meta.find({"similarity": {"$lt": 0.8}}, {"url": True})
+    not_indexed_urls = db.search_sanity_prefix.find({'google_dir': {"$exists": False}})
     not_indexed_urls = list(not_indexed_urls)
     print("Total: ", len(not_indexed_urls))
     for i, url in enumerate(not_indexed_urls):
-        today_url = requests.get(url['url']).url
+        print(i, url['url'])
+        try:
+            today_url = requests.get(url['url'], timeout=15).url
+        except: today_url = url['url']
         up, today_up = urlparse(url['url']), urlparse(today_url)
         netloc, path, query = today_up.netloc, up.path, up.query
-        if path == '' or os.path.dirname(path) == '/':
-            continue
         dirname = path
+        if path in ['', '/']:
+            continue
         for _ in range(3):
+            if dirname == '/':
+                break
             dirname = os.path.dirname(dirname)
             site = netloc + dirname
             print('Search on google:', dirname)
@@ -425,6 +430,8 @@ def se_level_of_indexing():
                 break
         dirname = path
         for _ in range(3):
+            if dirname == '/':
+                break
             dirname = os.path.dirname(dirname)
             site = netloc + dirname
             print('Search on bing:', dirname)
