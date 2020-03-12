@@ -241,9 +241,10 @@ def get_sitemaps(hostname):
     except: return None
 
 
-def wappalyzer_analyze(url, proxy=None):
+def wappalyzer_analyze(url, proxy=None, timeout=None):
     """
     Use wappalyzer to analyze the tech used by this website
+    Timeout: Time for pages to load resources, in ms
     """
     agent_string = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
     focus_categories = {
@@ -257,11 +258,14 @@ def wappalyzer_analyze(url, proxy=None):
         "64": "Reverse proxies"
     }
     tech = defaultdict(list)
+    flags = {'-a': agent_string}
+    if proxy: flags.update({'--proxy': proxy})
+    if timeout: flags.update({'-w': timeout*1000})
+    flags_cmd = sum([[k, str(v)] for k, v in flags.items()], [])
     browsers = ['zombie', 'puppeteer']
     for browser in browsers:
         try:
-            if proxy: cmd = ['wappalyzer', '-b', browser, '-a', agent_string,  '--proxy', proxy, url]
-            else: cmd = cmd = ['wappalyzer', '-b', browser, '-a', agent_string, url]
+            cmd = ['wappalyzer', '-b', browser] + flags_cmd + [url]
             output = check_output(cmd, timeout=20)
             result = json.loads(output.decode())
         except Exception as e:
