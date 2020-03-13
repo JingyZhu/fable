@@ -85,7 +85,7 @@ def inspect_reorg_tech():
     Grab data of technologies that url being reorganized under different time (fine, )
     To see whether reorganization of data is because of tech changes
     """
-    urls = db_test.reorg_tech.find({'through': {"$exists": False}})
+    urls = db_test.reorg_tech.find({'broken_tech': {}})
     for i, url in enumerate(list(urls)):
         print(i, url['_id'])
         get_techs(url)

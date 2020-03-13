@@ -17,6 +17,7 @@ import config
 from utils import crawl, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db_test = MongoClient(config.MONGO_HOSTNAME).wd_test
 PS = crawl.ProxySelector(config.PROXIES)
 
 def dict_diff(a, b):
@@ -164,5 +165,29 @@ def take_differences_intersect_reorg(transfer_record=False):
     print(len(sample), transfer_link_count)
 
 
+def check_page_tech_changes():
+    data = db_test.reorg_tech.find({'through': True})
+    data = list(data)
+    total, transfer_count = len(data), 0
+    transfer = []
+    for url in data:
+        transferred = False
+        broken_tech, fine_tech = url.get('broken_tech'), url.get('fine_tech')
+        if not broken_tech: broken_tech = {}
+        if not fine_tech: fine_tech = {}
+        add_a, add_b = dict_diff(fine_tech, broken_tech)
+        shared_keys = set(add_a.keys()).intersection(set(add_b.keys()))
+        shared_keys = shared_keys.union(['CMS', 'Web frameworks'])
+        for shared_key in shared_keys:
+            if len(add_a[shared_key]) == 0 and  len(add_b[shared_key]) == 0: continue
+            transferred = True
+
+        if transferred:
+            transfer.append(url) 
+            transfer_count += 1
+    json.dump(transfer, open('../tmp/tech_transfer.json', 'w+'))
+    print(transfer_count, total)
+
+
 if __name__ == '__main__':
-    crawl_analyze_reorg()
+    check_page_tech_changes()

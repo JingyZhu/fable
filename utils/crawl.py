@@ -16,6 +16,9 @@ import json
 from collections import defaultdict
 from itertools import product
 
+requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
+
+
 class ProxySelector:
     """
     Select Proxy from a pool
@@ -257,6 +260,8 @@ def wappalyzer_analyze(url, proxy=None, timeout=None):
         "62": "Paas",
         "64": "Reverse proxies"
     }
+    r = requests.get(url, headers=requests_header)
+    url = r.url if r.status_code / 100 < 4 else url
     tech = defaultdict(list)
     flags = {'-a': agent_string}
     if proxy: flags.update({'--proxy': proxy})
