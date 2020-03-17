@@ -10,7 +10,6 @@ import re
 from urllib.parse import urlparse
 from collections import defaultdict, Counter
 import requests
-import json
 from dateutil import parser as dparser
 import datetime
 import os

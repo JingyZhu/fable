@@ -222,3 +222,18 @@ Prefix for urls where search engine can get prefix search
     "bing_urls": "list", 
 }
 ```
+
+### site_tech
+Sample 2k subhosts which has broken pages 
+```json
+{
+    "_id": "subhost",
+    "subhost": "subhost",
+    "hostname": "sitename",
+    "techs": [{
+        "startTS": "str",
+        "endTS": "str",
+        "tech": {}
+    }]
+}
+```
