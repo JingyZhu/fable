@@ -237,3 +237,19 @@ Sample 2k subhosts which has broken pages
     }]
 }
 ```
+
+### site_url_before_after
+Collect urls appear before and after site's tech has changed/same\
+Index on subhost
+```json
+{
+    "url": "url",
+    "type": "Change | Same",
+    "subhost": "subhost",
+    "beforeTS": "str",
+    "afterTS": "str",
+    "afterStatus": "str",
+    "beforeTech": {},
+    "afterTech" {}
+}
+```

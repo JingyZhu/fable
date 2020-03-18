@@ -260,7 +260,19 @@ def wappalyzer_analyze(url, proxy=None, timeout=None):
         "62": "Paas",
         "64": "Reverse proxies"
     }
-    r = requests.get(url, headers=requests_header)
+    count = 0
+    while True:
+        try:
+            r = requests.get(url, timeout=timeout, headers=requests_header)
+            if (r.status_code == 429 or r.status_code == 504) and count < 3:  # Requests limit
+                print('requests_crawl:', 'get status code', str(r.status_code))
+                count += 1
+                time.sleep(10)
+                continue
+            break
+        except Exception as e:
+            print("There is an exception with requests crawl:",str(e))
+            return
     url = r.url if r.status_code / 100 < 4 else url
     tech = defaultdict(list)
     flags = {'-a': agent_string}
