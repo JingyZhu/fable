@@ -31,6 +31,8 @@ def same_tech(a, b):
 def subhost_tech_change(subhost):
     homepage_snapshots, _ = crawl.wayback_index(subhost, total_link=True, param_dict={"filter": "statuscode:200"}, proxies=PS.select())
     homepage_snapshots = sorted(homepage_snapshots, key=lambda x: int(x[0]))
+    if len(homepage_snapshots) <=1:
+        return []
     begin_idx, end_idx = 0, len(homepage_snapshots) - 1
     begin_ts, end_ts = homepage_snapshots[0][0], homepage_snapshots[-1][0]
     def wappalyzer_once(obj, visits):
@@ -48,7 +50,7 @@ def subhost_tech_change(subhost):
             return transfer
         begin_tech = wappalyzer_once(records[begin_idx], visits)
         end_tech = wappalyzer_once(records[end_idx], visits)
-        if same_tech(begin_tech, end_tech): # TODO Not necessarily correct
+        if same_tech(begin_tech, end_tech):
             return transfer
         elif end_idx - begin_idx <= 1:
             return [(records[begin_idx][0], begin_tech), (records[end_idx][0], end_tech)]
@@ -59,27 +61,31 @@ def subhost_tech_change(subhost):
             return transfer
     visits = {}
     tech_transfer_records = check_transfer(begin_idx, end_idx, homepage_snapshots, visits)
-    # TODO: Finish this function to determine period of techs AND FIND WAY TO DEFINE TWO DICT AS SAME!
     tech_transfer_records = [(begin_ts, visits[begin_ts])] + tech_transfer_records + [(end_ts, visits[end_ts])]
     periods = [{
         "startTS": tech_transfer_records[i][0],
         "endTS": tech_transfer_records[i+1][0],
         "tech": tech_transfer_records[i][1]
-    } for i in range(0, len(tech_transfer_records, 2))]
+    } for i in range(0, len(tech_transfer_records), 2)]
     return periods
     # for tech_transfer in tech_transfer_records:
 
 
 def collect_tech_change_sites():
     """
+    Entry func
     Collect site's (subhosts) tech change time range 
     """
-    subhosts = db.site_tech.find()
+    subhosts = db.site_tech.find({"techs": {"$exists": False}})
     subhosts = list(subhosts)
-    for subhost in subhosts[:5]:
-        print(subhost)
+    print("Total:", len(subhosts))
+    for i, subhost in enumerate(subhosts):
+        print(i, subhost["_id"])
         period = subhost_tech_change(subhost['_id'])
-        print(json.dumps(period, indent=2))
+        if len(period) == 0:
+            continue
+        db.site_tech.update_one({"_id": subhost['_id']}, {"$set": {"techs": period}})
+        # print(json.dumps(period, indent=2))
 
 collect_tech_change_sites()
     
