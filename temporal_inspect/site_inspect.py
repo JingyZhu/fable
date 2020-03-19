@@ -12,6 +12,7 @@ import requests
 import datetime
 import os
 from dateutil import parser as dparser
+import itertools
 
 sys.path.append('../')
 import config
@@ -90,6 +91,26 @@ def collect_tech_change_sites():
             continue
         db.site_tech.update_one({"_id": subhost['_id']}, {"$set": {"techs": period}})
         # print(json.dumps(period, indent=2))
+
+
+def diff_dict(a, b):
+    """Get Changes from a to b. Assum a, b are dict(list)"""
+    changes = []
+    addition_a = set(a.keys()) - set(b.keys())
+    addition_b = set(b.keys()) - set(a.keys())
+    changes = [('delete', aa, a[aa]) for aa in addition_a] + [('add', ab, b[ab]) for ab in addition_b]
+    shared_keys = set(a.keys()).intersection(set(b.keys()))
+    for k in shared_keys:
+        add_a = set(a[k]) - set(b[k])
+        add_b = set(b[k]) - set(a[k])
+        changes += [('change', k, add_a, add_b)]
+    rval = []
+    for c in changes:
+        if c[0] in ['delete', 'add']:
+            rval += [(c[0], c[1], cc) for cc in c[2]]
+        else:
+            rval += [(c[0], c[1], before, after) for before, after in itertools.product(c[2], c[3])]
+    return rval
 
 
 def match_before_after_urls(query_meta, days):
@@ -207,7 +228,30 @@ def collect_close_snapshots(days=30):
         except: print('db insert failed')
 
 
+def collect_changes():
+    """
+    Entry func
+    """
+    urls = db.site_url_before_after.aggregate([
+        {"$match": {"type": "Change"}},
+        {"$group": {"_id":{
+            "periodID": "$periodID",
+            "subhost": "$subhost",
+        }, "total": {"$sum": 1}}},
+        {"$match": {"total": {"$gte": 50}}}
+    ])
+    changes_collect = defaultdict(int)
+    urls = list(urls)
+    print(len(urls))
+    for url in urls:
+        url['_id'].update({"type": "Change"})
+        obj = db.site_url_before_after.find_one(url['_id'])
+        changes = diff_dict(obj['beforeTech']['tech'], obj['afterTech']['tech'])
+        for c in changes:
+            changes_collect[c] += 1
+    print(changes_collect)
+
 
 if __name__ == '__main__':
-    collect_close_snapshots()
+    collect_changes()
     

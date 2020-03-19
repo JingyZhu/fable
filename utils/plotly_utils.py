@@ -92,3 +92,42 @@ def plot_bar(df, xtitle="", ytitle="", title="", idx='', stacked=False, unified=
     )
     if stacked: fig.update_layout(barmode='stack')
     fig.show()
+
+    
+def plot_box(df, xtitle="", ytitle="", title=""):
+    """
+    Plot the boxplot for different class
+    data should be a pandas dataframe, where each row is a set of data. 
+    """
+    fig = go.Figure()
+    fig.update_layout(
+        autosize=False,
+        title={
+            'text': title,
+            'x':0.5,
+            'yanchor': 'top'
+        },
+        xaxis_title=xtitle,
+        yaxis_title=ytitle,
+        width=1300,
+        height=800,
+        font=dict(
+            family="Time New Roman",
+            size=16,
+            color="#7f7f7f"
+        ),
+        plot_bgcolor='rgba(0,0,0,0)',
+        margin=go.layout.Margin(
+            l=50,
+            r=50,
+            b=50,
+            t=30,
+            pad=4
+        ),
+        showlegend=False
+    )
+    for name, col in df.iteritems():
+        length = len(col)
+        col = col[col.notnull()]
+        fig.add_trace(go.Box(y=col, name=name, boxpoints='all'))
+    fig.show()
