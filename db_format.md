@@ -248,6 +248,7 @@ Index on subhost
     "subhost": "subhost",
     "beforeTS": "str",
     "afterTS": "str",
+    "periodID": "int",
     "afterStatus": "str",
     "beforeTech": {},
     "afterTech" {}

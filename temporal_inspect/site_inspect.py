@@ -134,7 +134,10 @@ def collect_close_snapshots(days=30):
     db.site_url_before_after.create_index([("subhost", pymongo.ASCENDING)])
     db.site_url_before_after.create_index([("url", pymongo.ASCENDING), ("type", pymongo.ASCENDING)], unique=True)
     tech_changes = []
+    site_with_techs = list(site_with_techs)
     for site in site_with_techs:
+        if db.site_url_before_after.find_one({"subhost": site['subhost'], "type": "Change"}): 
+            continue
         for i in range(len(site['techs']) - 1):
             techs = site['techs']
             endTS = dparser.parse(techs[i]['endTS'])
@@ -146,10 +149,11 @@ def collect_close_snapshots(days=30):
                     "beforeTS": endTS,
                     "afterTS": beginTS,
                     "beforeTech": techs[i],
-                    "afterTech": techs[i+1]
+                    "afterTech": techs[i+1],
+                    "periodID": i
                 })
     print("Total1:", len(tech_changes))
-    for count, tech_change in enumerate(tech_changes[:30]):
+    for count, tech_change in enumerate(tech_changes):
         print(count, tech_change['subhost'])
         in_range_urls = match_before_after_urls(tech_change, days)
         in_range_urls = [{
@@ -159,6 +163,7 @@ def collect_close_snapshots(days=30):
             "beforeTS": li[0],
             "afterTS": li[1],
             "afterStatus": li[2],
+            "periodID": tech_change['periodID'],
             "beforeTech": tech_change['beforeTech'],
             "afterTech": tech_change['afterTech']
         } for u, li in in_range_urls.items()]
@@ -167,6 +172,8 @@ def collect_close_snapshots(days=30):
 
     tech_sames = []
     for site in site_with_techs:
+        if db.site_url_before_after.find_one({"subhost": site['subhost'], "type": "Same"}): 
+            continue
         for i in range(len(site['techs'])):
             techs = site['techs']
             endTS = dparser.parse(techs[i]['endTS'])
@@ -180,10 +187,11 @@ def collect_close_snapshots(days=30):
                 tech_sames.append({
                     "subhost": site['subhost'],
                     "beforeTS": beginTS,
-                    "afterTS": endTS
+                    "afterTS": endTS,
+                    "periodID": i
                 })
     print("Total2:", len(tech_sames))
-    for count, tech_same in enumerate(tech_sames[:30]):
+    for count, tech_same in enumerate(tech_sames):
         print(count, tech_same['subhost'])
         in_range_urls = match_before_after_urls(tech_same, days)
         in_range_urls = [{
@@ -193,6 +201,7 @@ def collect_close_snapshots(days=30):
             "beforeTS": li[0],
             "afterTS": li[1],
             "afterStatus": li[2],
+            "periodID": tech_same['periodID']
         } for u, li in in_range_urls.items()]
         try: db.site_url_before_after.insert_many(in_range_urls, ordered=False)
         except: print('db insert failed')
