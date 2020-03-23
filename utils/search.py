@@ -5,10 +5,12 @@ import requests
 import json
 import sys, time
 from bs4 import BeautifulSoup
+from pymongo import MongoClient
+
 
 sys.path.append('../')
 import config
-from utils import text_utils
+from utils import text_utils, crawl, url_utils
 
 google_query_dict = {
     "q": None,
@@ -26,6 +28,7 @@ headers = {"Ocp-Apim-Subscription-Key": config.BING_SEARCH_KEY}
 google_url = 'https://www.googleapis.com/customsearch/v1'
 bing_url = 'https://api.cognitive.microsoft.com/bing/v7.0/search'
 
+host_extractor = url_utils.HostExtractor()
 
 def get_headers(html):
     soup = BeautifulSoup(html, 'lxml')
@@ -57,14 +60,28 @@ def get_title(html):
     return get_headers(html)    
 
 
-def google_search(query, end=0, param_dict={}):
+def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False):
     """
     Search using google
     If get 403, return None
+    site_spec_url: If set, will only search within the site
+    use_db: If set, will query db before calling API, and update results to db
     """
+    begin = time.time()
     google_query_dict['q'] = query
+    if site_spec_url:
+        try:
+            r = requests.get(site_spec_url, headers=crawl.requests_header, timeout=10)
+            site = host_extractor.extract(r.url)
+            param_dict.update({'siteSearch': site})
+        except: site = ""
     google_query_dict.update(param_dict)
     count = 0
+    if use_db:
+        db = MongoClient(config.MONGO_HOSTNAME).web_decay
+        result = db.searched.find_one({'query': query, 'site': site})
+        if result:
+            return result['results']
     while count < 3:
         try:
             r = requests.get(google_url, params=google_query_dict)
@@ -83,8 +100,12 @@ def google_search(query, end=0, param_dict={}):
                 continue
             else: return None
         end = len(r['items']) if end == 0 else min(len(r["items"]), end)
-        time.sleep(1)
-        return [ u["link"] for u in r['items'][:end]]
+        results = [ u["link"] for u in r['items'][:end]]
+        if use_db:
+            db = MongoClient(config.MONGO_HOSTNAME).web_decay
+            db.searched.insert_one({'query': query, 'site': site, 'results': results})
+        time.sleep(max(1 + begin - time.time(), 0))
+        return 
 
 
 def bing_search(query, end=0, param_dict={}):

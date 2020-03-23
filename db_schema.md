@@ -116,7 +116,17 @@ Sample host which contains 2xx/3xx status code
 ### url_status_implicit_broken
 The joined results between url_status and host_sample \
 In other word, all urls in url_status which hostname is sampled in host_sample\
-Format: Same as url_status
+```json
+{
+    "url": "string",
+    "hostname": "string",
+    "year": ["int"],
+    "status": "status (2/3/4/5xx / DNS / Other)",
+    "detail": "string",
+    "(similarity)": "TF-IDF similarity of page on liveweb vs. wayback machine",
+    "(broken)": "Boolean (used as determine 23xx urls broken)"
+}
+```json'
 
 ### url_update
 Record whether a url has high link density / update frequently on wayback
@@ -133,6 +143,11 @@ Record whether a url has high link density / update frequently on wayback
 ```
 
 ### url_broken
+Sampled broken urls from site which contains >= 50 broken urls \
+Subset of url_status_implicit_broken
+Format: Sampe as url_status_implicit_broken
+
+### url_broken_year
 Sampled broken urls. 1000 per cell: {year * status} \
 Subset of url_status_implicit_broken
 Format: Sampe as url_status 
@@ -168,7 +183,6 @@ Search results for broken pages
 }
 ```
 
-
 ### search_sanity_meta
 For sampled good page \
 Similar to search_meta
@@ -186,7 +200,27 @@ Similar to search_meta
 
 ### search_sanity
 Search results for good pages \
-Format similar to search
+Schema is same as search
+
+### search_infer_meta
+metadata for search infer rules inspection\
+Schema is same as search_meta
+
+### search_infer
+#### Index: from
+Searched results for search_infer_meta
+Schema is same as search
+
+### searched
+##### Index: query, query_hostname_exact (unique)
+Searched query (siteSearch) with results
+```json
+{
+    "query": "string",
+    "site": "string (empty if no site search is used)",
+    "results": ["string"]
+}
+```
 
 ### wappaplyzer_sanity
 URLs are no redirection non-broken urls
@@ -222,14 +256,6 @@ Prefix for urls where search engine can get prefix search
     "bing_urls": "list", 
 }
 ```
-
-### search_infer_meta
-metadata for search infer rules inspection\
-Schema is same as search_meta
-
-### serach_infer
-Searched results for search_infer_meta
-Schema is same as search
 
 ### site_tech
 Sample 2k subhosts which has broken pages 

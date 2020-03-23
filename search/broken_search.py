@@ -27,7 +27,9 @@ import config
 idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
-counter = mp.Value('i', 0)
+db_test = MongoClient(config.MONGO_HOSTNAME).wd_test
+counter = 0
+host_extractor = url_utils.HostExtractor()
 
 def timeout_handler(signum, frame):
     print(mp.current_process().name)
@@ -50,7 +52,7 @@ def get_wayback_cp(url, year):
     elif len(cps) <= 0: return [], {}
     wayback = []
     usage = {u[0]: 'archive' for u in cps}
-    for ts, cp in cps:
+    for ts, cp, _ in cps:
         html = crawl.requests_crawl(cp, proxies=PS.select())
         if not html: continue
         content = text_utils.extract_body(html, version='domdistiller')
@@ -87,21 +89,21 @@ def crawl_wayback(q_in, tid):
         counter += 1
         print(counter, tid, url, len(list(filter(lambda x: x[2] != "", wayback_cp))))
         if len(wm_objs) >= 30:
-            try: db.search_meta.insert_many(wm_objs, ordered=False)
+            try: db.search_infer_meta.insert_many(wm_objs, ordered=False)
             except: pass
             wm_objs = []
         
-    try: db.search_meta.insert_many(wm_objs, ordered=False)
+    try: db.search_infer_meta.insert_many(wm_objs, ordered=False)
     except: pass
 
 
 def crawl_wayback_wrapper(NUM_THREADS=5):
-    db.search_meta.create_index([("url", pymongo.ASCENDING), ("ts", pymongo.ASCENDING)], unique=True)
-    db.search.create_index([("url", pymongo.ASCENDING), ("from", pymongo.ASCENDING)], unique=True)
+    db.search_infer_meta.create_index([("url", pymongo.ASCENDING), ("ts", pymongo.ASCENDING)], unique=True)
+    db.search_infer.create_index([("url", pymongo.ASCENDING), ("from", pymongo.ASCENDING)], unique=True)
     q_in = queue.Queue()
     urls = db.url_broken.aggregate([
         {"$lookup": {
-            "from": "search_meta",
+            "from": "search_infer_meta",
             "localField": "_id",
             "foreignField": "url",
             "as": "broken"
@@ -141,10 +143,10 @@ def crawl_realweb(q_in, tid):
             {"$set": {"html": brotli.compress(html.encode()), "content": content}}
         ))
         if len(se_ops) >= 1:
-            try: db.search.bulk_write(se_ops)
+            try: db.search_infer.bulk_write(se_ops)
             except: print("db bulk write failed")
             se_ops = []
-    try: db.search.bulk_write(se_ops)
+    try: db.search_infer.bulk_write(se_ops)
     except: print("db bulk write failed")
 
 
@@ -154,7 +156,7 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
     Update each record with html (byte) and content
     """
     q_in = mp.Queue()
-    urls = db.search.find({'html': {"$exists": False}})
+    urls = db.search_infer.find({'html': {"$exists": False}})
     urls = sorted(list(urls), key=lambda x: x['url'] + str(x['from']))
     length = len(urls)
     print(length // len(config.HOSTS))
@@ -178,12 +180,12 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
 
 
 def search_titleMatch_topN():
-    urls = db.search_meta.aggregate([
+    urls = db.search_infer_meta.aggregate([
         {"$match": {"usage": "represent"}},
         {"$lookup":{
-            "from": "searched_titleMatch",
+            "from": "searched_infer",
             "localField": "url",
-            "foreignField": "_id",
+            "foreignField": "from",
             "as": "hasSearched"
         }},
         {"$match": {"hasSearched.0": {"$exists": False}}},
@@ -194,10 +196,17 @@ def search_titleMatch_topN():
     print('total:', len(urls))
     for i, obj in enumerate(urls):
         titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
-        db.searched_titleMatch.insert_one({"_id": url})
-        db.searched_topN.insert_one({"_id": url})
         if titleMatch:
-            search_results = search.google_search('"{}"'.format(titleMatch))
+            try:
+                r = requests.get(obj['url'], headers=crawl.requests_crawl, timeout=10)
+                site = host_extractor.extract
+            except:
+                site = ''
+            result = db.searched.find_one({'query': titleMatch, 'site': obj['hostname'], 'exact': True}):
+            if result:
+                search_results = result['results']
+            else:
+                search_results = search.google_search('"{}"'.format(titleMatch))
             if search_results is None:
                 print("No more access to google api")
                 break
@@ -209,6 +218,12 @@ def search_titleMatch_topN():
                     "rank": "top5" if j < 5 else "top10"
                 })
         if topN:
+
+            result = db.searched.find_one({'query': titleMatch, 'site': obj['hostname'], 'exact': False}):
+            if result:
+                search_results = result['results']
+            else:
+                search_results = search.google_search('"{}"'.format(titleMatch))
             search_results = search.google_search(topN)
             if search_results is None:
                 print("No more access to google api")
@@ -221,16 +236,16 @@ def search_titleMatch_topN():
                     "rank": "top5" if j < 5 else "top10"
                 })
         if len(se_objs) >= 10:
-            try: db.search.insert_many(se_objs, ordered=False)
+            try: db.search_infer.insert_many(se_objs, ordered=False)
             except: pass
             se_objs = []
 
-    try: db.search.insert_many(se_objs, ordered=False)
+    try: db.search_infer.insert_many(se_objs, ordered=False)
     except: pass
 
 
 def calculate_titleMatch(NUM_THREADS=10):
-    urls = list(db.search_meta.find({'titleMatch': {"$exists": False}}))
+    urls = list(db.search_infer_meta.find({'titleMatch': {"$exists": False}}))
     print('total:', len(urls))
     q_in = mp.Queue()
     count = mp.Value('i', 0)
@@ -243,7 +258,7 @@ def calculate_titleMatch(NUM_THREADS=10):
                 print(count.value, pid)
             url, ts, html = q_in.get()
             title = search.get_title(html)
-            db.search_meta.update_one({"url": url, "ts": ts}, {"$set": {"titleMatch": title}})
+            db.search_infer_meta.update_one({"url": url, "ts": ts}, {"$set": {"titleMatch": title}})
     for url in urls:
         try: html = brotli.decompress(url['html']).decode()
         except:
@@ -260,30 +275,30 @@ def calculate_titleMatch(NUM_THREADS=10):
 
 
 def calculate_topN():
-    corpus = db.search_meta.find({}, {'content': True})
+    corpus = db.search_infer_meta.find({}, {'content': True})
     corpus = [c['content'] for c in corpus]
     tfidf = text_utils.TFidf(corpus)
     print('tfidf initialized')
-    urls = list(db.search_meta.find({'topN': {"$exists": False}}))
+    urls = list(db.search_infer_meta.find({'topN': {"$exists": False}}))
     print('total:', len(urls))
     for i, url in enumerate(urls):
         words = tfidf.topN(url['content'])
         query = ' '.join(words)
-        db.search_meta.update_one({"url": url['url'], "ts": url['ts']}, {"$set": {"topN": query}})
+        db.search_infer_meta.update_one({"url": url['url'], "ts": url['ts']}, {"$set": {"topN": query}})
         if i % 100 == 0: print(i)
 
 
 def calculate_similarity():
     """
     Calcuate the (highest) similarity of each searched pages
-    Update similarity and searched_urls to db.search_meta
+    Update similarity and searched_urls to db.search_infer_meta
     """
-    corpus1 = db.search_meta.find({'content': {"$ne": ""}}, {'content': True})
-    corpus2 = db.search.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
+    corpus1 = db.search_infer_meta.find({'content': {"$ne": ""}}, {'content': True})
+    corpus2 = db.search_infer.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
     corpus = [c['content'] for c in corpus1] + [c['content'] for c in corpus2]
     tfidf = text_utils.TFidf(corpus)
     print("tfidf init success!")
-    searched_urls = db.search_meta.aggregate([
+    searched_urls = db.search_infer_meta.aggregate([
         {"$match": {"usage": "represent", "similarity": {"$exists": False}}},
         {"$lookup": {
             "from": "search",
@@ -307,14 +322,14 @@ def calculate_similarity():
         if simi >= simi_dict[url]['simi']:
             simi_dict[url]['simi'] = simi
             simi_dict[url]['searched_url'] = searched['url']
-    search_meta = db.search_meta.find({"usage": "represent", "similarity": {"$exists": False}}, {'url': True, 'ts': True})
-    for obj in list(search_meta):
+    search_infer_meta = db.search_infer_meta.find({"usage": "represent", "similarity": {"$exists": False}}, {'url': True, 'ts': True})
+    for obj in list(search_infer_meta):
         url, ts = obj['url'], obj['ts']
         value = simi_dict[url]    
-        db.search_meta.update_one({'url': url, 'ts': ts}, \
+        db.search_infer_meta.update_one({'url': url, 'ts': ts}, \
             {'$set': {'similarity': value['simi'], 'searched_url': value['searched_url']}})
 
 
 
 if __name__ == '__main__':
-    calculate_similarity()
+    crawl_wayback_wrapper(NUM_THREADS=4)
