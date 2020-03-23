@@ -148,7 +148,6 @@ def crawl_realweb(q_in, tid):
     except: print("db bulk write failed")
 
 
-
 def crawl_realweb_wrapper(NUM_THREADS=10):
     """
     Crawl the searched results from the db.search
@@ -178,7 +177,6 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
         t.join()
 
 
-
 def search_titleMatch_topN():
     urls = db.search_meta.aggregate([
         {"$match": {"usage": "represent"}},
@@ -190,7 +188,7 @@ def search_titleMatch_topN():
         }},
         {"$match": {"hasSearched.0": {"$exists": False}}},
         {"$project": {"hasSearched": False}}
-    ])eeeeeeeeeeeeeeee
+    ])
     se_objs = []
     urls = list(urls)[:4900]
     print('total:', len(urls))

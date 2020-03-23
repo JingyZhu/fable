@@ -223,6 +223,14 @@ Prefix for urls where search engine can get prefix search
 }
 ```
 
+### search_infer_meta
+metadata for search infer rules inspection\
+Schema is same as search_meta
+
+### serach_infer
+Searched results for search_infer_meta
+Schema is same as search
+
 ### site_tech
 Sample 2k subhosts which has broken pages 
 ```json
