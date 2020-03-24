@@ -182,14 +182,14 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
 def search_titleMatch_topN():
     urls = db.search_infer_meta.aggregate([
         {"$match": {"usage": "represent"}},
-        {"$lookup":{
-            "from": "searched_infer",
-            "localField": "url",
-            "foreignField": "from",
-            "as": "hasSearched"
-        }},
-        {"$match": {"hasSearched.0": {"$exists": False}}},
-        {"$project": {"hasSearched": False}}
+        # {"$lookup":{
+        #     "from": "searched_infer",
+        #     "localField": "url",
+        #     "foreignField": "from",
+        #     "as": "hasSearched"
+        # }},
+        # {"$match": {"hasSearched.0": {"$exists": False}}},
+        # {"$project": {"hasSearched": False}}
     ])
     se_objs = []
     urls = list(urls)[:4900]
@@ -197,16 +197,7 @@ def search_titleMatch_topN():
     for i, obj in enumerate(urls):
         titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
         if titleMatch:
-            try:
-                r = requests.get(obj['url'], headers=crawl.requests_crawl, timeout=10)
-                site = host_extractor.extract
-            except:
-                site = ''
-            result = db.searched.find_one({'query': titleMatch, 'site': obj['hostname'], 'exact': True}):
-            if result:
-                search_results = result['results']
-            else:
-                search_results = search.google_search('"{}"'.format(titleMatch))
+            search_results = search.google_search('"{}"'.format(titleMatch), use_db=True)
             if search_results is None:
                 print("No more access to google api")
                 break
@@ -218,13 +209,7 @@ def search_titleMatch_topN():
                     "rank": "top5" if j < 5 else "top10"
                 })
         if topN:
-
-            result = db.searched.find_one({'query': titleMatch, 'site': obj['hostname'], 'exact': False}):
-            if result:
-                search_results = result['results']
-            else:
-                search_results = search.google_search('"{}"'.format(titleMatch))
-            search_results = search.google_search(topN)
+            search_results = search.google_search(topN, site_spec_url=obj['url'], use_db=True)
             if search_results is None:
                 print("No more access to google api")
                 break
@@ -332,4 +317,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    crawl_wayback_wrapper(NUM_THREADS=4)
+    calculate_topN()

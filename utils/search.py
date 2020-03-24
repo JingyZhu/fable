@@ -75,11 +75,12 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
             site = host_extractor.extract(r.url)
             param_dict.update({'siteSearch': site})
         except: site = ""
+    else: site = ""
     google_query_dict.update(param_dict)
     count = 0
     if use_db:
         db = MongoClient(config.MONGO_HOSTNAME).web_decay
-        result = db.searched.find_one({'query': query, 'site': site})
+        result = db.searched.find_one({'query': query, 'site': site, 'engine': 'google'})
         if result:
             return result['results']
     while count < 3:
@@ -93,6 +94,8 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
         if "items" not in r:
             if status_code != 403:
                 time.sleep(1)
+                if use_db:
+                    db.searched.insert_one({'query': query, 'site': site, 'engine': 'google', 'results': []})
                 return []
             elif count < 3: 
                 count += 1
@@ -102,13 +105,12 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
         end = len(r['items']) if end == 0 else min(len(r["items"]), end)
         results = [ u["link"] for u in r['items'][:end]]
         if use_db:
-            db = MongoClient(config.MONGO_HOSTNAME).web_decay
-            db.searched.insert_one({'query': query, 'site': site, 'results': results})
+            db.searched.insert_one({'query': query, 'site': site, 'engine': 'google', 'results': results})
         time.sleep(max(1 + begin - time.time(), 0))
-        return 
+        return results
 
 
-def bing_search(query, end=0, param_dict={}):
+def bing_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False):
     """
     Search using bing
     """

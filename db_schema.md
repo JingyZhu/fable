@@ -212,12 +212,13 @@ Searched results for search_infer_meta
 Schema is same as search
 
 ### searched
-##### Index: query, query_hostname_exact (unique)
+##### Index: query, query_site_engine (unique)
 Searched query (siteSearch) with results
 ```json
 {
     "query": "string",
     "site": "string (empty if no site search is used)",
+    "engine": "google|bing",
     "results": ["string"]
 }
 ```
