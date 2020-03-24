@@ -81,9 +81,10 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
     if use_db:
         db = MongoClient(config.MONGO_HOSTNAME).web_decay
         result = db.searched.find_one({'query': query, 'site': site, 'engine': 'google'})
-        if result:
+        if result is not None:
+            print("Search hit on db")
             return result['results']
-    while count < 3:
+    while True:
         try:
             r = requests.get(google_url, params=google_query_dict)
             status_code = r.status_code
@@ -92,6 +93,7 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
             print(str(e))
             return []
         if "items" not in r:
+            # print(r, status_code)
             if status_code != 403:
                 time.sleep(1)
                 if use_db:
@@ -101,12 +103,14 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
                 count += 1
                 time.sleep(1)
                 continue
-            else: return None
+            else:
+                json.dump(r, open('search_err.json', 'w+'))
+                return None
         end = len(r['items']) if end == 0 else min(len(r["items"]), end)
         results = [ u["link"] for u in r['items'][:end]]
         if use_db:
             db.searched.insert_one({'query': query, 'site': site, 'engine': 'google', 'results': results})
-        time.sleep(max(1 + begin - time.time(), 0))
+        time.sleep(1)
         return results
 
 

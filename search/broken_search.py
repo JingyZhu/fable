@@ -28,7 +28,7 @@ idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME).web_decay
 db_test = MongoClient(config.MONGO_HOSTNAME).wd_test
-counter = 0
+counter = mp.Value('i', 0)
 host_extractor = url_utils.HostExtractor()
 
 def timeout_handler(signum, frame):
@@ -126,8 +126,7 @@ def crawl_wayback_wrapper(NUM_THREADS=5):
         t.join()
 
 
-def crawl_realweb(q_in, tid):
-    global counter
+def crawl_realweb(q_in, tid, counter):
     se_ops = []
     db = MongoClient(config.MONGO_HOSTNAME).web_decay
     while not q_in.empty():
@@ -155,6 +154,7 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
     Crawl the searched results from the db.search
     Update each record with html (byte) and content
     """
+    counter = mp.Value('i', 0)
     q_in = mp.Queue()
     urls = db.search_infer.find({'html': {"$exists": False}})
     urls = sorted(list(urls), key=lambda x: x['url'] + str(x['from']))
@@ -166,12 +166,12 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
         q_in.put((url['url'], url['from']))
     pools = []
     for i in range(NUM_THREADS):
-        pools.append(mp.Process(target=crawl_realweb, args=(q_in, i)))
+        pools.append(mp.Process(target=crawl_realweb, args=(q_in, i, counter)))
         pools[-1].start()
     def segfault_handler(signum, frame):
         print("Seg Fault on process")
         if not q_in.empty():
-            pools.append(mp.Process(target=crawl_realweb, args=(q_in, len(pools))))
+            pools.append(mp.Process(target=crawl_realweb, args=(q_in, len(pools), counter)))
             pools[-1].start()
             pools[-1].join()
     signal.signal(signal.SIGSEGV, segfault_handler) 
@@ -182,20 +182,22 @@ def crawl_realweb_wrapper(NUM_THREADS=10):
 def search_titleMatch_topN():
     urls = db.search_infer_meta.aggregate([
         {"$match": {"usage": "represent"}},
-        # {"$lookup":{
-        #     "from": "searched_infer",
-        #     "localField": "url",
-        #     "foreignField": "from",
-        #     "as": "hasSearched"
-        # }},
-        # {"$match": {"hasSearched.0": {"$exists": False}}},
-        # {"$project": {"hasSearched": False}}
+        {"$lookup":{
+            "from": "searched_titleMatch",
+            "localField": "url",
+            "foreignField": "_id",
+            "as": "hasSearched"
+        }},
+        {"$match": {"hasSearched.0": {"$exists": False}}},
+        {"$project": {"hasSearched": False}}
     ])
     se_objs = []
-    urls = list(urls)[:4900]
+    urls = list(urls)
+    random.shuffle(urls)
+    urls = urls[:4900]
     print('total:', len(urls))
     for i, obj in enumerate(urls):
-        titleMatch, topN, url = obj['titleMatch'], obj.get('topN'), obj['url']
+        titleMatch, url = obj['titleMatch'], obj['url']
         if titleMatch:
             search_results = search.google_search('"{}"'.format(titleMatch), use_db=True)
             if search_results is None:
@@ -208,7 +210,30 @@ def search_titleMatch_topN():
                     "from": url,
                     "rank": "top5" if j < 5 else "top10"
                 })
+        if len(se_objs) >= 10:
+            try: db.search_infer.insert_many(se_objs, ordered=False)
+            except: pass
+            se_objs = []
+    urls = db.search_infer_meta.aggregate([
+        {"$match": {"usage": "represent"}},
+        {"$lookup":{
+            "from": "searched_topN",
+            "localField": "url",
+            "foreignField": "_id",
+            "as": "hasSearched"
+        }},
+        {"$match": {"hasSearched.0": {"$exists": False}}},
+        {"$project": {"hasSearched": False}}
+    ])
+    se_objs = []
+    urls = list(urls)
+    random.shuffle(urls)
+    urls = urls[:4900]
+    print('total:', len(urls))
+    for i, obj in enumerate(urls):
+        topN, url = obj.get('topN'), obj['url']
         if topN:
+            print(i, url, topN)
             search_results = search.google_search(topN, site_spec_url=obj['url'], use_db=True)
             if search_results is None:
                 print("No more access to google api")
@@ -315,6 +340,5 @@ def calculate_similarity():
             {'$set': {'similarity': value['simi'], 'searched_url': value['searched_url']}})
 
 
-
 if __name__ == '__main__':
-    calculate_topN()
+    search_titleMatch_topN()
