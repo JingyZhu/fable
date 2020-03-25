@@ -203,6 +203,7 @@ def search_titleMatch_topN():
             if search_results is None:
                 print("No more access to google api")
                 break
+            db.searched_titleMatch.insert_one({'_id': url})
             print(i, len(search_results), url, titleMatch)
             for j, search_url in enumerate(search_results):
                 se_objs.append({
@@ -214,6 +215,9 @@ def search_titleMatch_topN():
             try: db.search_infer.insert_many(se_objs, ordered=False)
             except: pass
             se_objs = []
+    try: db.search_infer.insert_many(se_objs, ordered=False)
+    except: pass
+    
     urls = db.search_infer_meta.aggregate([
         {"$match": {"usage": "represent"}},
         {"$lookup":{
@@ -238,6 +242,7 @@ def search_titleMatch_topN():
             if search_results is None:
                 print("No more access to google api")
                 break
+            db.searched_topN.insert_one({'_id': url})
             print(i, len(search_results), url, topN)
             for j, search_url in enumerate(search_results):
                 se_objs.append({
@@ -249,7 +254,6 @@ def search_titleMatch_topN():
             try: db.search_infer.insert_many(se_objs, ordered=False)
             except: pass
             se_objs = []
-
     try: db.search_infer.insert_many(se_objs, ordered=False)
     except: pass
 
@@ -311,7 +315,7 @@ def calculate_similarity():
     searched_urls = db.search_infer_meta.aggregate([
         {"$match": {"usage": "represent", "similarity": {"$exists": False}}},
         {"$lookup": {
-            "from": "search",
+            "from": "search_infer",
             "localField": "url",
             "foreignField": "from",
             "as": "searched"
@@ -341,4 +345,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    search_titleMatch_topN()
+    calculate_similarity()
