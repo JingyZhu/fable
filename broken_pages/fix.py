@@ -17,7 +17,7 @@ import config
 
 idx = config.HOSTS.index(socket.gethostname())
 proxy = config.PROXIES[idx]
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 counter = 0
 
 def decide_content(html):

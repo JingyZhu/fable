@@ -20,7 +20,7 @@ sys.path.append('../')
 import config
 from utils import db_utils, url_utils
 
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 year = 2014
 NUM_THREADS = 10
 counter = 0

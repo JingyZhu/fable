@@ -21,7 +21,7 @@ sys.path.append('../')
 import config
 from utils import text_utils, plot, search, crawl, url_utils
 
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 counter = mp.Value('i', 0)
 host_extractor = url_utils.HostExtractor()
 
@@ -201,7 +201,7 @@ def calculate_titleMatch_topN():
 def crawl_realweb(q_in, tid):
     global counter
     se_ops = []
-    db = MongoClient(config.MONGO_HOSTNAME).web_decay
+    db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
     while not q_in.empty():
         url, fromm, idd = q_in.get()
         with counter.get_lock():

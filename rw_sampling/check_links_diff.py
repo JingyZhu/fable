@@ -20,7 +20,7 @@ sys.path.append('../')
 from utils import crawl, url_utils, plot
 import config
 
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 host_extractor = url_utils.HostExtractor()
 
 

@@ -26,7 +26,7 @@ import config
 
 idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 db_test = MongoClient(config.MONGO_HOSTNAME).wd_test
 counter = mp.Value('i', 0)
 host_extractor = url_utils.HostExtractor()
@@ -128,7 +128,7 @@ def crawl_wayback_wrapper(NUM_THREADS=5):
 
 def crawl_realweb(q_in, tid, counter):
     se_ops = []
-    db = MongoClient(config.MONGO_HOSTNAME).web_decay
+    db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
     while not q_in.empty():
         url, fromm = q_in.get()
         with counter.get_lock():
@@ -265,7 +265,7 @@ def calculate_titleMatch(NUM_THREADS=10):
     count = mp.Value('i', 0)
     def proc_func(q_in, pid):
         nonlocal count
-        db = MongoClient(config.MONGO_HOSTNAME).web_decay
+        db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
         while not q_in.empty():
             with count.get_lock():
                 count.value += 1

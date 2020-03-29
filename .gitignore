@@ -16,3 +16,4 @@ temp.py
 test.ipynb
 broken_pages/*.yaml
 search/schedule.py
+*.mongo

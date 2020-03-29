@@ -18,7 +18,7 @@ from utils import text_utils, crawl
 import config
 
 PS = crawl.ProxySelector(config.PROXIES)
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 
 
 def domsitiller_vs_boilerpipe():

@@ -79,7 +79,7 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
     google_query_dict.update(param_dict)
     count = 0
     if use_db:
-        db = MongoClient(config.MONGO_HOSTNAME).web_decay
+        db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
         result = db.searched.find_one({'query': query, 'site': site, 'engine': 'google'})
         if result is not None:
             print("Search hit on db")

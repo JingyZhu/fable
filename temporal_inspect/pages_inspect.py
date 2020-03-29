@@ -18,7 +18,7 @@ sys.path.append('../')
 import config
 from utils import url_utils, crawl
 
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 db_test = MongoClient(config.MONGO_HOSTNAME).wd_test
 
 PS = crawl.ProxySelector(config.PROXIES)

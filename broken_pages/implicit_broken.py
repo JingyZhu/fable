@@ -24,7 +24,7 @@ import config
 
 idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 counter = mp.Value('i', 0)
 
 
@@ -106,7 +106,7 @@ def crawl_pages(q_in, tid):
     Add into db.url_update
     """
     global counter
-    db = MongoClient(config.MONGO_HOSTNAME).web_decay
+    db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
     rw_objs, wm_objs, uu_objs, wu_objs = [], [], [], []
     while not q_in.empty():
         url, year = q_in.get()

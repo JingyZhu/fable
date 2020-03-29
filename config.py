@@ -22,3 +22,5 @@ else:
     SEARCH_CX = config_yml.get('search_cx')
     SEARCH_KEY = config_yml.get('search_key')
     BING_SEARCH_KEY = config_yml.get('bing_search_key')
+    MONGO_USER = config_yml.get('mongo_user')
+    MONGO_PWD = config_yml.get('mongo_pwd')

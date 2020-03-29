@@ -30,7 +30,7 @@ counter = 0
 host_extractor = url_utils.HostExtractor()
 rw_stats = [] # Depth and new host_exploration stats for each walk.
 
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 rj_blocked = set() # Random jump blocked for faster sampling the seeds
 
 def base_host(url):

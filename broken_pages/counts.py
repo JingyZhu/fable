@@ -18,8 +18,8 @@ sys.path.append('../')
 import config
 from utils import plot, url_utils
 
-db = MongoClient(config.MONGO_HOSTNAME).web_decay
-# db = MongoClient(config.MONGO_HOSTNAME).test
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
+# db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').test
 year = 2019
 
 def create_host_status():
