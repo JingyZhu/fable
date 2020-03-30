@@ -259,7 +259,7 @@ Prefix for urls where search engine can get prefix search
 ```
 
 ### site_tech
-Sample 2k subhosts which has broken pages 
+Sample 10k subhosts which has broken pages 
 ```json
 {
     "_id": "subhost",

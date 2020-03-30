@@ -28,7 +28,7 @@ idx = config.HOSTS.index(socket.gethostname())
 PS = crawl.ProxySelector(config.PROXIES)
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 db_test = MongoClient(config.MONGO_HOSTNAME).wd_test
-counter = mp.Value('i', 0)
+counter = 0
 host_extractor = url_utils.HostExtractor()
 
 def timeout_handler(signum, frame):
@@ -345,4 +345,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    calculate_similarity()
+    crawl_realweb_wrapper(NUM_THREADS=10)

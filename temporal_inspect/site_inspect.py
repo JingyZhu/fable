@@ -19,7 +19,7 @@ import config
 from utils import url_utils, crawl
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
-db_test = MongoClient(config.MONGO_HOSTNAME).wd_test
+db_test = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').wd_test
 
 PS = crawl.ProxySelector(config.PROXIES)
 
@@ -231,6 +231,7 @@ def collect_close_snapshots(days=30):
 def collect_changes():
     """
     Entry func
+    Collect the frequency (count) of each type of change appear
     """
     urls = db.site_url_before_after.aggregate([
         {"$match": {"type": "Change"}},
@@ -253,5 +254,5 @@ def collect_changes():
 
 
 if __name__ == '__main__':
-    collect_changes()
+    collect_tech_change_sites()
     

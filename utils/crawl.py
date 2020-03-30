@@ -93,19 +93,19 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     count = 0
     while True:
         try:
-            r = requests.get('http://web.archive.org/cdx/search/cdx', params=params, proxies=proxies)
+            r = requests.get('http://web.archive.org/cdx/search/cdx', headers=requests_header, params=params, proxies=proxies)
             r = r.json()
             break
         except Exception as e:
             try:
-                print('Wayback index:', r.text.split('\n')[0])
+                print('Wayback index:', str(e), '\n', r.text.split('\n')[0])
             except Exception as e:
                 count += 1
                 if count < 3:
-                    time.sleep(5)
+                    time.sleep(20)
                     continue 
                 return [], str(e)
-            if not wait or r.status_code != 429:
+            if not wait or r.status_code not in [429, 445]:
                 return [], str(e)
             time.sleep(10)
     if total_link:
