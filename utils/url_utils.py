@@ -3,6 +3,14 @@ from publicsuffix import fetch, PublicSuffixList
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 import re
+import os, time
+from os.path import realpath, join, dirname
+import subprocess
+from collections import defaultdict
+
+import sys
+sys.path.append('../')
+import config
 
 class HostExtractor:
     def __init__(self):
@@ -21,6 +29,70 @@ class HostExtractor:
             url = 'http://' + url
         hostname = urlparse(url).netloc.split(':')[0]
         return self.psl.get_public_suffix(hostname)
+
+
+class UrlRuleInferer:
+    def __init__(self, tmp_path=config.TMPPATH):
+        self.path = tmp_path
+        self.learned = False
+        self.rule_dict = {}
+        self.site = ""
+        self.strans = join(dirname(realpath(__file__)), 'strans')
+    
+    def process_url(self, url):
+        up = urlparse(url)
+        return up.netloc + up.path + up.query
+    
+    def construct_match(self, url_pairs):
+        file_string = ""
+        for old_url, new_url in url_pairs:
+            file_string += '{}=>{}\n'.format(old_url, new_url)
+        return file_string
+    
+    def learn_rules(self, urls, site):
+        """Learn rules for each url, same dir, and whole site
+        url: list(tuple(old, new))"""
+        self.site = site
+        if self.learned:
+            _ = [os.remove(os.path.join(self.path, v)) for v in self.rule_dict.values()]
+            self.rule_dict = {}
+        dir_dict = defaultdict(list)
+        site_urls = []
+        for old_url, new_url in urls:
+            old_url, new_url = self.process_url(old_url), self.process_url(new_url)
+            filename = str(time.time()) + "_" + self.site
+            subprocess.call([self.strans, '-b', old_url, '-a', new_url, '--save', join(self.path, filename)])
+            self.rule_dict['url:' + old_url] = filename
+            path_dir = dirname(urlparse(old_url).path)
+            dir_dict[path_dir].append((old_url, new_url))
+            site_urls.append((old_url, new_url))
+        for path_dir, path_urls in dir_dict.items():
+            filename = str(time.time()) + "_" + self.site
+            match_str = self.construct_match(path_urls)
+            f = open(join(self.path, 'rule_infer_list'), 'w+')
+            f.write(match_str)
+            f.close()
+            subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list'), '--save', join(self.path, filename)])
+            self.rule_dict['dir:' + path_dir] = filename
+        filename = str(time.time()) + "_" + self.site
+        match_str = self.construct_match(site_urls)
+        f = open(join(self.path, 'rule_infer_list'), 'w+')
+        f.write(match_str)
+        f.close()
+        subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list'), '--save', join(self.path, filename)])
+        self.rule_dict['site'] = filename
+    
+    def infer(self, url):
+        inferred_urls = []
+        url = self.process_url(url)
+        path_dir = dirname(urlparse(url).path)
+        for rule_name, rule_file in self.rule_dict.items():
+            if rule_name[:4] in ['url:', 'site:'] or rule_name == 'dir:' + path_dir::
+                output = subprocess.check_output('printf "{}" | {} --load {}'.format(url, self.strans, join(self.path, rule_file)), shell=True)
+                inferred_urls.append(output.decode())
+        return inferred_urls
+
+
 
 
 def get_num_words(string):

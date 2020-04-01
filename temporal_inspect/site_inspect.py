@@ -5,7 +5,7 @@ import sys
 from pymongo import MongoClient
 import pymongo
 import json, yaml
-import re
+import re, random
 from urllib.parse import urlparse
 from collections import defaultdict, Counter
 import requests
@@ -83,6 +83,7 @@ def collect_tech_change_sites():
     """
     subhosts = db.site_tech.find({"techs": {"$exists": False}})
     subhosts = list(subhosts)
+    random.shuffle(subhosts)
     print("Total:", len(subhosts))
     for i, subhost in enumerate(subhosts):
         print(i, subhost["_id"])

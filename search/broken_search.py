@@ -345,4 +345,4 @@ def calculate_similarity():
 
 
 if __name__ == '__main__':
-    crawl_realweb_wrapper(NUM_THREADS=10)
+    calculate_similarity()
