@@ -61,8 +61,8 @@ def generate_inferred_rules(NUM_PROC=16):
                     inferred_urls = URI.infer(url['url'])
                     print(pid, 'url:', url['url'], inferred_urls)
                     if_objs += [{
-                        "url": url['url'],
-                        "from": iu
+                        "url": 'http://' + iu,
+                        "from": url['url']
                     } for iu in inferred_urls]
             try: db.search_infer_guess.insert_many(if_objs, ordered=False)
             except: pass

@@ -54,8 +54,11 @@ class UrlRuleInferer:
         url: list(tuple(old, new))"""
         self.site = site
         if self.learned:
-            _ = [os.remove(os.path.join(self.path, v)) for v in self.rule_dict.values()]
-            os.remove(os.path.join(self.path, 'rule_infer_list_' + self.site))
+            for v in self.rule_dict.values():
+                try:os.remove(os.path.join(self.path, v))
+                except: pass
+            try: os.remove(os.path.join(self.path, 'rule_infer_list_' + self.site))
+            except: pass
             self.rule_dict = {}
         dir_dict = defaultdict(list)
         site_urls = []
@@ -93,7 +96,8 @@ class UrlRuleInferer:
         path_dir = dirname(urlparse(url).path)
         for rule_name, rule_file in self.rule_dict.items():
             if rule_name[:4] in ['url:', 'site:'] or rule_name == 'dir:' + path_dir:
-                output = subprocess.check_output('printf "{}" | {} --load {}'.format(url, self.strans, join(self.path, rule_file)), shell=True)
+                try: output = subprocess.check_output('echo "{}" | {} --load {}'.format(url, self.strans, join(self.path, rule_file)), shell=True)
+                except: continue
                 inferred_urls.append(output.decode()[:-1])
         inferred_urls = list(filter(lambda x: x != '', inferred_urls))
         return list(set(inferred_urls))
@@ -101,8 +105,11 @@ class UrlRuleInferer:
     def __del__(self):
         print("deleted")
         if self.learned:
-            _ = [os.remove(os.path.join(self.path, v)) for v in self.rule_dict.values()]
-            os.remove(os.path.join(self.path, 'rule_infer_list_' + self.site))
+            for v in self.rule_dict.values():
+                try:os.remove(os.path.join(self.path, v))
+                except: pass
+            try: os.remove(os.path.join(self.path, 'rule_infer_list_' + self.site))
+            except: pass
 
 
 def get_num_words(string):
