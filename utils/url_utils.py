@@ -55,7 +55,7 @@ class UrlRuleInferer:
         self.site = site
         if self.learned:
             _ = [os.remove(os.path.join(self.path, v)) for v in self.rule_dict.values()]
-            os.remove(os.path.join(self.path, 'rule_infer_list'))
+            os.remove(os.path.join(self.path, 'rule_infer_list_' + self.site))
             self.rule_dict = {}
         dir_dict = defaultdict(list)
         site_urls = []
@@ -71,18 +71,18 @@ class UrlRuleInferer:
         for path_dir, path_urls in dir_dict.items():
             filename = str(time.time()) + "_dir_" + self.site
             match_str = self.construct_match(path_urls)
-            f = open(join(self.path, 'rule_infer_list'), 'w+')
+            f = open(join(self.path, 'rule_infer_list_' + self.site), 'w+')
             f.write(match_str)
             f.close()
-            subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list'), '--save', join(self.path, filename)])
+            subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list_' + self.site), '--save', join(self.path, filename)])
             self.rule_dict['dir:' + path_dir] = filename
         print("UrlRuleInferrer: dir learned")
         filename = str(time.time()) + "_site_" + self.site
         match_str = self.construct_match(site_urls)
-        f = open(join(self.path, 'rule_infer_list'), 'w+')
+        f = open(join(self.path, 'rule_infer_list_' + self.site), 'w+')
         f.write(match_str)
         f.close()
-        subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list'), '--save', join(self.path, filename)])
+        subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list_' + self.site), '--save', join(self.path, filename)])
         self.rule_dict['site'] = filename
         print("UrlRuleInferrer: site learned")
         self.learned = True
@@ -95,13 +95,14 @@ class UrlRuleInferer:
             if rule_name[:4] in ['url:', 'site:'] or rule_name == 'dir:' + path_dir:
                 output = subprocess.check_output('printf "{}" | {} --load {}'.format(url, self.strans, join(self.path, rule_file)), shell=True)
                 inferred_urls.append(output.decode()[:-1])
+        inferred_urls = list(filter(lambda x: x != '', inferred_urls))
         return list(set(inferred_urls))
 
     def __del__(self):
         print("deleted")
         if self.learned:
             _ = [os.remove(os.path.join(self.path, v)) for v in self.rule_dict.values()]
-            os.remove(os.path.join(self.path, 'rule_infer_list'))
+            os.remove(os.path.join(self.path, 'rule_infer_list_' + self.site))
 
 
 def get_num_words(string):
