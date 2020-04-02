@@ -41,7 +41,7 @@ class UrlRuleInferer:
     
     def process_url(self, url):
         up = urlparse(url)
-        return up.netloc + up.path + up.query
+        return up.netloc.split(':')[0] + up.path + up.query
     
     def construct_match(self, url_pairs):
         file_string = ""
@@ -55,44 +55,53 @@ class UrlRuleInferer:
         self.site = site
         if self.learned:
             _ = [os.remove(os.path.join(self.path, v)) for v in self.rule_dict.values()]
+            os.remove(os.path.join(self.path, 'rule_infer_list'))
             self.rule_dict = {}
         dir_dict = defaultdict(list)
         site_urls = []
         for old_url, new_url in urls:
             old_url, new_url = self.process_url(old_url), self.process_url(new_url)
-            filename = str(time.time()) + "_" + self.site
+            filename = str(time.time()) + "_url_" + self.site
             subprocess.call([self.strans, '-b', old_url, '-a', new_url, '--save', join(self.path, filename)])
             self.rule_dict['url:' + old_url] = filename
             path_dir = dirname(urlparse(old_url).path)
             dir_dict[path_dir].append((old_url, new_url))
             site_urls.append((old_url, new_url))
+        print("UrlRuleInferrer: url learned")
         for path_dir, path_urls in dir_dict.items():
-            filename = str(time.time()) + "_" + self.site
+            filename = str(time.time()) + "_dir_" + self.site
             match_str = self.construct_match(path_urls)
             f = open(join(self.path, 'rule_infer_list'), 'w+')
             f.write(match_str)
             f.close()
             subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list'), '--save', join(self.path, filename)])
             self.rule_dict['dir:' + path_dir] = filename
-        filename = str(time.time()) + "_" + self.site
+        print("UrlRuleInferrer: dir learned")
+        filename = str(time.time()) + "_site_" + self.site
         match_str = self.construct_match(site_urls)
         f = open(join(self.path, 'rule_infer_list'), 'w+')
         f.write(match_str)
         f.close()
         subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list'), '--save', join(self.path, filename)])
         self.rule_dict['site'] = filename
+        print("UrlRuleInferrer: site learned")
+        self.learned = True
     
     def infer(self, url):
         inferred_urls = []
         url = self.process_url(url)
         path_dir = dirname(urlparse(url).path)
         for rule_name, rule_file in self.rule_dict.items():
-            if rule_name[:4] in ['url:', 'site:'] or rule_name == 'dir:' + path_dir::
+            if rule_name[:4] in ['url:', 'site:'] or rule_name == 'dir:' + path_dir:
                 output = subprocess.check_output('printf "{}" | {} --load {}'.format(url, self.strans, join(self.path, rule_file)), shell=True)
-                inferred_urls.append(output.decode())
-        return inferred_urls
+                inferred_urls.append(output.decode()[:-1])
+        return list(set(inferred_urls))
 
-
+    def __del__(self):
+        print("deleted")
+        if self.learned:
+            _ = [os.remove(os.path.join(self.path, v)) for v in self.rule_dict.values()]
+            os.remove(os.path.join(self.path, 'rule_infer_list'))
 
 
 def get_num_words(string):
@@ -136,5 +145,4 @@ def status_categories(status, detail):
     elif  re.compile("^OtherError").match(status): return "OtherError_" + detail
     else:
         raise Exception("Unknown categories")
-
 

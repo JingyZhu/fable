@@ -206,10 +206,23 @@ Schema is same as search
 metadata for search infer rules inspection\
 Schema is same as search_meta
 
+
 ### search_infer
 #### Index: from
 Searched results for search_infer_meta
 Schema is same as search
+
+### search_infer_guess
+urls infered by rules from searched urls for urls cannot find copies
+```json
+{
+    "url": "string",
+    "from": "string",
+    "status": "2xx|45xx",
+    "html": "byte (if status 2xx)",
+    "content": "string (if status 2xx)"
+}
+```
 
 ### searched
 ##### Index: query, query_site_engine (unique)

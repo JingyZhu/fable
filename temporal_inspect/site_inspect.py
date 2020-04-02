@@ -190,7 +190,7 @@ def collect_close_snapshots(days=30):
             "afterTech": tech_change['afterTech']
         } for u, li in in_range_urls.items()]
         try: db.site_url_before_after.insert_many(in_range_urls, ordered=False)
-        except: print('db insert failed')
+        except: print('db insert failed (Or insert list empty)')
 
     tech_sames = []
     for site in site_with_techs:
@@ -255,5 +255,5 @@ def collect_changes():
 
 
 if __name__ == '__main__':
-    collect_tech_change_sites()
+    collect_close_snapshots()
     
