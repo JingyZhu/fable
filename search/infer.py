@@ -90,7 +90,15 @@ def crawl_guess(q_in, pid, counter):
         with counter.get_lock():
             counter.value += 1
             print(counter.value, pid, url)
-        r = requests.get(url, headers=requests_header, timeout=15)
+        try:
+            r = requests.get(url, headers=requests_header, timeout=15)
+        except:
+            update_dict['status'] = 'wrong scheme'
+            if_ops.append(pymongo.UpdateOne(
+                {"url": url, "from": fromm}, 
+                {"$set": update_dict}
+            ))
+            continue
         update_dict['status'] = str(r.status_code)
         if r.status_code < 400:
             html = crawl.requests_crawl(url)
@@ -138,5 +146,48 @@ def crawl_guess_wrapper(NUM_PROCS=10):
         t.join()
 
 
+def calculate_similarity():
+    """
+    Calcuate the (highest) similarity of each guessed pages
+    Update similarity and guessed_urls to db.search_infer_meta
+    """
+    corpus1 = db.search_infer_meta.find({'content': {"$ne": ""}}, {'content': True})
+    corpus2 = db.search_infer.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
+    corpus3 = db.search_infer_guess.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
+    corpus = [c['content'] for c in corpus1] + [c['content'] for c in corpus2] + [c['content'] for c in corpus3]
+    tfidf = text_utils.TFidf(corpus)
+    print("tfidf init success!")
+    guessed_urls = db.search_infer_meta.aggregate([
+        {"$match": {"usage": "represent", "guess_similarity": {"$exists": False}}},
+        {"$lookup": {
+            "from": "search_infer_guess",
+            "localField": "url",
+            "foreignField": "from",
+            "as": "guessed"
+        }},
+        {"$project": {"guessed.html": False, "guessed._id": False, "_id": False, "html": False}},
+        {"$unwind": "$guessed"},
+        {"$match": {"guessed.content": {"$exists": True, "$ne": ""}}}
+    ])
+    guessed_urls = list(guessed_urls)
+    simi_dict = collections.defaultdict(lambda: {'ts': 0, 'simi': 0, 'guessed_url': ''})
+    print('total comparison:', len(guessed_urls))
+    for i, guessed_url in enumerate(guessed_urls):
+        if i % 100 == 0: print(i)
+        url, ts, content = guessed_url['url'], guessed_url['ts'], guessed_url['content']
+        guessed = guessed_url['guessed']
+        simi = tfidf.similar(content, guessed['content'])
+        simi_dict[url]['ts'] = ts
+        if simi >= simi_dict[url]['simi']:
+            simi_dict[url]['simi'] = simi
+            simi_dict[url]['guessed_url'] = guessed['url']
+    search_infer_meta = db.search_infer_meta.find({"usage": "represent", "guess_similarity": {"$exists": False}}, {'url': True, 'ts': True})
+    for obj in list(search_infer_meta):
+        url, ts = obj['url'], obj['ts']
+        value = simi_dict[url]    
+        db.search_infer_meta.update_one({'url': url, 'ts': ts}, \
+            {'$set': {'guess_similarity': value['simi'], 'guessed_url': value['guessed_url']}})
+
+
 if __name__ == '__main__':
-    generate_inferred_rules()
+    calculate_similarity()

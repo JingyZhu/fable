@@ -77,7 +77,9 @@ class UrlRuleInferer:
             f = open(join(self.path, 'rule_infer_list_' + self.site), 'w+')
             f.write(match_str)
             f.close()
-            subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list_' + self.site), '--save', join(self.path, filename)])
+            try:
+                subprocess.call([self.strans, '-f',  join(self.path, 'rule_infer_list_' + self.site), '--save', join(self.path, filename)], timeout=10*60)
+            except: continue
             self.rule_dict['dir:' + path_dir] = filename
         print("UrlRuleInferrer: dir learned")
         filename = str(time.time()) + "_site_" + self.site
