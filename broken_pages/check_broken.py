@@ -18,7 +18,7 @@ import nmap
 
 sys.path.append('../')
 import config
-from utils import db_utils, url_utils
+from utils import db_utils, url_utils, sic_transit
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 year = 2014
@@ -379,5 +379,47 @@ def dns_more_host_investigation():
     json.dump(host_status, open('dns_host.json', 'w+'))
 
 
+def sic_transit_test_200(NUM_THREADS=16):
+    """
+    Apply sic transit broken detection algorithm on 23xx status code pages
+    """
+    good_urls = db.url_status_implicit_broken.find({'status': re.compile("^[23]")})
+    count = 0
+    def thread_func(q_in, i):
+        nonlocal count
+        update_ops = []
+        while not q_in.empty():
+            obj = q_in.get()
+            url = obj['url']
+            print(count, i, url)
+            count += 1
+            is_broken, reason = sic_transit.broken(url)
+            if re.compile('^([45]|DNSError|OtherError)').match(reason): 
+                print('Get non-200 status')
+                continue
+            update_ops.append(pymongo.UpdateOne(
+                {"_id": obj['_id']}, 
+                {"$set": {"sic_broken": is_broken, "sic_reason": reason}}
+            ))
+            if len(update_ops) >= 10:
+                try: db.url_status_implicit_broken.bulk_write(update_ops, ordered=False)
+                except: pass
+                update_ops = []
+        try: db.url_status_implicit_broken.bulk_write(update_ops, ordered=False)
+        except: pass
+
+    good_urls = list(good_urls)
+    random.shuffle(good_urls)
+    q_in = queue.Queue()
+    for obj in good_urls:
+        q_in.put(obj)
+    pools = []
+    for i in range(NUM_THREADS):
+        pools.append(threading.Thread(target=thread_func, args=(q_in, i)))
+        pools[-1].start()
+    for t in pools:
+        t.join()
+
+
 if __name__ == '__main__':
-    fix_45xx_status(NUM_THREADS=10)
+    sic_transit_test_200()
