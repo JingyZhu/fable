@@ -583,11 +583,11 @@ def dirname_fate():
     Only counts dirname with >= 3 samples
     """
     fate = defaultdict(dict)
+    total_urls = 0
     hosts = db.url_status_implicit_broken.aggregate([
         {"$group": {"_id": "$hostname"}}
     ])
     for i, host in enumerate(list(hosts)):
-        if i % 100 == 0: print(i)
         host_fate = defaultdict(list)
         urls = db.url_status_implicit_broken.find({"hostname": host['_id']})
         for url in urls:
@@ -599,6 +599,7 @@ def dirname_fate():
         dir_count = {}
         for dirname, statuss in host_fate.items():
             if len(statuss) >= 3:
+                total_urls += len(statuss)
                 dir_count[dirname] = set(statuss)
         fate[host['_id']] = dir_count
     fate_list, fate_count = [], defaultdict(int)
@@ -609,17 +610,18 @@ def dirname_fate():
                 fate_count[tuple(sorted(list(statuss)))] += 1
     fate = {h: {d: list(s) for d, s in ds.items() if len(s) > 1} for h, ds in fate.items()}
     fate = {h: ds for h, ds in fate.items() if len(ds) > 0}
-    json.dump(fate, open('fate.json', 'w+'))
+    json.dump(fate, open('../tmp/fate.json', 'w+'))
     print(len(fate_list))
-    plot.plot_CDF([fate_list], show=False)
-    plt.xlabel("# status")
-    plt.ylabel("CDF across (subhost, path_dir)")
-    plt.title("Whether url with same dirname share the fate")
-    plt.savefig('fig/fate.png')
-
+    # plot.plot_CDF([fate_list], show=False)
+    # plt.xlabel("# status")
+    # plt.ylabel("CDF across (subhost, path_dir)")
+    # plt.title("Whether url with same dirname share the fate")
+    # plt.savefig('fig/fate.png')
+    print("Total urls included:", total_urls)
+    print(sum(fate_count.values()))
     fate_count = [list(k) + [v] for k, v in fate_count.items()]
     fate_count.sort(key=lambda x: x[-1], reverse=True)
-    json.dump(fate_count, open('fate_count.json', 'w+') )
+    # json.dump(fate_count, open('../tmp/fate_count.json', 'w+') )
 
 
 
