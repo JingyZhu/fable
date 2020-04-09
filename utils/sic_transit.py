@@ -108,7 +108,7 @@ def broken(url):
         return True, status
     path = urlparse(url).path
     if path == '': url += '/'
-    elif path == '/' and url[-1] == '/': url = url[:-1]
+    elif path != '/' and url[-1] == '/': url = url[:-1]
     url_dir = os.path.dirname(url)
     random_filename = ''.join([random.choice(string.ascii_letters) for _ in range(25)])
     random_url = url_dir + '/' + random_filename
