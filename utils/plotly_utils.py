@@ -26,13 +26,26 @@ class SiteTree:
             subhost, path, query = up.netloc.split(':')[0], up.path, up.query
             if path == '': path += '/'
             directories = [subhost] + path.split('/')[1:]
-            cur_node = url_tree
+            cur_node, parent_node = url_tree, url_tree
+            parent_key = directories[0]
             for d in directories[:-1]:
+                if isinstance(cur_node, list): # Case of /a and /a/b
+                    cur_list = cur_node
+                    cur_node = tree()
+                    cur_node[''] = cur_list
+                    parent_node[parent_key] = cur_node
+                parent_key, parent_node = d, cur_node
                 cur_node = cur_node[d]
             filename = directories[-1] + '?' + query if query else directories[-1]
+            if isinstance(cur_node, list): # Case of /a and /a/b
+                cur_list = cur_node
+                cur_node = tree()
+                cur_node[''] = cur_list
+                parent_node[parent_key] = cur_node
             cur_node[filename] = [status, broken]
-        # Delete intermediate nodes with only one child (link list)
+        # count1 = self.check(url_tree)
         json.dump(url_tree, open('tmp/tree_pre.json', 'w+'))
+        # Delete intermediate nodes with only one child (link list)
         stack = [url_tree]
         while len(stack) > 0:
             cur_node = stack.pop()
@@ -40,16 +53,29 @@ class SiteTree:
             keys = list(cur_node.keys())
             for k in keys:
                 cur_k, v = k, cur_node[k]
-                need_cut = False
                 while not (len(v) > 1 or isinstance(v, list)):
                     sub_k, v = list(v.keys())[0], list(v.values())[0]
-                    cur_k = '{}/{}'.format(cur_k, sub_k)
-                    cur_node[cur_k] = v
-                    need_cut = True
-                if need_cut: del(cur_node[k])
+                    new_k = '{}/{}'.format(cur_k, sub_k)
+                    cur_node[new_k] = v
+                    del(cur_node[cur_k])
+                    cur_k = new_k
                 stack.append(cur_node[cur_k])
         json.dump(url_tree, open('tmp/tree.json', 'w+'))
+        # count2 = self.check(url_tree)
+        # assert(count1 == count2)
         return url_tree
+
+    def check(self, url_tree):
+        stack = [url_tree]
+        leaf_count = 0
+        while len(stack) > 0:
+            cur_node = stack.pop()
+            if isinstance(cur_node, list):
+                leaf_count += 1
+                continue
+            for v in cur_node.values():
+                stack.append(v)
+        return leaf_count
 
     def update_urls(self, urls):
         """urls should include status and broken metadata (refer to db_format-->url_status_implicit_broken)"""
