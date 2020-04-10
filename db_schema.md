@@ -124,7 +124,10 @@ In other word, all urls in url_status which hostname is sampled in host_sample\
     "status": "status (2/3/4/5xx / DNS / Other)",
     "detail": "string",
     "(similarity)": "TF-IDF similarity of page on liveweb vs. wayback machine",
-    "(broken)": "Boolean (used as determine 23xx urls broken)"
+    "(broken)": "Boolean (used as determine hard broken)",
+    "(sic_broken)": "Boolean sic_transit's determine 23xx broken",
+    "(sic_reason)": "string reason for determine why is (not) broken",
+    "ct_broken": "Boolean content broken" 
 }
 ```json'
 
