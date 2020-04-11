@@ -9,6 +9,8 @@ from collections import defaultdict
 import re
 import os
 import json
+import igraph
+from igraph import Graph, EdgeSeq
 
 class SiteTree:
     """
@@ -43,26 +45,29 @@ class SiteTree:
                 cur_node[''] = cur_list
                 parent_node[parent_key] = cur_node
             cur_node[filename] = [status, broken]
-        # count1 = self.check(url_tree)
+        count1 = self.check(url_tree)
+        print(count1)
         json.dump(url_tree, open('tmp/tree_pre.json', 'w+'))
         # Delete intermediate nodes with only one child (link list)
-        stack = [url_tree]
-        while len(stack) > 0:
-            cur_node = stack.pop()
-            if isinstance(cur_node, list): continue
-            keys = list(cur_node.keys())
-            for k in keys:
-                cur_k, v = k, cur_node[k]
-                while not (len(v) > 1 or isinstance(v, list)):
-                    sub_k, v = list(v.keys())[0], list(v.values())[0]
-                    new_k = '{}/{}'.format(cur_k, sub_k)
-                    cur_node[new_k] = v
-                    del(cur_node[cur_k])
-                    cur_k = new_k
-                stack.append(cur_node[cur_k])
-        json.dump(url_tree, open('tmp/tree.json', 'w+'))
-        # count2 = self.check(url_tree)
-        # assert(count1 == count2)
+        if self.flatten:
+            stack = [url_tree]
+            while len(stack) > 0:
+                cur_node = stack.pop()
+                if isinstance(cur_node, list): continue
+                keys = list(cur_node.keys())
+                for k in keys:
+                    cur_k, v = k, cur_node[k]
+                    while not (len(v) > 1 or isinstance(v, list)):
+                        sub_k, v = list(v.keys())[0], list(v.values())[0]
+                        new_k = '{}/{}'.format(cur_k, sub_k)
+                        cur_node[new_k] = v
+                        del(cur_node[cur_k])
+                        cur_k = new_k
+                    stack.append(cur_node[cur_k])
+            json.dump(url_tree, open('tmp/tree.json', 'w+'))
+            count2 = self.check(url_tree)
+            print(count2)
+        assert(count1 == count2)
         return url_tree
 
     def check(self, url_tree):
@@ -76,18 +81,121 @@ class SiteTree:
             for v in cur_node.values():
                 stack.append(v)
         return leaf_count
+    
+    def categorize(self, status, broken):
+        if re.compile('^[45]').match(status): return '45xx'
+        if re.compile('^(DNSError|OtherError)').match(status): return 'network_error'
+        return '200_broken' if broken else '200_fine'
 
-    def update_urls(self, urls):
-        """urls should include status and broken metadata (refer to db_format-->url_status_implicit_broken)"""
+    def __init__(self, urls, hostname, colors=None, flatten=True):
+        """
+        urls should include status and broken metadata (refer to db_format-->url_status_implicit_broken)
+        Colors is the color mapping for status (45xx, etc)
+        Flatten is to decide whether is intermediate nodes of tree are flattened
+        """
         self.urls = urls
+        self.flatten = flatten
         self.tree = self.generate_tree()
-
-    def __init__(self, urls):
-        self.update_urls(urls)
+        self.hostname = hostname
+        self.colors = colors if colors else \
+            {'45xx': 'red', 'network_error': 'blue', '200_broken': 'green', '200_fine': 'white', 'non_leaf': 'grey'}
     
     def plot_tree(self):
-        # TODO imlement this function
-        pass
+        G = Graph()
+        vcount = 0
+        G.add_vertices(1)
+        url_map, cate_map = {'': vcount}, defaultdict(set)
+        vcount += 1
+        q = [(self.tree, '')]
+        while len(q) > 0:
+            cur_node, cur_url = q.pop()
+            if isinstance(cur_node, list):
+                cate = self.categorize(cur_node[0], cur_node[1])
+                cate_map[cate].add(url_map[cur_url])
+                continue
+            for path, value in cur_node.items():
+                if cur_url == '': new_path = path
+                else: new_path = cur_url + '/' + path
+                G.add_vertices(1)
+                url_map[new_path] = vcount
+                q.insert(0, (value, new_path))
+                G.add_edges([(url_map[cur_url], url_map[new_path])])
+                vcount += 1
+        leaf_nodes = set([n for cates in cate_map.values() for n in cates])
+        non_leaf_nodes = set([n for n in range(vcount) if n not in leaf_nodes])
+        cate_map['non_leaf'] = non_leaf_nodes
+        reverse_url_map = {v: k for k, v in url_map.items()}
+        layout = G.layout('rt', root=[0])
+        position = {k: layout[k] for k in range(vcount)}
+        M = max([layout[k][1] for k in range(vcount)])
+        E = [e.tuple for e in G.es] # list of edges
+        Xedge, Yedge = [], []
+        for edge in E:
+            Xedge += [position[edge[0]][0], position[edge[1]][0], None]
+            Yedge += [2*M - position[edge[0]][1], 2*M - position[edge[1]][1], None]
+
+        fig = go.Figure()
+        # Plot edges
+        fig.add_trace(go.Scatter(x=Xedge,
+            y=Yedge,
+            mode='lines',
+            line=dict(color='rgb(210,210,210)', width=1),
+            hoverinfo='none'
+        ))
+        # Plot nodes
+        for cate, nodes in cate_map.items():
+            nodes = list(nodes)
+            labels = [reverse_url_map[n] for n in nodes]
+            Xn = [position[k][0] for k in nodes]
+            Yn = [2*M - position[k][1] for k in nodes]
+            fig.add_trace(go.Scatter(x=Xn, y=Yn, mode='markers', name=cate,
+                marker={
+                    'symbol': 'circle-dot',
+                    'size': 18,
+                    'color': self.colors[cate],    #'#DB4551',
+                    'line': {'color': 'rgb(50,50,50)', 'width': 1}
+                },
+                text=labels,
+                hoverinfo='text',
+                opacity=0.8
+            ))
+        axis = {
+            'showline': False, # hide axis line, grid, ticklabels and  title
+            'zeroline': False,
+            'showgrid': False,
+            'showticklabels': False,
+        }
+        fig.update_layout(
+            height=1000,
+            xaxis=axis,
+            yaxis=axis,
+            margin=dict(l=40, r=40, b=85, t=100),
+            plot_bgcolor='rgb(248,248,248)',
+            hovermode='closest',
+            hoverlabel={
+                'align': 'left',
+                'bgcolor': "white", 
+                'font_size': 20, 
+            }
+        )
+        text = [reverse_url_map[k].split('/')[-1] for k in range(vcount)]
+        fig.show()
+    
+    def make_annotations(self, pos, text, M):
+        L = len(pos)
+        if len(text) != L:
+            raise ValueError('The lists pos and text must have the same len')
+        annotations = []
+        for k in range(L):
+            annotations.append(
+                dict(
+                    text=text[k], # or replace labels with a different list for the text within the circle
+                    x=pos[k][0], y=2*M - pos[k][1],
+                    xref='x1', yref='y1',
+                    font=dict(color='rgb(250,250,250)', size=10),
+                    showarrow=False)
+            )
+        return annotations
 
 
 def plot_CDF(df, xtitle="", ytitle="", title="", cut=1, clear_bound=True):
