@@ -2,6 +2,7 @@
 Plot utilities for plotly libraries
 """
 import plotly.graph_objects as go
+import plotly
 import pandas as pd
 import numpy as np
 from urllib.parse import urlparse
@@ -23,7 +24,7 @@ class SiteTree:
         url_tree = tree()
         # Insert urls into 
         for obj in self.urls:
-            url, status, broken = obj['url'], obj['status'], obj.get('sic_broken')
+            url, status, sic_broken, detail = obj['url'], obj['status'], obj.get('sic_broken'), obj['detail']
             up = urlparse(url)
             subhost, path, query = up.netloc.split(':')[0], up.path, up.query
             if path == '': path += '/'
@@ -44,7 +45,7 @@ class SiteTree:
                 cur_node = tree()
                 cur_node[''] = cur_list
                 parent_node[parent_key] = cur_node
-            cur_node[filename] = [status, broken]
+            cur_node[filename] = [status, sic_broken, detail]
         count1 = self.check(url_tree)
         print(count1)
         json.dump(url_tree, open('tmp/tree_pre.json', 'w+'))
@@ -82,10 +83,15 @@ class SiteTree:
                 stack.append(v)
         return leaf_count
     
-    def categorize(self, status, broken):
+    def categorize(self, status, sic_broken, detail):
         if re.compile('^[45]').match(status): return '45xx'
         if re.compile('^(DNSError|OtherError)').match(status): return 'network_error'
-        return '200_broken' if broken else '200_fine'
+        two_hundred_map = {
+            'no redirection': 'nr',
+            'non-home redirection': 'nhr',
+            'homepage redirection': 'hr'
+        }
+        return '{}_broken'.format(two_hundred_map[detail]) if sic_broken else '{}_fine'.format(two_hundred_map[detail])
 
     def __init__(self, urls, hostname, colors=None, flatten=True):
         """
@@ -98,9 +104,12 @@ class SiteTree:
         self.tree = self.generate_tree()
         self.hostname = hostname
         self.colors = colors if colors else \
-            {'45xx': 'red', 'network_error': 'blue', '200_broken': 'green', '200_fine': 'white', 'non_leaf': 'grey'}
+            {'45xx': 'red', 'network_error': '#582477','non_leaf': 'grey',
+            'nr_fine': '#F7F7BC', 'nr_broken': '#E7AD00', 
+            'hr_fine': '#AEE17F', 'hr_broken': '#2D7A10',
+            'nhr_fine': '#B3D7D7', 'nhr_broken': '#02748F'}
     
-    def plot_tree(self):
+    def plot_tree(self, save_html=False, width=None):
         G = Graph()
         vcount = 0
         G.add_vertices(1)
@@ -110,7 +119,7 @@ class SiteTree:
         while len(q) > 0:
             cur_node, cur_url = q.pop()
             if isinstance(cur_node, list):
-                cate = self.categorize(cur_node[0], cur_node[1])
+                cate = self.categorize(cur_node[0], cur_node[1], cur_node[2])
                 cate_map[cate].add(url_map[cur_url])
                 continue
             for path, value in cur_node.items():
@@ -180,6 +189,9 @@ class SiteTree:
         )
         text = [reverse_url_map[k].split('/')[-1] for k in range(vcount)]
         fig.show()
+        if save_html:
+            if width: fig.update_layout(width=width)
+            plotly.offline.plot(fig, filename=self.hostname+'.html', auto_open=False)
     
     def make_annotations(self, pos, text, M):
         L = len(pos)
