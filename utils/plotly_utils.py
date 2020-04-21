@@ -125,7 +125,7 @@ class SiteTree:
                 continue
             for path, value in cur_node.items():
                 if cur_url == '': new_path = path
-                elif path[0] == '?': new_path = cur_url + path
+                elif len(path) > 0 and path[0] == '?': new_path = cur_url + path
                 else: new_path = cur_url + '/' + path
                 G.add_vertices(1)
                 url_map[new_path] = vcount

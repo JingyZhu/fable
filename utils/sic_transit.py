@@ -106,12 +106,18 @@ def broken(url):
     status, _ = get_status(url, resp, msg)
     if re.compile('^([45]|DNSError|OtherError)').match(status):
         return True, status
-    path = urlparse(url).path
-    if path == '': url += '/'
-    elif path != '/' and url[-1] == '/': url = url[:-1]
-    url_dir = os.path.dirname(url)
+    up = urlparse(url)
+    scheme, netloc, path, query = up.scheme, up.netloc, up.path, up.query
+    end_with_slash = False
+    if path == '': path += '/'
+    elif path != '/' and path[-1] == '/': 
+        end_with_slash = True
+        path = path[:-1]
+    url_dir = os.path.dirname(path)
     random_filename = ''.join([random.choice(string.ascii_letters) for _ in range(25)])
-    random_url = url_dir + '/' + random_filename
+    random_url = "{}://{}{}".format(scheme, netloc, os.path.join(url_dir, random_filename))
+    if end_with_slash: random_url += '/'
+    if query: random_url += '?' + query
     random_resp, msg = send_request(random_url)
     random_status, _ = get_status(random_url, random_resp, msg)
     if re.compile('^([45]|DNSError|OtherError)').match(random_status):
