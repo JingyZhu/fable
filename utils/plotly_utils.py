@@ -29,6 +29,7 @@ class SiteTree:
             subhost, path, query = up.netloc.split(':')[0], up.path, up.query
             if path == '': path += '/'
             directories = [subhost] + path.split('/')[1:]
+            if query: directories += ['?' + query]
             cur_node, parent_node = url_tree, url_tree
             parent_key = directories[0]
             for d in directories[:-1]:
@@ -39,7 +40,7 @@ class SiteTree:
                     parent_node[parent_key] = cur_node
                 parent_key, parent_node = d, cur_node
                 cur_node = cur_node[d]
-            filename = directories[-1] + '?' + query if query else directories[-1]
+            filename = directories[-1]
             if isinstance(cur_node, list): # Case of /a and /a/b
                 cur_list = cur_node
                 cur_node = tree()
@@ -68,7 +69,7 @@ class SiteTree:
             json.dump(url_tree, open('tmp/tree.json', 'w+'))
             count2 = self.check(url_tree)
             print(count2)
-        assert(count1 == count2)
+            assert(count1 == count2)
         return url_tree
 
     def check(self, url_tree):
@@ -124,6 +125,7 @@ class SiteTree:
                 continue
             for path, value in cur_node.items():
                 if cur_url == '': new_path = path
+                elif path[0] == '?': new_path = cur_url + path
                 else: new_path = cur_url + '/' + path
                 G.add_vertices(1)
                 url_map[new_path] = vcount
@@ -228,7 +230,7 @@ def plot_CDF(df, xtitle="", ytitle="", title="", cut=1, clear_bound=True):
         },
         xaxis_title=xtitle,
         yaxis_title=ytitle,
-        width=800,
+        width=1000,
         height=600,
         font=dict(
             family="Time New Roman",

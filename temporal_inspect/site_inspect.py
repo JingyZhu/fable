@@ -85,6 +85,11 @@ def collect_tech_change_sites():
     subhosts = list(subhosts)
     random.shuffle(subhosts)
     print("Total:", len(subhosts))
+    # Temp add
+    host, domain = 'www.greateranglia.co.uk', 'greateranglia.co.uk' 
+    subhosts = [{'_id': host, 'subhost': host, 'hostname': domain}]
+    db.site_tech.insert_one(subhosts[0])
+    # Temp add
     for i, subhost in enumerate(subhosts):
         print(i, subhost["_id"])
         period = subhost_tech_change(subhost['_id'])
@@ -255,5 +260,5 @@ def collect_changes():
 
 
 if __name__ == '__main__':
-    collect_close_snapshots()
+    collect_tech_change_sites()
     
