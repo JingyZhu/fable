@@ -383,7 +383,7 @@ def sic_transit_test_200(NUM_THREADS=16):
     """
     Apply sic transit broken detection algorithm on 23xx status code pages
     """
-    good_urls = db.url_status_implicit_broken.find({'status': re.compile("^[23]")})
+    good_urls = db.url_status_implicit_broken.find({'status': re.compile("^[23]"), "hostname": "eventful.com"})
     count = 0
     def thread_func(q_in, i):
         nonlocal count
@@ -422,4 +422,4 @@ def sic_transit_test_200(NUM_THREADS=16):
 
 
 if __name__ == '__main__':
-    sic_transit_test_200()
+    sic_transit_test_200(NUM_THREADS=5)
