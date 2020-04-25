@@ -110,7 +110,8 @@ class SiteTree:
             'hr_fine': '#AEE17F', 'hr_broken': '#2D7A10',
             'nhr_fine': '#B3D7D7', 'nhr_broken': '#02748F'}
     
-    def plot_tree(self, save_html=False, width=None):
+    def plot_tree(self, save_html=None, width=None):
+        """save_html: If specified, should be path/filename for html to be saved"""
         G = Graph()
         vcount = 0
         G.add_vertices(1)
@@ -193,7 +194,9 @@ class SiteTree:
         fig.show()
         if save_html:
             if width: fig.update_layout(width=width)
-            plotly.offline.plot(fig, filename=self.hostname+'.html', auto_open=False)
+            if save_html[-1] == '/': path = os.path.join(save_html, f'{self.hostname}.html')
+            else: path = save_html
+            plotly.offline.plot(fig, filename=path, auto_open=False)
     
     def make_annotations(self, pos, text, M):
         L = len(pos)
@@ -375,5 +378,5 @@ def plot_Scatter(df, xtitle="", ytitle="", title=""):
         x = [c[0] for c in col]
         y = [c[1] for c in col]
         fig.add_trace(go.Scatter(x=x, y=y,  \
-                                 name=name, mode='markers', marker={'size': 10}))
+                                 name=name, mode='lines+markers', marker={'size': 10}))
     fig.show()
