@@ -1,7 +1,6 @@
 const Zombie = require('zombie');
 const Browser = require('../browser');
-const setCookie = require('set-cookie-parser')
-
+const setCookie = require('set-cookie-parser');
 
 class ZombieBrowser extends Browser {
   constructor(options) {
@@ -49,7 +48,7 @@ class ZombieBrowser extends Browser {
       response.headers._headers = new_headers;
       return response
     });
-
+    // jingyz: end of handler
   }
 
   visit(url) {
@@ -58,7 +57,7 @@ class ZombieBrowser extends Browser {
         this.browser.visit(url, () => {
           const resource = this.browser.resources.length
             ? this.browser.resources.filter(_resource => _resource.response).shift() : null;
-  
+
           this.window = this.browser.window;
           this.document = this.browser.document;
           this.headers = this.getHeaders();
@@ -69,10 +68,8 @@ class ZombieBrowser extends Browser {
           this.links = this.getLinks();
           this.scripts = this.getScripts();
           this.cookies = this.getCookies();
-    
 
           resolve();
-          
         });
       } catch (error) {
         reject(error.message);

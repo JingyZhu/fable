@@ -178,6 +178,13 @@ class SiteTree:
             'showticklabels': False,
         }
         fig.update_layout(
+            title={
+                'text': self.hostname,
+                'x':0.5,
+                'yanchor': 'top',
+                'font': {'size': 28}
+            },
+            font={'size': 16},
             height=1000,
             xaxis=axis,
             yaxis=axis,

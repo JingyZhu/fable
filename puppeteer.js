@@ -1,3 +1,4 @@
+// jingyz: Added for parse cookie
 const setCookie = require('set-cookie-parser');
 
 const {
@@ -84,16 +85,39 @@ class PuppeteerBrowser extends Browser {
 
           const page = await browser.newPage();
 
-          page.setDefaultTimeout(this.options.maxWait * 2);
+          page.setDefaultTimeout(this.options.maxWait * 1.1);
+
+          await page.setRequestInterception(true);
 
           page.on('error', error => reject(new Error(`page error: ${error.message || error}`)));
 
-          page.on('response', async (response) => {
+          let responseReceived = false;
+
+          page.on('request', (request) => {
             try {
-              if (response.status() === 301 || response.status() === 302) {
-                return;
+              if (
+                responseReceived
+                && request.isNavigationRequest()
+                && request.frame() === page.mainFrame()
+                && request.url() !== url
+              ) {
+                this.log(`abort navigation to ${request.url()}`);
+
+                request.abort('aborted');
+              } else if (!done) {
+                if (!['document', 'script'].includes(request.resourceType())) {
+                  request.abort();
+                } else {
+                  request.continue();
+                }
               }
-              
+            } catch (error) {
+              reject(new Error(`page error: ${error.message || error}`));
+            }
+          });
+
+          page.on('response', (response) => {
+            try {
               if (!this.statusCode) {
                 this.statusCode = response.status();
 
@@ -101,12 +125,13 @@ class PuppeteerBrowser extends Browser {
 
                 const headers = response.headers();
                 
+                // jingyz
                 if (!response.url().includes('web.archive.org')){
                   Object.keys(headers).forEach((key) => {
                     this.headers[key] = Array.isArray(headers[key]) ? headers[key] : [headers[key]];
                   });
                 }
-                else{
+                else{ // jingyz
                   Object.keys(headers).forEach((key) => {
                     if (key.match(/x-archive-orig/gi)){
                       let waybackKey = key.toLowerCase().replace('x-archive-orig-', '');
@@ -133,22 +158,38 @@ class PuppeteerBrowser extends Browser {
                     }
                   });
                 }
+                // end of jingyz
 
                 this.contentType = headers['content-type'] || null;
+              }
+
+              if (response.status() < 300 || response.status() > 399) {
+                responseReceived = true;
               }
             } catch (error) {
               reject(new Error(`page error: ${error.message || error}`));
             }
           });
 
-          page.on('console', ({ _type, _text, _location }) => this.log(`${_text} (${_location.url}: ${_location.lineNumber})`, _type));
+          page.on('console', ({ _type, _text, _location }) => {
+            if (!/Failed to load resource: net::ERR_FAILED/.test(_text)) {
+              this.log(`${_text} (${_location.url}: ${_location.lineNumber})`, _type);
+            }
+          });
 
-          await page.setUserAgent(this.options.userAgent);
+          if (this.options.userAgent) {
+            await page.setUserAgent(this.options.userAgent);
+          }
 
-          await Promise.race([
-            page.goto(url, { waitUntil: 'domcontentloaded' }),
-            new Promise((_resolve, _reject) => setTimeout(() => _reject(new Error('timeout')), this.options.maxWait)),
-          ]);
+          try {
+            await Promise.race([
+              page.goto(url, { waitUntil: 'domcontentloaded' }),
+              // eslint-disable-next-line no-shadow
+              new Promise((resolve, reject) => setTimeout(() => reject(new Error('timeout')), this.options.maxWait)),
+            ]);
+          } catch (error) {
+            throw new Error(error.message || error.toString());
+          }
 
           // eslint-disable-next-line no-undef
           const links = await page.evaluateHandle(() => Array.from(document.getElementsByTagName('a')).map(({
@@ -187,7 +228,7 @@ class PuppeteerBrowser extends Browser {
         }
       });
     } catch (error) {
-      this.log(`visit error: ${error.message || error}`, 'error');
+      this.log(`visit error: ${error.message || error} (${url})`, 'error');
 
       throw new Error(error.message || error.toString());
     } finally {
@@ -203,6 +244,8 @@ class PuppeteerBrowser extends Browser {
         }
       }
     }
+
+    this.log(`visit ok (${url})`);
   }
 }
 
