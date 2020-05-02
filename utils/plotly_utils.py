@@ -12,6 +12,8 @@ import os
 import json
 import igraph
 from igraph import Graph, EdgeSeq
+from IPython.core.display import display, HTML
+import bs4
 
 class SiteTree:
     """
@@ -88,11 +90,11 @@ class SiteTree:
         if re.compile('^[45]').match(status): return '45xx'
         if re.compile('^(DNSError|OtherError)').match(status): return 'network_error'
         two_hundred_map = {
-            'no redirection': 'nr',
-            'non-home redirection': 'nhr',
-            'homepage redirection': 'hr'
+            'no redirection': 'no redir',
+            'non-home redirection': 'non-home redir',
+            'homepage redirection': 'home redir'
         }
-        return '{}_broken'.format(two_hundred_map[detail]) if sic_broken else '{}_fine'.format(two_hundred_map[detail])
+        return f'{two_hundred_map[detail]} broken' if sic_broken else f'{two_hundred_map[detail]} fine'
 
     def __init__(self, urls, hostname, colors=None, flatten=True):
         """
@@ -105,10 +107,10 @@ class SiteTree:
         self.tree = self.generate_tree()
         self.hostname = hostname
         self.colors = colors if colors else \
-            {'45xx': 'red', 'network_error': '#582477','non_leaf': 'grey',
-            'nr_fine': '#F7F7BC', 'nr_broken': '#E7AD00', 
-            'hr_fine': '#AEE17F', 'hr_broken': '#2D7A10',
-            'nhr_fine': '#B3D7D7', 'nhr_broken': '#02748F'}
+            {'45xx': 'red', 'network_error': '#582477','not_leaf': 'grey',
+            'no redir fine': '#F7F7BC', 'no redir broken': '#E7AD00', 
+            'home redir fine': '#AEE17F', 'home redir broken': '#2D7A10',
+            'non-home redir fine': '#B3D7D7', 'non-home redir broken': '#02748F'}
     
     def plot_tree(self, save_html=None, width=None):
         """save_html: If specified, should be path/filename for html to be saved"""
@@ -135,7 +137,7 @@ class SiteTree:
                 vcount += 1
         leaf_nodes = set([n for cates in cate_map.values() for n in cates])
         non_leaf_nodes = set([n for n in range(vcount) if n not in leaf_nodes])
-        cate_map['non_leaf'] = non_leaf_nodes
+        cate_map['not_leaf'] = non_leaf_nodes
         reverse_url_map = {v: k for k, v in url_map.items()}
         layout = G.layout('rt', root=[0])
         position = {k: layout[k] for k in range(vcount)}
@@ -197,13 +199,35 @@ class SiteTree:
                 'font_size': 20, 
             }
         )
+        if save_html and width:
+            fig.update_layout(width=width)
         text = [reverse_url_map[k].split('/')[-1] for k in range(vcount)]
-        fig.show()
+        div = plotly.offline.plot(fig, include_plotlyjs=False, output_type='div')
+        soup = bs4.BeautifulSoup(div, 'lxml')
+        div_id = soup.find('div', {'class': 'plotly-graph-div'}).get('id')
+        js =f'''
+            <script>
+            var myDiv = document.getElementById('{div_id}');
+            myDiv.on('plotly_click',
+                function(eventdata) {{
+                    let url = 'http://' + eventdata.points[0].text; 
+                    window.open(url, '_blank');
+                }}
+            );
+            </script>'''
+        header = soup.new_tag("head")
+        soup.html.insert(0, header)
+        plotly_src = soup.new_tag("script", src="https://cdn.plot.ly/plotly-latest.min.js")
+        soup.head.insert(0, plotly_src)
+        js_soup = bs4.BeautifulSoup(js, 'lxml')
+        soup.body.append(js_soup.script)
+        html = str(soup)
+        # # show the plot 
+        # display(HTML(html))
         if save_html:
-            if width: fig.update_layout(width=width)
             if save_html[-1] == '/': path = os.path.join(save_html, f'{self.hostname}.html')
             else: path = save_html
-            plotly.offline.plot(fig, filename=path, auto_open=False)
+            with open(path, 'w+') as f: f.write(html)
     
     def make_annotations(self, pos, text, M):
         L = len(pos)

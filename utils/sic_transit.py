@@ -126,7 +126,6 @@ def broken(url):
         return False, "#redirection doesn't match"
     if resp.url == random_resp.url:
         return True, "Same final url"
-    print(random_url)
     # url_content = text_utils.extract_body(resp.text, version='domdistiller')
     # random_content = text_utils.extract_body(random_resp.text, version='domdistiller')
     if text_utils.k_shingling(resp.text, random_resp.text) >= 0.9:
