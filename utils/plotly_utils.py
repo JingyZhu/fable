@@ -210,7 +210,13 @@ class SiteTree:
             var myDiv = document.getElementById('{div_id}');
             myDiv.on('plotly_click',
                 function(eventdata) {{
-                    let url = 'http://' + eventdata.points[0].text; 
+                    let url = 'http://' + eventdata.points[0].text;
+                    const el = document.createElement('textarea');
+                    el.value = url;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
                     window.open(url, '_blank');
                 }}
             );
