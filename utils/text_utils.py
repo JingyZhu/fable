@@ -55,8 +55,10 @@ class TFidf:
         Re calculated the tfidf from the self.corpus
         """
         print("re_init")
+        begin = time.time()
         self.vectorizer = TfidfVectorizer()
         self.tfidf = self.vectorizer.fit_transform(self.corpus)
+        print(f"Takes {(time.time()-begin):.2f}s")
 
     def __init__(self, corpus):
         corpus = list(set(corpus))
@@ -100,6 +102,10 @@ class TFidf:
         idxes = array.argsort()[-N:]
         words = self.vectorizer.get_feature_names()
         return [words[i] for i in reversed(idxes)]
+    
+    def add_corpus(self, corpus):
+        self.corpus += corpus
+        self.re_init()
 
 
 def find_complement_string(A, B):
@@ -302,7 +308,7 @@ def lang_meta(html):
         return None
 
 
-def extract_body(html, version='justext', handle_exception=True):
+def extract_body(html, version='domdistiller', handle_exception=True):
     """
     Wrapper functions for different version of html body extraction
     """

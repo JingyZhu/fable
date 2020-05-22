@@ -50,10 +50,11 @@ def get_title(html):
     """
     Wrappers for getting decent title of a page
     """
-    versions = ['newspaper', 'domdistiller']
+    versions = ['domdistiller', 'newspaper']
     for v in versions:
         try:
             title = text_utils.extract_title(html, version=v)
+            print(title)
             assert(title != "")
             return title
         except: pass
@@ -71,6 +72,7 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
     google_query_dict['q'] = query
     if site_spec_url:
         try:
+            if '://' not in site_spec_url: site_spec_url = f'http://{site_spec_url}'
             r = requests.get(site_spec_url, headers=crawl.requests_header, timeout=10)
             site = host_extractor.extract(r.url)
             param_dict.update({'siteSearch': site})

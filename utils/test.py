@@ -21,7 +21,8 @@ def test_sic_transit_broken():
         ('http://www.decathlon.co.uk/C-309970-quechua/N-66470-price~from-25-to-50/N-66470-price~from-15-to-20/N-66470-price~from-200-to-250', False),
         ('http://www.eclipse.org/documentation/?topic=/org.eclipse.platform.doc.isv/guide/intro_extending_content.htm', False),
         ('http://findavideo.com/findavideo/reviews.tam?cart=99C02nex.ftq&lpg=/findavideo/stars.tam&lpt=936225424&xax=5998&TITLE.ctx=Twice+Upon+a+Time', True),
-        ('http://blog.imageworksllc.com/blog/bid/341454/js.hubspot.com/analytics/', False)
+        ('http://blog.imageworksllc.com/blog/bid/341454/js.hubspot.com/analytics/', False),
+        ('http://knect365.com/clinical-trials-innovation/content/1?topics=big+data', False),
     ]
     print('url\tlabel\tclassification')
     for tc in testcase:
