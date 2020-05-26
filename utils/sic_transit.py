@@ -154,6 +154,16 @@ def construct_rand_urls(url):
     return random_urls
 
 
+def filter_redir(r):
+    """Filter out simple redirections from http --> https"""
+    old_his = [h.url for h in r.history] + [r.url]
+    new_his = []
+    for idx, (h_bef, h_aft) in enumerate(zip(old_his[:-1], old_his[1:])):
+        if not h_bef.split('://')[-1] == h_aft.split('://')[-1]:
+            new_his.append(r.history[idx])
+    return new_his
+
+
 def broken(url):
     """
     Entry func: detect whether this url is broken
@@ -164,33 +174,33 @@ def broken(url):
     if re.compile('^([45]|DNSError|OtherError)').match(status):
         return True, status
     # Construct new url with random filename
-    up = urlparse(url)
-    scheme, netloc, path, query = up.scheme, up.netloc, up.path, up.query
-    end_with_slash = False
-    if path == '': path += '/'
-    elif path != '/' and path[-1] == '/': 
-        end_with_slash = True
-        path = path[:-1]
-    url_dir = os.path.dirname(path)
-    random_filename = ''.join([random.choice(string.ascii_letters) for _ in range(25)])
-    random_url = "{}://{}{}".format(scheme, netloc, os.path.join(url_dir, random_filename))
-    if end_with_slash: random_url += '/'
-    if query: random_url += '?' + query
-    
-    random_resp, msg = send_request(random_url)
-    random_status, _ = get_status(random_url, random_resp, msg)
-    if re.compile('^([45]|DNSError|OtherError)').match(random_status):
-        return False, "random url hard broken"
-    # Filter out http --> https redirection
-    if len(resp.history) != len(random_resp.history):
-        return False, "#redirection doesn't match"
-    if resp.url == random_resp.url:
-        return True, "Same final url"
-    # url_content = text_utils.extract_body(resp.text, version='domdistiller')
-    # random_content = text_utils.extract_body(random_resp.text, version='domdistiller')
-    if text_utils.k_shingling(resp.text, random_resp.text) >= 0.9:
-        return True, "Similar soft 404 content"
-    return False, "no features match"
+    random_urls = construct_rand_urls(url)
+    broken_decision, reasons = [], []
+    for random_url in random_urls:
+        random_resp, msg = send_request(random_url)
+        random_status, _ = get_status(random_url, random_resp, msg)
+        if re.compile('^([45]|DNSError|OtherError)').match(random_status):
+            broken_decision.append(False)
+            reasons.append("random url hard broken")
+            continue
+        # Filter out http --> https redirection
+        if len(filter_redir(resp)) != len(filter_redir(random_resp)):
+            broken_decision.append(False)
+            reasons.append("#redirection doesn't match")
+            continue
+        if resp.url == random_resp.url:
+            broken_decision.append(True)
+            reasons.append("Same final url")
+            continue
+        # url_content = text_utils.extract_body(resp.text, version='domdistiller')
+        # random_content = text_utils.extract_body(random_resp.text, version='domdistiller')
+        if text_utils.k_shingling(resp.text, random_resp.text) >= 0.9:
+            broken_decision.append(True)
+            reasons.append("Similar soft 404 content")
+            continue
+        broken_decision.append(False)
+        reasons.append("no features match")
+    return not False in broken_decision, reasons
     
 
 

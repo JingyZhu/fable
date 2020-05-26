@@ -29,3 +29,14 @@ class BrokenClassifier:
             corpus = self.db.url_content.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
             corpus = [c['content'] for c in list(corpus)]
             self.tfidf = text_utils.TFidf(corpus)
+    
+    def broken(self, url, use_db=True):
+        """
+        Other than sic transit's way, also check for content similarity
+        """
+        content_simi = False
+        up = urlparse(url)
+        if use_db:
+            url_match = f'{up.netloc.split(':')[0]}.*{up.path}{up.query}'
+            urls = self.db.url_implicit_broken.find({'_id': re.compile(url_match)})
+        
