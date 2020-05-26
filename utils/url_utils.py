@@ -7,6 +7,7 @@ import os, time
 from os.path import realpath, join, dirname
 import subprocess
 from collections import defaultdict
+from url_normalize import url_normalize
 
 import sys
 sys.path.append('../')

@@ -4,9 +4,10 @@ Implementation of detection of broken pages from sic transit
 import requests
 import re
 import os
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qsl
 import random, string
 import sys
+from math import ceil
 
 sys.path.append('../')
 import config
@@ -97,6 +98,62 @@ def get_status(url, resp, msg):
     return status, detail
 
 
+def construct_rand_urls(url):
+    """
+    Construct random urls from given url. Randomed part satisfies:
+        With same format. Consists of the same char format as old ones
+        Return urls with all possible random construction
+    """
+    random_urls = []
+    up = urlparse(url)
+    def similar_pattern(name):
+        sep = "$-_.+!*'(),"
+        lower_char = [c for c in name if c.islower()]
+        upper_char = [c for c in name if c.isupper()]
+        num_char = [c for c in name if c.isdigit()]
+        ratio = ceil(25/(len(lower_char) + len(upper_char) + len(num_char)))
+        for c in lower_char:
+            name = name.replace(c, ''.join([random.choice(string.ascii_lowercase) for _ in range(ratio)]))
+        for c in upper_char:
+            name = name.replace(c, ''.join([random.choice(string.ascii_uppercase) for _ in range(ratio)]))
+        for c in num_char:
+            name = name.replace(c, ''.join([random.choice(string.digits) for _ in range(ratio)]))
+        return name
+    scheme, netloc, path, query = up.scheme, up.netloc, up.path, up.query
+    end_with_slash = False
+    if path == '': path += '/'
+    elif path != '/' and path[-1] == '/': 
+        end_with_slash = True
+        path = path[:-1]
+    # Filename Random construction
+    url_dir, filename = os.path.dirname(path), os.path.basename(path)
+    random_filename = similar_pattern(filename)
+    random_url = f"{scheme}://{netloc}{os.path.join(url_dir, random_filename)}"
+    if end_with_slash: random_url += '/'
+    if query: random_url += '?' + query
+    random_urls.append(random_url)
+    # Query Random construct
+    if not query: return random_urls
+    ql = parse_qsl(query)
+    if len(ql) == 0: # Not valid query string. Replace all together
+        q = similar_pattern(query)
+        random_url = f"{scheme}://{netloc}{path}"
+        if end_with_slash: random_url += '/'
+        random_url += '?' + q
+        random_urls.append(random_url)
+    else:
+        for idx, qkv in enumerate(ql):
+            qv = similar_pattern(qkv[1])
+            query_cp = ql.copy()
+            query_cp[idx] = (qkv[0], qv)
+            rand_query = '&'.join([f'{q[0]}={q[1]}' for q in query_cp])
+            random_url = f"{scheme}://{netloc}{path}"
+            if end_with_slash: random_url += '/'
+            random_url += '?' + rand_query
+            random_urls.append(random_url)
+    return random_urls
+
+
 def broken(url):
     """
     Entry func: detect whether this url is broken
@@ -106,6 +163,7 @@ def broken(url):
     status, _ = get_status(url, resp, msg)
     if re.compile('^([45]|DNSError|OtherError)').match(status):
         return True, status
+    # Construct new url with random filename
     up = urlparse(url)
     scheme, netloc, path, query = up.scheme, up.netloc, up.path, up.query
     end_with_slash = False
@@ -118,10 +176,12 @@ def broken(url):
     random_url = "{}://{}{}".format(scheme, netloc, os.path.join(url_dir, random_filename))
     if end_with_slash: random_url += '/'
     if query: random_url += '?' + query
+    
     random_resp, msg = send_request(random_url)
     random_status, _ = get_status(random_url, random_resp, msg)
     if re.compile('^([45]|DNSError|OtherError)').match(random_status):
         return False, "random url hard broken"
+    # Filter out http --> https redirection
     if len(resp.history) != len(random_resp.history):
         return False, "#redirection doesn't match"
     if resp.url == random_resp.url:

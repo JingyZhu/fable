@@ -104,8 +104,13 @@ class TFidf:
         return [words[i] for i in reversed(idxes)]
     
     def add_corpus(self, corpus):
-        self.corpus += corpus
-        self.re_init()
+        need_reinit = False
+        new_c = [c for c in corpus if c not in self.idx]
+        for c in new_c:
+            need_reinit = True
+            self.idx[c] = len(self.corpus)
+            self.corpus.append(c)
+        if need_reinit: self.re_init()
 
 
 def find_complement_string(A, B):
