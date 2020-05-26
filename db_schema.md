@@ -129,7 +129,7 @@ In other word, all urls in url_status which hostname is sampled in host_sample\
     "(sic_reason)": "string reason for determine why is (not) broken",
     "ct_broken": "Boolean content broken" 
 }
-```json'
+```
 
 ### url_update
 Record whether a url has high link density / update frequently on wayback

@@ -33,10 +33,15 @@ class BrokenClassifier:
     def broken(self, url, use_db=True):
         """
         Other than sic transit's way, also check for content similarity
+        Return broken, reasons
         """
-        content_simi = False
         up = urlparse(url)
         if use_db:
-            url_match = f'{up.netloc.split(':')[0]}.*{up.path}{up.query}'
-            urls = self.db.url_implicit_broken.find({'_id': re.compile(url_match)})
+            up = urlparse(url)
+            url_match = f"{re.escape(up.netloc.split(':')[0])}.*{re.escape(up.path)}"
+            if up.query: url_match += re.escape(f'?{up.query}')
+            urls = list(self.db.url_implicit_broken.find({'_id': re.compile(url_match)}))
+            if len(urls) > 0 and 'ct_broken' in urls[0] and urls[0]['ct_broken'] == False:
+                return False, ['Same content']
+        return sic_transit.broken(url)
         
