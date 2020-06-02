@@ -51,7 +51,7 @@ def localserver(PORT):
 
 localserver(PORT)
 
-class TFidfDynamicDynamic:
+class TFidfDynamic:
     def re_init(self):
         """
         Re calculated the tfidf from the self.corpus
@@ -62,15 +62,13 @@ class TFidfDynamicDynamic:
         # print(f"Takes {(time.time()-begin):.2f}s")
 
     def __init__(self, corpus):
-        """fixed: Whether to fix idf vector when new document is added to prevent recompute total vector"""
         corpus = list(set(corpus))
         self.idx = {c: i for i, c in enumerate(corpus)}
         self.corpus = corpus
         self.vectorizer = TfidfVectorizer()
-        self.vectorizer.fit(corpus)
-        self.tfidf = self.vectorizer.transform(corpus)
-    
-    def dynamic_similar(self, text1, text2):
+        self.tfidf = self.vectorizer.fit_transform(corpus)
+
+    def similar(self, text1, text2):
         """
         Get similarity of 2 text
         If any of the text is not in the corpus, TFIDF matrix will be recalculated
@@ -89,50 +87,6 @@ class TFidfDynamicDynamic:
         if need_reinit: self.re_init()
         idx1, idx2 = self.idx[text1], self.idx[text2]
         return cosine_similarity(self.tfidf[idx1].toarray(), self.tfidf[idx2].toarray())[0,0]
-
-    def static_init(self, inputs):
-        """
-        Get tfidf within inputs. 
-        TFIDF value will be based on the previous corpus instead of the input
-        """
-        idf = self.vectorizer.idf_
-        vocab = defaultdict(None, copy.deepcopy(self.vectorizer.vocabulary_))
-        vocab.default_factory = vocab.__len__
-        query = ['los angeles chiropractic dasdasdasda this', 'los santos interesting dasdasdasda']
-        query_tfidf = TfidfVectorizer()
-        query_matrix = query_tfidf.fit_transform(query)
-
-        num_docs = query_matrix.shape[0]
-        query_idf = query_tfidf.idf_
-        query_vocab = query_tfidf.vocabulary_
-        for word in query_vocab.keys():
-            # Added with proper index if not in vocabulary
-            if word not in vocab:
-                vocab[word]
-                df = (num_docs + 1) / np.exp(query_idf[query_vocab[word]] - 1) - 1
-                df = np.log((tfidf.tfidf.shape[0] + 1) / (df + 1)) + 1
-                idf = np.append(idf, [df])
-        # for word in unseen_words:
-        query_tfidf = TfidfVectorizer(vocabulary=vocab)
-        query_tfidf.idf_ = idf
-        # query_tfidf._idf_diag = sp.diags(idf, offsets=0,
-        #                                 shape=(idf.shape[0], idf.shape[0]),
-        #                                 format='csr',
-        #                                 dtype=np.float64)
-        query_matrix = query_tfidf.transform(query)
-
-
-    def similar(self, text1, text2, fixed=None):
-        """
-        Depend on whether fixed/self.fixed is True/False
-        If not fixed, tfidf similar is accurate on all corpus including input
-        Else, only based on corpus when constructed class
-        """
-        fixed = fixed is fixed is not None else self.fixed
-        if fixed:
-            return self.static_similar(text1, text2)
-        else:
-            return self.dynamic_similar(text1, text2)
     
     def topN(self, text, N=10):
         """
@@ -160,7 +114,74 @@ class TFidfDynamicDynamic:
         if need_reinit: self.re_init()
 
 
-class TFidfStatic
+class TFidfStatic:
+    def __init__(self, corpus)
+        corpus = list(set(corpus))
+        self.corpus = corpus
+        self.vectorizer = TfidfVectorizer()
+        self.vectorizer.fit(corpus)
+        self.tfidf = self.vectorizer.transform(corpus)
+        self.workingset_vec = None
+        self.workingset_tfidf = None
+        self.idx = None
+    
+    def _init_workingset(self, inputs):
+        """
+        Get tfidf within inputs. 
+        TFIDF value will be based on the previous corpus instead of the input
+        """
+        inputs = list(set(inputs))
+        self.idx = {i: c for c, i in enumerate(inputs)}
+        # Get vocabulary from inputs
+        idf = self.vectorizer.idf_
+        vocab = defaultdict(None, copy.deepcopy(self.vectorizer.vocabulary_))
+        vocab.default_factory = vocab.__len__
+        inputs_tfidf = TfidfVectorizer()
+        inputs_matrix = inputs_tfidf.fit_transform(inputs)
+        # Add unseen vocab to existed corpus
+        num_docs = inpouts_matrix.shape[0]
+        inouts_idf = inputs_tfidf.idf_
+        inputs_vocab = inputs_tfidf.vocabulary_
+        for word in inputs_vocab.keys():
+            # Added with proper index if not in vocabulary
+            if word not in vocab:
+                vocab[word]
+                df = (num_docs + 1) / np.exp(inputs_idf[inputs_vocab[word]] - 1) - 1
+                df = np.log((self.tfidf.shape[0] + 1) / (df + 1)) + 1
+                idf = np.append(idf, [df])
+        # Construct workingset
+        self.workingset_vec = TfidfVectorizer(vocabulary=vocab)
+        self.workingset_vec.idf_ = idf
+        # self.workingset_vec._idf_diag = sp.diags(idf, offsets=0,
+        #                                 shape=(idf.shape[0], idf.shape[0]),
+        #                                 format='csr',
+        #                                 dtype=np.float64)
+        self.workingset_tfidf = self.workingset_vec.transform(inputs)
+    
+    def _clear_workingset(self):
+        self.idx = None
+        self.workingset_vec = None
+        self.workingset_tfidf = None
+    
+    def similar(self, text1, text2):
+        if self.workingset_vec is None:
+            self._init_workingset([text1, text2])
+        idx1, idx2 = self.idx[text1], self.idx[text2]
+        return cosine_similarity(self.workingset_tfidf[idx1].toarray(), self.workingset_tfidf[idx2].toarray())[0,0]
+    
+    def topN(self, text, N=10):
+        if self.workingset_vec is None:
+            self._init_workingset([text])
+        array = self.workingset_tfidf[self.idx[text]].toarray()[0]
+        idxes = array.argsort()[-N:]
+        words = self.vectorizer.get_feature_names()
+        return [words[i] for i in reversed(idxes)]
+
+    def add_corpus(self, inputs):
+        if self.workingset_vec is not None:
+            self._clear_workingset
+        self._init_workingset(inputs)
+
 
 def find_complement_string(A, B):
     A, B = A.split(), B.split()
