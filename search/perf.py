@@ -28,7 +28,7 @@ host_extractor = url_utils.HostExtractor()
 def topN(url):
     content = db.test_search.find_one({"_id": url})
     if not content: return None
-    topWords = TFidf.topN(content['content'], N=10)
+    topWords = TFidfDynamic.topN(content['content'], N=10)
     query = ' '.join(topWords)
     return query
 
@@ -162,14 +162,14 @@ def performance_trend():
     origin_corpus = [e['content'] for e in origin_corpus]
     search_corpus = list(db.test_metadata_search.find({"content": {"$exists": True}}, {"content": True}))
     search_corpus = [e['content'] for e in search_corpus]
-    TFidf = text_utils.TFidf(origin_corpus + search_corpus)
+    TFidfDynamic = text_utils.TFidfDynamic(origin_corpus + search_corpus)
     top5, top10 = [], []
     for url in db.test_search.find({"content": {"$exists": True}}):
         content = url['content']
         print(url['url'])
         search_results = list(db.test_metadata_search.find({"from": url['url']}))
-        t5 = [TFidf.similar(content, u['content']) for u in search_results if u['rank'] == 'top5']
-        t10 = [TFidf.similar(content, u['content']) for u in search_results]
+        t5 = [TFidfDynamic.similar(content, u['content']) for u in search_results if u['rank'] == 'top5']
+        t10 = [TFidfDynamic.similar(content, u['content']) for u in search_results]
         t5 = max(t5) if len(t5) > 0 else 0
         t10 = max(t10) if len(t10) > 0 else 0
         top5.append(t5)
@@ -186,7 +186,7 @@ def calculate_titleMatch_topN():
     corpus2 = db.search_meta.find({}, {'content': True})
     corpus2 = [c['content'] for c in corpus2]
     corpus = corpus1 + corpus2
-    tfidf = text_utils.TFidf(corpus)
+    tfidf = text_utils.TFidfDynamic(corpus)
     print("TD-IDF initialized success!")
     urls = list(db.search_sanity_meta.find())
     for i, url in enumerate(urls):
@@ -359,7 +359,7 @@ def calculate_similarity():
     corpus1 = db.search_sanity_meta.find({'content': {"$ne": ""}}, {'content': True})
     corpus2 = db.search_sanity.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
     corpus = [c['content'] for c in corpus1] + [c['content'] for c in corpus2]
-    tfidf = text_utils.TFidf(corpus)
+    tfidf = text_utils.TFidfDynamic(corpus)
     print("tfidf init success!")
     searched_urls = db.search_sanity_meta.aggregate([
         {"$match": {"similarity": {"$exists": False}}},

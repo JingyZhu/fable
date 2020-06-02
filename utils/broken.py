@@ -24,11 +24,11 @@ class BrokenClassifier:
         """
         self.db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
         if corpus:
-            self.tfidf = text_utils.TFidf(corpus)
+            self.tfidf = text_utils.TFidfDynamic(corpus)
         else:
             corpus = self.db.url_content.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
             corpus = [c['content'] for c in list(corpus)]
-            self.tfidf = text_utils.TFidf(corpus)
+            self.tfidf = text_utils.TFidfDynamic(corpus)
     
     def broken(self, url, use_db=True):
         """
@@ -40,7 +40,7 @@ class BrokenClassifier:
             up = urlparse(url)
             url_match = f"{re.escape(up.netloc.split(':')[0])}.*{re.escape(up.path)}"
             if up.query: url_match += re.escape(f'?{up.query}')
-            urls = list(self.db.url_implicit_broken.find({'_id': re.compile(url_match)}))
+            urls = list(self.db.url_status_implicit_broken.find({'_id': re.compile(url_match)}))
             if len(urls) > 0 and 'ct_broken' in urls[0] and urls[0]['ct_broken'] == False:
                 return False, ['Same content']
         return sic_transit.broken(url)

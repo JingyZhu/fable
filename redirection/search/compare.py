@@ -35,14 +35,14 @@ def init_tfidf():
             if content is None:
                 content = ""
             url_docs[matchurls['search_url']] = content
-    return url_docs, text_utils.TFidf(list(url_docs.values()))
+    return url_docs, text_utils.TFidfDynamic(list(url_docs.values()))
 
 
 def comp2():
     """
     Calculate similarity of docs and get the highest one for each url
     """
-    url_docs, TFidf = init_tfidf()
+    url_docs, TFidfDynamic = init_tfidf()
     for obj in db.search_html.find():
         url = obj["url"]
         newobj = {
@@ -55,7 +55,7 @@ def comp2():
             matchurl = matchurls['search_url']
             # if matchurl not in url_docs:
             #     continue
-            similarity = TFidf.similar(url_docs[url], url_docs[matchurl])
+            similarity = TFidfDynamic.similar(url_docs[url], url_docs[matchurl])
             if similarity >= simi_topN:
                 simi_topN = similarity
                 best_url_topN = matchurl
@@ -69,7 +69,7 @@ def comp2():
         best_url_titlematch, simi_titlematch = "", 0
         for matchurls in titlematch:
             matchurl = matchurls['search_url']
-            similarity = TFidf.similar(url_docs[url], url_docs[matchurl])
+            similarity = TFidfDynamic.similar(url_docs[url], url_docs[matchurl])
             if similarity >= simi_titlematch:
                 simi_titlematch = similarity
                 best_url_titlematch = matchurl

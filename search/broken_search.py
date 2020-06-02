@@ -291,7 +291,7 @@ def calculate_titleMatch(NUM_THREADS=10):
 def calculate_topN():
     corpus = db.search_infer_meta.find({}, {'content': True})
     corpus = [c['content'] for c in corpus]
-    tfidf = text_utils.TFidf(corpus)
+    tfidf = text_utils.TFidfDynamic(corpus)
     print('tfidf initialized')
     urls = list(db.search_infer_meta.find({'topN': {"$exists": False}}))
     print('total:', len(urls))
@@ -310,7 +310,7 @@ def calculate_similarity():
     corpus1 = db.search_infer_meta.find({'content': {"$ne": ""}}, {'content': True})
     corpus2 = db.search_infer.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
     corpus = [c['content'] for c in corpus1] + [c['content'] for c in corpus2]
-    tfidf = text_utils.TFidf(corpus)
+    tfidf = text_utils.TFidfDynamic(corpus)
     print("tfidf init success!")
     searched_urls = db.search_infer_meta.aggregate([
         {"$match": {"usage": "represent", "similarity": {"$exists": False}}},

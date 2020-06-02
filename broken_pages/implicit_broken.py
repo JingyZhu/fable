@@ -252,7 +252,7 @@ def compute_broken():
     contents = db.url_content.find({}, {'content': True})
     contents = [c['content'] for c in contents]
     print("Got contents")
-    tfidf = text_utils.TFidf(contents)
+    tfidf = text_utils.TFidfDynamic(contents)
     print("tdidf init success!")
     available_urls = db.url_status_implicit_broken.aggregate([
         {"$match": {"status": re.compile('^[23]'), 'similarity': {"$exists": False} }},

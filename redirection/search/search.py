@@ -33,12 +33,12 @@ bing_url = 'https://api.cognitive.microsoft.com/bing/v7.0/search'
 
 
 def topN(url):
-    _, TFidf = text_utils.prepare_tfidf()
+    _, TFidfDynamic = text_utils.prepare_tfidf()
     db = MongoClient().web_decay
     content = db.redirection.find_one({'url': url})['wayback_content']
     if content is None:
         return None
-    topWords = TFidf.topN(content, N=10)
+    topWords = TFidfDynamic.topN(content, N=10)
     query = ' '.join(topWords)
     return query
 
@@ -73,7 +73,7 @@ def pretty_searchtext(text):
 
 def title_match(url):
     # TODO implement search on titleExact Match
-    _, TFidf = text_utils.prepare_tfidf()
+    _, TFidfDynamic = text_utils.prepare_tfidf()
     db = MongoClient().web_decay
     timestamp = db.redirection.find_one({'url': url}, {"timestamp": 1})['timestamp']
     element = db.html.find_one({'url': url}, {"wayback_html": 1})['wayback_html']

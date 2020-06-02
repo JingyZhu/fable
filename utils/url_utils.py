@@ -1,7 +1,7 @@
 
 from publicsuffix import fetch, PublicSuffixList
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qsl
 import re
 import os, time
 from os.path import realpath, join, dirname
@@ -13,6 +13,13 @@ import sys
 sys.path.append('../')
 import config
 
+def filter_wayback(url):
+    url = url.replace('http://web.archive.org/web/', '')
+    url = url.replace('https://web.archive.org/web/', '')
+    slash = url.find('/')
+    url = url[slash + 1:]
+    return url
+
 class HostExtractor:
     def __init__(self):
         self.psl = PublicSuffixList(fetch())
@@ -22,10 +29,7 @@ class HostExtractor:
         Wayback: Whether the url is got from wayback
         """
         if wayback:
-            url = url.replace('http://web.archive.org/web/', '')
-            url = url.replace('https://web.archive.org/web/', '')
-            slash = url.find('/')
-            url = url[slash + 1:]
+            url = filter_wayback(url)
         if 'http://' not in url and 'https://' not in url:
             url = 'http://' + url
         hostname = urlparse(url).netloc.split(':')[0]
@@ -157,3 +161,26 @@ def status_categories(status, detail):
     else:
         raise Exception("Unknown categories")
 
+
+def url_match(url1, url2, wayback=True):
+    """
+    Compare whether two urls are identical on filepath and query
+    If wayback is set to True, will first try to filter out wayback's prefix
+    """
+    if wayback:
+        url1 = filter_wayback(url1)
+        url2 = filter_wayback(url2)
+    up1, up2 = urlparse(url1), urlparse(url2)
+    netloc1, path1, query1 = up1.netloc.split(':')[0], up1.path, up1.query
+    netloc2, path2, query2 = up2.netloc.split(':')[0], up2.path, up2.query
+    if netloc1 != netloc2:
+        return False
+    if path1 == '': path1 = '/'
+    if path2 == '': path2 = '/'
+    if path1 != path2:
+        return False
+    if query1 == query2:
+        return True
+    qsl1, qsl2 = sorted(parse_qsl(query1), key=lambda kv: (kv[0], kv[1])), sorted(parse_qsl(query2), key=lambda kv: (kv[0], kv[1]))
+    return len(qsl1) > 0 and qsl1 == qsl2
+        

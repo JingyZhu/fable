@@ -55,7 +55,7 @@ def is_updating():
     corpus = db.url_content.find({"usage": re.compile("updating")}, {"content": True})
     corpus = [c['content'] for c in corpus]
     print("Got content", len(corpus))
-    tfidf = text_utils.TFidf(corpus)
+    tfidf = text_utils.TFidfDynamic(corpus)
     print("tfidf init success")
     rvals = db.url_update.aggregate([
         {"$match": {"detail": re.compile("similar")}},

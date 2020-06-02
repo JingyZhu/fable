@@ -155,7 +155,7 @@ def calculate_similarity():
     corpus2 = db.search_infer.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
     corpus3 = db.search_infer_guess.find({'content': {"$exists": True,"$ne": ""}}, {'content': True})
     corpus = [c['content'] for c in corpus1] + [c['content'] for c in corpus2] + [c['content'] for c in corpus3]
-    tfidf = text_utils.TFidf(corpus)
+    tfidf = text_utils.TFidfDynamic(corpus)
     print("tfidf init success!")
     guessed_urls = db.search_infer_meta.aggregate([
         {"$match": {"usage": "represent", "guess_similarity": {"$exists": False}}},

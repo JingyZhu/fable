@@ -113,7 +113,7 @@ def comp1_db():
     Do comparison from data in db
     Get url, content from redirection, get tf-idf from class, and update in the redirection
     """
-    url_idx, TFidf = text_utils.prepare_tfidf()
+    url_idx, TFidfDynamic = text_utils.prepare_tfidf()
     db = MongoClient().web_decay
     redirection = db.redirection
     for i, obj in enumerate(redirection.find()):
@@ -121,7 +121,7 @@ def comp1_db():
         if not obj['original_content'] or not obj['wayback_content']:
             similarity = 0
         else:
-            similarity = TFidf.similar(obj['original_content'], obj['wayback_content'])
+            similarity = TFidfDynamic.similar(obj['original_content'], obj['wayback_content'])
         redirection.find_one_and_update(
             {'url': url}, {'$set': {'similarity': similarity}}
         )
