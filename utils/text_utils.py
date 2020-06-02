@@ -21,6 +21,7 @@ import sys, copy
 import multiprocessing as mp
 import scipy.sparse as sp
 import numpy as np
+from collections import defaultdict
 
 sys.path.append('../')
 from utils import url_utils
@@ -115,7 +116,7 @@ class TFidfDynamic:
 
 
 class TFidfStatic:
-    def __init__(self, corpus)
+    def __init__(self, corpus):
         corpus = list(set(corpus))
         self.corpus = corpus
         self.vectorizer = TfidfVectorizer()
@@ -139,8 +140,8 @@ class TFidfStatic:
         inputs_tfidf = TfidfVectorizer()
         inputs_matrix = inputs_tfidf.fit_transform(inputs)
         # Add unseen vocab to existed corpus
-        num_docs = inpouts_matrix.shape[0]
-        inouts_idf = inputs_tfidf.idf_
+        num_docs = inputs_matrix.shape[0]
+        inputs_idf = inputs_tfidf.idf_
         inputs_vocab = inputs_tfidf.vocabulary_
         for word in inputs_vocab.keys():
             # Added with proper index if not in vocabulary

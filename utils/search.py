@@ -50,11 +50,11 @@ def get_title(html):
     """
     Wrappers for getting decent title of a page
     """
-    versions = ['domdistiller', 'newspaper']
+    versions = ['newspaper', 'domdistiller']
     for v in versions:
         try:
             title = text_utils.extract_title(html, version=v)
-            print(title)
+            # print(title)
             assert(title != "")
             return title
         except: pass
