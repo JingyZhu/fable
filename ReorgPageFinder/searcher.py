@@ -42,6 +42,7 @@ class Searcher:
         html = crawl.requests_crawl(url)
         title = search.get_title(html)
         content = text_utils.extract_body(html)
+        self.tfidf._clear_workingset()
         topN = self.tfidf.topN(content)
         topN = ' '.join(topN)
         print(f'title: {title}')
