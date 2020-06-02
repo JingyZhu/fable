@@ -13,6 +13,7 @@ tmp/
 .ipynb_checkpoints/
 
 temp.py
+broken_inspection.ipynb
 test.ipynb
 query.ipynb
 broken_pages/*.yaml
@@ -20,3 +21,4 @@ search/schedule.py
 *.mongo
 backlinks.csv
 sample.csv
+alexa_top1k.txt
