@@ -24,6 +24,11 @@ class ProxySelector:
     Select Proxy from a pool
     """
     def __init__(self, proxies):
+        """
+        proxies: A list of available proxies that in the format of requests.get proxy input
+        """
+        if proxies is None or len(proxies) == 0:
+            proxies = [{}]
         self.proxies = proxies
         self.len = len(proxies)
         self.idx = 0
@@ -296,3 +301,24 @@ def wappalyzer_analyze(url, proxy=None, timeout=None):
             if key in focus_categories:
                 tech[focus_categories[key]].append(obj['name'])
     return tech
+
+
+def outgoing_links(url, html, wayback=False):
+    """
+    Given the html, return all the outgoing links
+    wayback: Whether the page is crawled from wayback
+    """
+    outlinks = set()
+    try:
+        soup = BeautifulSoup(html, 'lxml')
+    except:
+        return []
+    for a_tag in soup.find_all('a'):
+        if 'href' not in a_tag.attrs:
+            continue
+        link = a_tag.attrs['href']
+        if len(link) == 0 or link[0] == '#': #Anchor ignore
+            continue
+        link = wayback_join(url, link)
+        outlinks.add(link)
+    return list(outlinks)

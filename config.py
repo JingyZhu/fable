@@ -14,8 +14,10 @@ if not os.path.exists(os.path.join(os.path.dirname(__file__), 'config.yml')):
     print("No config yaml file find")
 else:
     config_yml = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)
-    PROXIES = [{'http': ip, 'https': ip } for ip in \
-                config_yml.get('proxies')]
+    if config_yml.get('proxies') is not None:
+        PROXIES = [{'http': ip, 'https': ip } for ip in \
+                    config_yml.get('proxies')]
+    else: PROXIES = []
     PROXIES = PROXIES + [{}]  # One host do not have to use proxy
     HOSTS = config_yml.get('hosts')
     TMPPATH = config_yml.get('tmp_path')

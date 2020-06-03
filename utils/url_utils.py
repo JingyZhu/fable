@@ -20,6 +20,14 @@ def filter_wayback(url):
     url = url[slash + 1:]
     return url
 
+class urlset:
+    def __init__(self, forms):
+        """forms: form tag text on the html"""
+        # TODO: implement this class constructor
+        self.url = ''
+        self.queries = []
+
+
 class HostExtractor:
     def __init__(self):
         self.psl = PublicSuffixList(fetch())

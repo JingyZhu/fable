@@ -13,11 +13,12 @@ import config
 from utils import search, crawl, text_utils, url_utils
 
 class Searcher:
-    def __init__(self, use_db=True, corpus=[]):
+    def __init__(self, use_db=True, corpus=[], proxies={}):
         """
         At lease one of db or corpus should be provided
         # TODO: Corpus could not be necessary
         """
+        self.PS = crawl.ProxySelector(proxies)
         if not use_db and len(corpus) == 0:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
@@ -39,7 +40,7 @@ class Searcher:
         if '://' not in site: site = f'http://{site}'
         r = requests.get(site, headers=crawl.requests_header, timeout=10)
         site = he.extract(r.url)
-        html = crawl.requests_crawl(url)
+        html = crawl.requests_crawl(url, proxies=self.PS.select())
         title = search.get_title(html)
         content = text_utils.extract_body(html)
         self.tfidf._clear_workingset()
@@ -63,7 +64,7 @@ class Searcher:
         print(search_results)
         searched_contents = {}
         for url in search_results:
-            html = crawl.requests_crawl(url)
+            html = crawl.requests_crawl(url, proxies=self.PS.select())
             if html is None: continue
             searched_contents[url] = text_utils.extract_body(html)
         self.tfidf._clear_workingset()
