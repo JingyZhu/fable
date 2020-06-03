@@ -11,10 +11,11 @@ import threading, queue
 import itertools
 import cchardet
 from reppy.robots import Robots
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 import json
 from collections import defaultdict
 from itertools import product
+from bs4 import BeautifulSoup
 
 requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
 
@@ -308,17 +309,80 @@ def outgoing_links(url, html, wayback=False):
     Given the html, return all the outgoing links
     wayback: Whether the page is crawled from wayback
     """
+    def wayback_join(url, link):
+        link = urljoin(url, link)
+        link = link.replace('http:/', 'http://')
+        link = link.replace('http:///', 'http://')
+        link = link.replace('https:/', 'https://')
+        link = link.replace('https:///', 'https://')
+        return link
     outlinks = set()
     try:
         soup = BeautifulSoup(html, 'lxml')
     except:
+        print("Failed to construct soup")
         return []
+    if wayback:
+        # Filter out navigational part
+        wm_ipp = soup.find_all('div', id='wm-ipp-base')
+        if len(wm_ipp) > 0: wm_ipp[0].decompose()
+        donato = soup.find_all('div', id='donato')
+        if len(donato) > 0: donato[0].decompose()
     for a_tag in soup.find_all('a'):
         if 'href' not in a_tag.attrs:
             continue
         link = a_tag.attrs['href']
         if len(link) == 0 or link[0] == '#': #Anchor ignore
             continue
-        link = wayback_join(url, link)
+        if wayback:
+            link = wayback_join(url, link)
+        else:
+            link = urljoin(url, link)
         outlinks.add(link)
-    return list(outlinks)
+    outlinks = list(outlinks)
+    # TODO: Add form outgoing tags
+    # for form_tag in soup.find_all('tag'):
+
+    return outlinks
+
+
+def outgoing_links_sig(url, html, wayback=False):
+    """
+    Given the html, return all the (outgoing links, anchor text, signature) pairs
+    wayback: Whether the page is crawled from wayback
+    """
+    def wayback_join(url, link):
+        link = urljoin(url, link)
+        link = link.replace('http:/', 'http://')
+        link = link.replace('http:///', 'http://')
+        link = link.replace('https:/', 'https://')
+        link = link.replace('https:///', 'https://')
+        return link
+    outlinks = set()
+    try:
+        soup = BeautifulSoup(html, 'lxml')
+    except:
+        print("Failed to construct soup")
+        return []
+    if wayback:
+        # Filter out navigational part
+        wm_ipp = soup.find_all('div', id='wm-ipp-base')
+        if len(wm_ipp) > 0: wm_ipp[0].decompose()
+        donato = soup.find_all('div', id='donato')
+        if len(donato) > 0: donato[0].decompose()
+    for a_tag in soup.find_all('a'):
+        if 'href' not in a_tag.attrs:
+            continue
+        link = a_tag.attrs['href']
+        if len(link) == 0 or link[0] == '#': #Anchor ignore
+            continue
+        if wayback:
+            link = wayback_join(url, link)
+        else:
+            link = urljoin(url, link)
+        outlinks.add(link)
+    outlinks = list(outlinks)
+    # TODO: Add form outgoing tags
+    # for form_tag in soup.find_all('tag'):
+
+    return outlinks
