@@ -4,12 +4,16 @@ Discover backlinks to today's page
 import os
 from urllib.parse import urlsplit, urlparse, parse_qsl, urlunsplit
 from itertools import chain, combinations
-import bs4
+from bs4 import BeautifulSoup
 
 import sys
 sys.path.append('../')
 import config
 from utils import search, crawl, text_utils, url_utils, sic_transit
+
+BUDGET = 11
+GUESS = 5
+OUTGOING = 2
 
 class Discoverer:
     def __init__(self, depth=3, corpus=[], proxies={}):
@@ -18,6 +22,7 @@ class Discoverer:
         self.PS = crawl.ProxySelector(proxies)
         self.wayback = {} # {url: (wayback ts, html)
         self.liveweb = {} # {url: html}
+        self.budget = BUDGET
     
     def guess_backlinks(self, url):
         """
@@ -66,10 +71,18 @@ class Discoverer:
         else:
             return None
     
-    def find_same_link(self, wayback_html, wayback_sig, liveweb_html, liveweb_sig):
+    def find_same_link(self, wayback_sig, liveweb_html):
         """
         For same page from wayback and liveweb (still working). Find the same url from liveweb which matches to wayback
+        
+        Returns: If there is a match on the url, return url, Else: return None
         """
+        pass
+
+    def discover_from_guesslink(self, src, dst, depth):
+        pass
+    
+    def discover_from_outgoing(self, src, dst, depth):
         pass
     
     def discover(self, url, depth=self.depth):
@@ -83,14 +96,14 @@ class Discoverer:
         guessed_urls = self.guess_backlinks(url)
         for guessed_url in guessed_urls:
             wayback_guessed_url = find_wayback_url(guessed_url)
+            broken, reason = sic_transit.broken(guessed_url)
             if wayback_guessed_url is None: # No archive in wayback for guessed_url
-                broken, reason = sic_transit.broken(guessed_url)
                 if broken:
                     continue
                 guessed_html = crawl.requests_crawl(guessed_url)
                 top_similar = self.link_same_page(html, guessed_url, guessed_html)
                 if top_simiar is not None: 
-                    return top_similar
+                    return top_similar[0]
             else:
                 wayback_guessed_html = crawl.requests_crawl(wayback_guessed_url[0])
                 wayback_outgoing_sigs = crawl.outgoing_links_sig(wayback_guessed_url[0], wayback_guessed_html, wayback=True)
@@ -99,8 +112,16 @@ class Discoverer:
                     if url_utils.url_match(url, wayback_outgoing_link):
                         linked = [True, (wayback_outgoing_link, anchor, sig)]
                         break
-                if wayback_linked[0] and not sic_transit.broken(guessed_url)[0]: # Linked to url working
-                    
-                    guessed_html = crawl.requests_crawl(linked[1][0])
+                if wayback_linked[0] and not broken: # Linked to url working
+                    guessed_html = crawl.requests_crawl(guessed_url)
+                    matched_url = self.find_same_link(linked[1], guessed_html)
+                    if matched_url:
+                        return matched_url
+                    else:
+                        top_similar = self.link_same_page(html, guessed_url, guessed_html)
+                        if top_simiar is not None: 
+                            return top_similar[0]
+                elif not broken: # No links to url
+                    link_guessed_url = self.discover(guessed_url)
 
         outgoing_links = crawl.outgoing_links(wayback_url, html, wayback=True)
