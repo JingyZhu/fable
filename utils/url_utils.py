@@ -14,6 +14,8 @@ sys.path.append('../')
 import config
 
 def filter_wayback(url):
+    if 'web.archive.org/web' not in url:
+        return url
     url = url.replace('http://web.archive.org/web/', '')
     url = url.replace('https://web.archive.org/web/', '')
     slash = url.find('/')
