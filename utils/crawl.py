@@ -16,6 +16,7 @@ import json
 from collections import defaultdict
 from itertools import product
 from bs4 import BeautifulSoup
+import bs4
 
 requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
 
@@ -382,6 +383,51 @@ def outgoing_links_sig(url, html, wayback=False):
         else:
             link = urljoin(url, link)
         # Get parent 
+        par, child = a_tag, a_tag
+        count = 0 # Prevent dead loop
+        while par.text.strip() == a_tag.text.strip() and count < 100:
+            child = par
+            par = par.parent
+            count += 1
+
+        sig = []
+        prev_tag = child.find_previous_sibling()
+        prev_str = child.previous_sibling
+        prev_tag = prev_tag.get_text(separator=' ').strip() if prev_tag is not None else None
+        if isinstance(prev_str, bs4.element.NavigableString):
+            prev_str = prev_str.strip() if prev_str.strip() != '' else None
+        else:
+            prev_str = prev_str.get_text(separator=' ').strip() if prev_str is not None else None
+        if prev_tag is not None and prev_str is not None:
+            whole_text = par.get_text(separator=' ')
+            if whole_text.find(prev_tag) > whole_text.find(prev_str):
+                sig.append(prev_tag)
+            else:
+                sig.append(prev_str)
+        elif prev_tag is not None : 
+            sig.append(prev_tag)
+        elif prev_str is not None:
+            sig.append(prev_str)
+        
+        next_tag = child.find_next_sibling()
+        next_str = child.next_sibling
+        next_tag = next_tag.get_text(separator=' ').strip() if next_tag is not None else None
+        if isinstance(next_str, bs4.element.NavigableString):
+            next_str = next_str.strip() if next_str.strip() != '' else None
+        else:
+            next_str = next_str.get_text(separator=' ').strip() if next_str is not None else None
+        if next_tag is not None and next_str is not None:
+            whole_text = par.get_text(separator=' ')
+            if whole_text.find(next_tag) < whole_text.find(next_str):
+                sig.append(next_tag)
+            else:
+                sig.append(next_str)
+        elif next_tag is not None : 
+            sig.append(next_tag)
+        elif next_str is not None:
+            sig.append(next_str)
+
+        print(tuple(sig))
         outlinks.add(link)
     outlinks = list(outlinks)
     # TODO: Add form outgoing tags
