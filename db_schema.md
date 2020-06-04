@@ -305,3 +305,14 @@ Index on subhost
     "afterTech" {}
 }
 ```
+
+# DB: ReorgPageFinder
+### crawl
+Record all crawled pages and its html
+```json
+{
+    "url": "url",
+    "statuscode": "",
+    "html": "byte"
+}
+```

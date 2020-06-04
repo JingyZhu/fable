@@ -6,6 +6,7 @@ from urllib.parse import urlsplit, urlparse, parse_qsl, urlunsplit
 from itertools import chain, combinations
 from bs4 import BeautifulSoup
 from queue import Queue
+import tools
 
 import sys
 sys.path.append('../')
@@ -17,13 +18,14 @@ GUESS = 5
 OUTGOING = 3
 
 class Discoverer:
-    def __init__(self, depth=3, corpus=[], proxies={}):
+    def __init__(self, depth=3, corpus=[], proxies={}, memo=tools.Memoize()):
         self.depth = depth
         self.corpus = corpus
         self.PS = crawl.ProxySelector(proxies)
-        self.wayback = {} # {url: (wayback ts, html)
-        self.liveweb = {} # {url: html}
+        self.wayback = {} # {url: wayback ts}
+        self.crawled = {} # {url: html}
         self.budget = BUDGET
+        self.memo = memo
     
     def guess_backlinks(self, url):
         """
@@ -53,7 +55,7 @@ class Discoverer:
             us_tmp = us._replace(query='&'.join([f'{kv[0]}={kv[1]}' for kv in sub_q]))
             guessed_urls.append(urlunsplit(us_tmp))
         return guessed_urls
-    
+
     def link_same_page(self, html, backlined_url, backlinked_html):
         """
         See whether backedlinked_html contains links to the same page as html
@@ -65,7 +67,7 @@ class Discoverer:
         outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_url, wayback=False)
         outgoing_htmls = {}
         for outgoing_link = in outgoing_links:
-            outgoing_htmls[outgoing_link] = crawl.requests_crawl(outgoing_url, proxies=self.PS.select())
+            outgoing_htmls[outgoing_link] = self.memo.crawl(outgoing_url, proxies=self.PS.select())
         top_similar = similar.similar(html, outgoing_htmls)
         if top_similar[0] > 0.8: 
             return top_similar
@@ -87,27 +89,27 @@ class Discoverer:
             2. If src is linking to dst on wayback
             3. If src is still working today
         
-        returns: (status, url(s)), status includes: found/looping/reorg/notfound
+        returns: (status, url(s)), status includes: found/loop/reorg/notfound
         """
         wayback_src = find_wayback_url(src)
         broken, reason = sic_transit.broken(src)
         if wayback_src is None: # No archive in wayback for guessed_url
             if broken:
                 continue
-            src_html = crawl.requests_crawl(src)
+            src_html = self.memo.crawl(src)
             top_similar = self.link_same_page(dst_html, src_url, src_html)
             if top_simiar is not None: 
                 return "found", top_similar[0]
         else:
-            wayback_src_html = crawl.requests_crawl(wayback_src[0])
+            wayback_src_html = self.memo.crawl(wayback_src[0])
             wayback_outgoing_sigs = crawl.outgoing_links_sig(wayback_src[0], wayback_src_html, wayback=True)
             wayback_linked = [False, '']
-            for wayback_outgoing_link, anchor, sig in wayback_outgoing_sigs:
+            for wayback_outgoing_link, anchor, sibtext in wayback_outgoing_sigs:
                 if url_utils.url_match(wayback_outgoing_link, dst, wayback=True):
-                    linked = [True, (wayback_outgoing_link, anchor, sig)]
+                    linked = [True, (wayback_outgoing_link, anchor, sibtext)]
                     break
             if wayback_linked[0] and not broken: # src linking to dst and is working today
-                src_html = crawl.requests_crawl(src)
+                src_html = self.memo.crawl(src)
                 matched_url = self.find_same_link(linked[1], src_html)
                 if matched_url:
                     return "found", matched_url
@@ -129,15 +131,41 @@ class Discoverer:
                 2. similar implementation
         """
         wayback_url = find_wayback_url(url)
-        html = crawl.requests_crawl(wayback_url[0])
+        html = self.memo.crawl(wayback_url[0])
         guessed_urls = self.guess_backlinks(url)
         search_queue = Queue()
+        seen = set()
         for link in guessed_urls:
-            search_queue.put((link, depth-GUESS))
+            if link not in seen:
+                search_queue.put((link, depth-GUESS))
+                seen.add(link)
         outgoing_links = crawl.outgoing_links(wayback_url, html, wayback=True)
         for link in outgoing_links:
-            search_queue.put((url_utils.filter_wayback(link), depth-OUTGOING))
+            if link not in seen:
+                search_queue.put((url_utils.filter_wayback(link), depth-OUTGOING))
+                seen.add(link)
         
         while not search_queue.empty():
             src, depth = search_queue.get()
-            reorg_url = self.discover_backlinks(src, dst, html)
+            status, msg_urls = self.discover_backlinks(src, dst, html)
+            if status == 'found':
+                return msg_urls
+            elif status == 'loop':
+                if depth >= GUESS:
+                    guessed_urls = self.guess_backlinks(src)
+                    for link in guessed_urls:
+                        if link not in seen:
+                            search_queue.put((link, depth-GUESS))
+                            seen.add(link)
+                if depth >= OUTGOING:
+                    for outlink, _, _ in msg_urls:
+                        if outlink not in seen:
+                            search_queue.put((url_utils.filter_wayback(outlink), depth - OUTGOING))
+                            seen.add(outlink)
+            elif status == 'reorg':
+                reorg_src = self.discover(src, depth)
+                if reorg_src is not None and reorg_src not in seen:
+                    search_queue.put((reorg_url, depth))
+                    seen.add(reorg_seen)
+        return
+
