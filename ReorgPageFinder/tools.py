@@ -38,3 +38,7 @@ class Memoize:
         except:
             pass
         return html
+
+class Similar:
+    def __init__(self):
+        pass

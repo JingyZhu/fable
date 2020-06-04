@@ -374,12 +374,14 @@ def outgoing_links_sig(url, html, wayback=False):
         if 'href' not in a_tag.attrs:
             continue
         link = a_tag.attrs['href']
+        anchor_text = a_tag.text
         if len(link) == 0 or link[0] == '#': #Anchor ignore
             continue
         if wayback:
             link = wayback_join(url, link)
         else:
             link = urljoin(url, link)
+        # Get parent 
         outlinks.add(link)
     outlinks = list(outlinks)
     # TODO: Add form outgoing tags
