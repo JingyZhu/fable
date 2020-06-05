@@ -330,7 +330,7 @@ def outgoing_links(url, html, wayback=False):
         donato = soup.find_all('div', id='donato')
         if len(donato) > 0: donato[0].decompose()
     for a_tag in soup.find_all('a'):
-        if 'href' not in a_tag.attrs:
+        if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
             continue
         link = a_tag.attrs['href']
         if len(link) == 0 or link[0] == '#': #Anchor ignore
@@ -359,7 +359,7 @@ def outgoing_links_sig(url, html, wayback=False):
         link = link.replace('https:/', 'https://')
         link = link.replace('https:///', 'https://')
         return link
-    outlinks = set()
+    outsigs = set()
     try:
         soup = BeautifulSoup(html, 'lxml')
     except:
@@ -372,10 +372,10 @@ def outgoing_links_sig(url, html, wayback=False):
         donato = soup.find_all('div', id='donato')
         if len(donato) > 0: donato[0].decompose()
     for a_tag in soup.find_all('a'):
-        if 'href' not in a_tag.attrs:
+        if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
             continue
         link = a_tag.attrs['href']
-        anchor_text = a_tag.text
+        anchor_text = a_tag.text.strip()
         if len(link) == 0 or link[0] == '#': #Anchor ignore
             continue
         if wayback:
@@ -427,10 +427,10 @@ def outgoing_links_sig(url, html, wayback=False):
         elif next_str is not None:
             sig.append(next_str)
 
-        print(tuple(sig))
-        outlinks.add(link)
-    outlinks = list(outlinks)
+        sig = tuple(sig)
+        outsigs.add((link, anchor_text, sig))
+    outsigs = list(outsigs)
     # TODO: Add form outgoing tags
     # for form_tag in soup.find_all('tag'):
 
-    return outlinks
+    return outsigs

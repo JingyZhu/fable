@@ -12,3 +12,4 @@ dateparser
 python-nmap
 Unidecode
 reppy
+msal
