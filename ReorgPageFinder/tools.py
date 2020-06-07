@@ -68,7 +68,7 @@ class Similar:
         self.tfidf._clear_workingset()
         anchor_count = defaultdict(int)
         corpus = []
-        for _, anchor, sig in [wayback_sig] + liveweb_sigs:
+        for link, anchor, sig in [wayback_sig] + liveweb_sigs:
             anchor_count[(link, anchor)] += 1
             corpus.append(anchor)
             for s in sig:
@@ -85,8 +85,23 @@ class Similar:
                     continue
                 simi = 0
                 for ws in wayback_sig[2]:
-                    for ls in sig
-                        simi = max(simi, ls)
+                    for ls in sig:
+                        simi = max(simi, self.tfidf.simiar(ws, ls))
                 if simi >= self.threshold:
                     return lws
         return None
+    
+    def search_similar(self, target, candidates):
+        """
+        See whether there are content from candidates that is similar target
+
+        Return a list with all candidate higher than threshold
+        """
+        self.tfidf._clear_workingset()
+        self.tfidf.add_corpus([target] + candidates.values())
+        simi_cand = []
+        for url, c in candidates.items():
+            simi = self.tfidf.similar(target, c)
+            if simi >= self.threshold:
+                simi_cand.append((simi, url))
+        return sorted(simi_cand, reverse=True)

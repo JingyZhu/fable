@@ -69,9 +69,9 @@ class Discoverer:
         outgoing_htmls = {}
         for outgoing_link = in outgoing_links:
             outgoing_htmls[outgoing_link] = self.memo.crawl(outgoing_url, proxies=self.PS.select())
-        top_similar = similar.similar(html, outgoing_htmls)
-        if top_similar[0] > 0.8: 
-            return top_similar
+        similars = self.search_similar(html, outgoing_htmls)
+        if len(similars) > 0: 
+            return similars[0]
         else:
             return None
     
