@@ -5,6 +5,7 @@ Methodologies: Content Match / Parital Match
 import pymongo
 from pymongo import MongoClient
 import brotli
+import re
 
 import sys
 sys.path.append('../')
@@ -39,6 +40,22 @@ class Memoize:
             pass
         return html
 
+
 class Similar:
-    def __init__(self):
-        pass
+    def __init__(self, use_db, db=db, corpus=[]):
+        if not use_db and len(corpus) == 0:
+            raise Exception("Corpus is requred for tfidf if db is not set")
+        self.use_db = use_db
+        self.threshold = 0.8
+        if use_db:
+            self.db =  db
+            corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
+            corpus = [c['content'] for c in list(corpus)]
+            self.tfidf = text_utils.TFidfStatic(corpus)
+        else:
+            self.tfidf = text_utils.TFidfStatic(corpus)
+    
+    def content_similar(self, content1, content2):
+        similarity = self.tfidf.similar(content1, content2)
+        return similarity
+    
