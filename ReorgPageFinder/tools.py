@@ -6,6 +6,7 @@ import pymongo
 from pymongo import MongoClient
 import brotli
 import re
+from collections import defaultdict
 
 import sys
 sys.path.append('../')
@@ -59,3 +60,33 @@ class Similar:
         similarity = self.tfidf.similar(content1, content2)
         return similarity
     
+    def match_url_sig(self, wayback_sig, liveweb_sigs):
+        """
+        See whether there is a url signature on liveweb that can match wayback sig
+        Based on 2 methods: UNIQUE Similar anchor text, Non-UNIQUE same anchor text & similar sig
+        """
+        self.tfidf._clear_workingset()
+        anchor_count = defaultdict(int)
+        corpus = []
+        for _, anchor, sig in [wayback_sig] + liveweb_sigs:
+            anchor_count[(link, anchor)] += 1
+            corpus.append(anchor)
+            for s in sig:
+                if s != '': corpus.append(s)
+        self.tfidf.add_corpus(corpus)
+        for lws in liveweb_sigs:
+            link, anchor, sig = lws
+            if anchor_count[(link, anchor)] < 2: # UNIQUE anchor
+                simi = self.tfidf.similar(wayback_sig[1], anchor)
+                if simi >= self.threshold:
+                    return lws
+            else:
+                if wayback_sig[1] != anchor:
+                    continue
+                simi = 0
+                for ws in wayback_sig[2]:
+                    for ls in sig
+                        simi = max(simi, ls)
+                if simi >= self.threshold:
+                    return lws
+        return None

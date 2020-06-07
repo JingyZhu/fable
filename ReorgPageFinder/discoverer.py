@@ -18,7 +18,7 @@ GUESS = 5
 OUTGOING = 3
 
 class Discoverer:
-    def __init__(self, depth=3, corpus=[], proxies={}, memo=tools.Memoize()):
+    def __init__(self, depth=3, corpus=[], proxies={}, memo=tools.Memoize(), simiar=tools.Similar()):
         self.depth = depth
         self.corpus = corpus
         self.PS = crawl.ProxySelector(proxies)
@@ -26,6 +26,7 @@ class Discoverer:
         self.crawled = {} # {url: html}
         self.budget = BUDGET
         self.memo = memo
+        self.similar = simiar
     
     def guess_backlinks(self, url):
         """
@@ -74,13 +75,15 @@ class Discoverer:
         else:
             return None
     
-    def find_same_link(self, wayback_sig, liveweb_html):
+    def find_same_link(self, wayback_sig, liveweb_url, liveweb_html):
         """
         For same page from wayback and liveweb (still working). Find the same url from liveweb which matches to wayback
         
         Returns: If there is a match on the url, return url, Else: return None
         """
-        pass
+        live_outgoing_sigs = crawl.outgoing_links_sig(liveweb_url, liveweb_html)
+        matched_url = self.similar.match_url_sig(wayback_sig, liveweb_outgoing_sigs)
+        return matched_url
 
     def discover_backlinks(self, src, dst, dst_html):
         """
@@ -106,11 +109,12 @@ class Discoverer:
             wayback_linked = [False, '']
             for wayback_outgoing_link, anchor, sibtext in wayback_outgoing_sigs:
                 if url_utils.url_match(wayback_outgoing_link, dst, wayback=True):
+                    # TODO: linked can be multiple links
                     linked = [True, (wayback_outgoing_link, anchor, sibtext)]
                     break
             if wayback_linked[0] and not broken: # src linking to dst and is working today
                 src_html = self.memo.crawl(src)
-                matched_url = self.find_same_link(linked[1], src_html)
+                matched_url = self.find_same_link(linked[1], src, src_html)
                 if matched_url:
                     return "found", matched_url
                 else:
