@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from pymongo import MongoClient
 import pymongo
 import re
+import tools
 
 import sys
 sys.path.append('../')
@@ -13,7 +14,7 @@ import config
 from utils import search, crawl, text_utils, url_utils
 
 class Searcher:
-    def __init__(self, use_db=True, corpus=[], proxies={}):
+    def __init__(self, use_db=True, corpus=[], proxies={},  memo=tools.Memoize(), similar=tools.Similar()):
         """
         At lease one of db or corpus should be provided
         # TODO: Corpus could not be necessary
@@ -29,9 +30,14 @@ class Searcher:
             self.tfidf = text_utils.TFidfStatic(corpus)
         else:
             self.tfidf = text_utils.TFidfStatic(corpus)
+        self.memo = memo
+        self.similar = similar
     
     def search(self, url, wayback=False, search_engine='bing'):
-        """wayback: Whether the url is snapshot on the wayback"""
+        """
+        wayback: Whether the url is snapshot on the wayback
+        # TODO: Only run later query when previous found no results
+        """
         if search_engine not in ['google', 'bing']:
             raise Exception("Search engine could support for google and bing")
         search_results = []
@@ -40,11 +46,11 @@ class Searcher:
         if '://' not in site: site = f'http://{site}'
         r = requests.get(site, headers=crawl.requests_header, timeout=10)
         site = he.extract(r.url)
-        html = crawl.requests_crawl(url, proxies=self.PS.select())
+        html = self.memo.crawl(url, proxies=self.PS.select())
         title = search.get_title(html)
         content = text_utils.extract_body(html)
-        self.tfidf._clear_workingset()
-        topN = self.tfidf.topN(content)
+        self.memo.tfidf._clear_workingset()
+        topN = self.memo.tfidf.topN(content)
         topN = ' '.join(topN)
         print(f'title: {title}')
         print(f'topN: {topN}')
@@ -67,9 +73,11 @@ class Searcher:
             html = crawl.requests_crawl(url, proxies=self.PS.select())
             if html is None: continue
             searched_contents[url] = text_utils.extract_body(html)
-        self.tfidf._clear_workingset()
-        self.tfidf.add_corpus([content] + list(searched_contents.values()))
-        searched_simi = {url: self.tfidf.similar(content, sc) for url, sc in searched_contents.items()}
-        searched_simi = sorted(searched_simi.items(), key=lambda x: x[1], reverse=True)
-        return searched_simi[0]
+        
+        # TODO: May move all comparison techniques to similar class
+        similars = self.search_similar(html, searched_contents)
+        if len(similars) > 0: 
+            return similars[0]
+        else:
+            return None
         

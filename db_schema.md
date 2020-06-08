@@ -316,3 +316,24 @@ Record all crawled pages and its html
     "html": "byte"
 }
 ```
+
+### corpus
+Used to initialize tfidf for document corpus
+```json
+{
+    "url": "string",
+    "src": "string",
+    "html": "Bytes (compressed by brotli)",
+    "content": "string",
+    "Others": "Not useful"
+}
+```
+
+### wayback_index
+Wayback indexed timestamps
+```json
+{
+    "url": "string",
+    "ts": "[int]"
+}
+```

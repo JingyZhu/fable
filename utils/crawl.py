@@ -116,7 +116,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
                 return [], str(e)
             time.sleep(10)
     if total_link:
-        r = [(i[1], "{}{}/{}".format(wayback_home, i[1], i[2]), i[4]) for i in r[1:]]
+        r = [(i[1], f"{wayback_home}{i[1]}/{i[2]}", i[4]) for i in r[1:]]
     else:
         r = [(i[1], i[2], i[4]) for i in r[1:]]
     if len(r) != 0:

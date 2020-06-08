@@ -7,6 +7,7 @@ from pymongo import MongoClient
 import brotli
 import re
 from collections import defaultdict
+import random
 
 import sys
 sys.path.append('../')
@@ -18,13 +19,14 @@ class Memoize:
     """
     Class for reducing crawl and wayback indexing
     """
-    def __init__(self, use_db=True, db=db):
+    def __init__(self, use_db=True, db=db, proxies={}):
         """
         # TODO: Implement non-db version. (In mem version)
         """
         self.use_db = db
         if use_db:
             self.db = db
+        self.PS = crawl.ProxySelector(proxies)
     
     def crawl(self, url, **kwargs):
         html = self.db.crawl.find_one({'_id': url})
@@ -40,6 +42,32 @@ class Memoize:
         except:
             pass
         return html
+    
+    def wayback_index(self, url, **kwargs):
+        """
+        Get most representative and lastest snapshot for a certain url
+        """
+        param_dict = {
+            "filter": ['statuscode:200', 'mimetype:text/html'],
+            "collapse": "timestamp:8"
+        }
+        cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
+        cps.sort(key=lambda x: x[0])
+        try:
+            db.wayback_index.insert_one({
+                'url': url,
+                'ts': [c[0] for c in cps]
+            })
+        except: pass
+        # Get latest 6 snapshots, and random sample 3 for finding representative results
+        cps = cps[-6:] if len(cps) >= 6 else cps
+        cps_sample = random.sample(cps, 3) if cps >= 3 else cps
+        cps_dict = {}
+        for ts, url, _ in cps_sample:
+            html = self.crawl(url, proxies=self.PS.select())
+            content = text_utils.extract_body(html, version='domdistiller')
+            cps_dict[ts] = (ts, html, content)
+        
 
 
 class Similar:
@@ -94,6 +122,7 @@ class Similar:
     def search_similar(self, target, candidates):
         """
         See whether there are content from candidates that is similar target
+        candidates: {url: content}
 
         Return a list with all candidate higher than threshold
         """
@@ -103,5 +132,5 @@ class Similar:
         for url, c in candidates.items():
             simi = self.tfidf.similar(target, c)
             if simi >= self.threshold:
-                simi_cand.append((simi, url))
-        return sorted(simi_cand, reverse=True)
+                simi_cand.append((url, simi))
+        return sorted(simi_cand, key=lambda x: x[1], reverse=True)

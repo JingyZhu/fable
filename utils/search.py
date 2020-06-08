@@ -81,7 +81,7 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
     google_query_dict.update(param_dict)
     count = 0
     if use_db:
-        db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
+        db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
         result = db.searched.find_one({'query': query, 'site': site, 'engine': 'google'})
         if result is not None:
             print("Search hit on db")
@@ -122,6 +122,13 @@ def bing_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False):
     """
     bing_query_dict["q"] = query
     bing_query_dict.update(param_dict)
+    count = 0
+    if use_db:
+        db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+        result = db.searched.find_one({'query': query, 'engine': 'bing'})
+        if result is not None:
+            print("Search hit on db")
+            return result['results']
     try:
         r = requests.get(bing_url, params=bing_query_dict, headers=headers)
         r = r.json()
@@ -130,9 +137,14 @@ def bing_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False):
         time.sleep(1)
         return []
     if "webPages" not in r or 'value' not in r['webPages']:
+        if use_db:
+         db.searched.insert_one({'query': query, 'engine': 'bing', 'results': []})
         time.sleep(1)
         return []
     values = r["webPages"]['value']
     end = len(values) if end == 0 else min(len(values), end)
+    results = [u['url'] for u in values[:end]]
+    if use_db:
+        db.searched.insert_one({'query': query, 'engine': 'bing', 'results': results})
     time.sleep(1)
     return [u['url'] for u in values[:end]]

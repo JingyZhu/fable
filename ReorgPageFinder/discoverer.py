@@ -21,7 +21,7 @@ class Discoverer:
     def __init__(self, depth=3, corpus=[], proxies={}, memo=tools.Memoize(), simiar=tools.Similar()):
         self.depth = depth
         self.corpus = corpus
-        self.PS = crawl.ProxySelector(proxies)
+        self.PS = crawl.ProxySelector()
         self.wayback = {} # {url: wayback ts}
         self.crawled = {} # {url: html}
         self.budget = BUDGET
