@@ -135,7 +135,7 @@ class TFidfStatic:
         self.idx = {i: c for c, i in enumerate(inputs)}
         # Get vocabulary from inputs
         idf = self.vectorizer.idf_
-        vocab = defaultdict(None, copy.deepcopy(self.vectorizer.vocabulary_))
+        vocab = defaultdict(None, self.vectorizer.vocabulary_)
         vocab.default_factory = vocab.__len__
         inputs_tfidf = TfidfVectorizer()
         inputs_matrix = inputs_tfidf.fit_transform(inputs)

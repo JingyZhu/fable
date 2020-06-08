@@ -50,7 +50,7 @@ def get_title(html):
     """
     Wrappers for getting decent title of a page
     """
-    versions = ['newspaper', 'domdistiller']
+    versions = ['domdistiller', 'newspaper']
     for v in versions:
         try:
             title = text_utils.extract_title(html, version=v)
@@ -58,7 +58,7 @@ def get_title(html):
             assert(title != "")
             return title
         except: pass
-    return get_headers(html)    
+    return get_headers(html)
 
 
 def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False):
@@ -84,7 +84,7 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
         db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
         result = db.searched.find_one({'query': query, 'site': site, 'engine': 'google'})
         if result is not None:
-            print("Search hit on db")
+            # print("Search hit on db")
             return result['results']
     while True:
         try:
@@ -127,7 +127,7 @@ def bing_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False):
         db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
         result = db.searched.find_one({'query': query, 'engine': 'bing'})
         if result is not None:
-            print("Search hit on db")
+            # print("Search hit on db")
             return result['results']
     try:
         r = requests.get(bing_url, params=bing_query_dict, headers=headers)

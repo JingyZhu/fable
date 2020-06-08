@@ -70,7 +70,8 @@ class Memoizer:
         cps_dict = {}
         for ts, wayback_url, _ in cps_sample:
             html = self.crawl(wayback_url, proxies=self.PS.select())
-            content = text_utils.extract_body(html, version='domdistiller')
+            # TODO: Domditiller vs Boilerpipe --> Acc vs Speed?
+            content = text_utils.extract_body(html, version='boilerpipe')
             # title = text_utils.extract_title(html, version='newspaper')
             cps_dict[ts] = (ts, wayback_url, content)
         rep = max(cps_dict.values(), key=lambda x: len(x[2].split()))
