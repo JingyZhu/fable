@@ -333,7 +333,19 @@ Used to initialize tfidf for document corpus
 Wayback indexed timestamps
 ```json
 {
+    "_id": "url",
     "url": "string",
     "ts": "[int]"
+}
+```
+
+### wayback_rep
+Wayback most representative ts for a url
+```json
+{
+    "_id": "url",
+    "url": "string",
+    "ts": "int",
+    "wayback_url": "string"
 }
 ```

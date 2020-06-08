@@ -15,7 +15,7 @@ import config
 from utils import text_utils, crawl
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
-class Memoize:
+class Memoizer:
     """
     Class for reducing crawl and wayback indexing
     """
@@ -29,6 +29,7 @@ class Memoize:
         self.PS = crawl.ProxySelector(proxies)
     
     def crawl(self, url, **kwargs):
+        """TODO: non-db version"""
         html = self.db.crawl.find_one({'_id': url})
         if html: 
             return brotli.decompress(html['html']).decode()
@@ -37,16 +38,19 @@ class Memoize:
             self.db.crawl.insert_one({
                 "_id": url,
                 "url": url,
-                "html": broti.compress(html.encode())
+                "html": brotli.compress(html.encode())
             })
-        except:
-            pass
+        except: pass
         return html
     
     def wayback_index(self, url, **kwargs):
         """
         Get most representative and lastest snapshot for a certain url
+        TODO: Non-db version
         """
+        wayback_url = self.db.wayback_rep.find_one({"_id": url})
+        if wayback_url:
+            return wayback_url['wayback_url']
         param_dict = {
             "filter": ['statuscode:200', 'mimetype:text/html'],
             "collapse": "timestamp:8"
@@ -54,24 +58,35 @@ class Memoize:
         cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
         cps.sort(key=lambda x: x[0])
         try:
-            db.wayback_index.insert_one({
+            self.db.wayback_index.insert_one({
+                "_id": url,
                 'url': url,
                 'ts': [c[0] for c in cps]
             })
         except: pass
         # Get latest 6 snapshots, and random sample 3 for finding representative results
         cps = cps[-6:] if len(cps) >= 6 else cps
-        cps_sample = random.sample(cps, 3) if cps >= 3 else cps
+        cps_sample = random.sample(cps, 3) if len(cps) >= 3 else cps
         cps_dict = {}
-        for ts, url, _ in cps_sample:
-            html = self.crawl(url, proxies=self.PS.select())
+        for ts, wayback_url, _ in cps_sample:
+            html = self.crawl(wayback_url, proxies=self.PS.select())
             content = text_utils.extract_body(html, version='domdistiller')
-            cps_dict[ts] = (ts, html, content)
-        
+            # title = text_utils.extract_title(html, version='newspaper')
+            cps_dict[ts] = (ts, wayback_url, content)
+        rep = max(cps_dict.values(), key=lambda x: len(x[2].split()))
+        try:
+            self.db.wayback_rep.insert_one({
+                "_id": url,
+                "url": url,
+                "ts": rep[0],
+                "wayback_url": rep[1]
+            })
+        except Exception as e: pass
+        return rep[1]
 
 
 class Similar:
-    def __init__(self, use_db, db=db, corpus=[]):
+    def __init__(self, use_db=True, db=db, corpus=[]):
         if not use_db and len(corpus) == 0:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
@@ -119,7 +134,7 @@ class Similar:
                     return lws
         return None
     
-    def search_similar(self, target, candidates):
+    def search_similar(self, target_html, target_content, candidates):
         """
         See whether there are content from candidates that is similar target
         candidates: {url: content}
@@ -127,10 +142,10 @@ class Similar:
         Return a list with all candidate higher than threshold
         """
         self.tfidf._clear_workingset()
-        self.tfidf.add_corpus([target] + candidates.values())
+        self.tfidf.add_corpus([target_content] + list(candidates.values()))
         simi_cand = []
         for url, c in candidates.items():
-            simi = self.tfidf.similar(target, c)
+            simi = self.tfidf.similar(target_content, c)
             if simi >= self.threshold:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
