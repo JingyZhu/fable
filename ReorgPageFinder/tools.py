@@ -28,20 +28,30 @@ class Memoizer:
             self.db = db
         self.PS = crawl.ProxySelector(proxies)
     
-    def crawl(self, url, **kwargs):
+    def crawl(self, url, final_url=False, **kwargs):
         """TODO: non-db version"""
-        html = self.db.crawl.find_one({'_id': url})
-        if html: 
-            return brotli.decompress(html['html']).decode()
-        html = crawl.requests_crawl(url, **kwargs)
+        if not final_url:
+            html = self.db.crawl.find_one({'_id': url})
+        else:
+            html = self.db.crawl.find_one({'_id': url, 'final_url': {"$exists": True}})
+        if html:
+            if not final_url:
+                return brotli.decompress(html['html']).decode()
+            else:
+                return brotli.decompress(html['html']).decode(), html['final_url']
+        html = crawl.requests_crawl(url, final_url=final_url, **kwargs)
+        if final_url:
+            html, fu = html
         try:
-            self.db.crawl.insert_one({
+            obj = {
                 "_id": url,
                 "url": url,
                 "html": brotli.compress(html.encode())
-            })
+            }
+            if final_url: obj.update({'final_url': fu})
+            self.db.crawl.update_one({'_id': url}, obj, upsert=True)
         except: pass
-        return html
+        return html if not final_url else html, fu
     
     def wayback_index(self, url, **kwargs):
         """
@@ -56,6 +66,21 @@ class Memoizer:
             "collapse": "timestamp:8"
         }
         cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
+        if len(cps) == 0: # No snapshots
+            try:
+                self.db.wayback_index.insert_one({
+                    "_id": url,
+                    'url': url,
+                    'ts': []
+                })
+                self.db.wayback_rep.insert_one({
+                    "_id": url,
+                    "url": url,
+                    "ts": None,
+                    "wayback_url": None
+                })
+            except: pass
+            return
         cps.sort(key=lambda x: x[0])
         try:
             self.db.wayback_index.insert_one({
@@ -84,6 +109,17 @@ class Memoizer:
             })
         except Exception as e: pass
         return rep[1]
+    
+    def extract_content(self, html, **kwargs):
+        html_bin = brotli.compress(html.encode())
+        content = self.db.crawl.find_one({'html': html_bin, 'content': {"$exists": True}})
+        if content:
+            return content['content']
+        content = text_utils.extract_body(html, **kwargs)
+        try:
+            self.db.update_one({'html': html_bin}, {'content': content})
+        except: pass
+        return content
 
 
 class Similar:
@@ -135,7 +171,7 @@ class Similar:
                     return lws
         return None
     
-    def search_similar(self, target_html, target_content, candidates):
+    def search_similar(self, target_content, candidates_contents, candidates_html=None):
         """
         See whether there are content from candidates that is similar target
         candidates: {url: content}
@@ -143,9 +179,9 @@ class Similar:
         Return a list with all candidate higher than threshold
         """
         self.tfidf._clear_workingset()
-        self.tfidf.add_corpus([target_content] + list(candidates.values()))
+        self.tfidf.add_corpus([target_content] + list(candidates_contents.values()))
         simi_cand = []
-        for url, c in candidates.items():
+        for url, c in candidates_contents.items():
             simi = self.tfidf.similar(target_content, c)
             if simi >= self.threshold:
                 simi_cand.append((url, simi))

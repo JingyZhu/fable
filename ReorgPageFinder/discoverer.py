@@ -18,7 +18,7 @@ GUESS = 5
 OUTGOING = 3
 
 class Discoverer:
-    def __init__(self, depth=3, corpus=[], proxies={}, memo=None, similar=None):
+    def __init__(self, depth=BUDGET, corpus=[], proxies={}, memo=None, similar=None):
         self.depth = depth
         self.corpus = corpus
         self.PS = crawl.ProxySelector(proxies)
@@ -57,23 +57,25 @@ class Discoverer:
             guessed_urls.append(urlunsplit(us_tmp))
         return guessed_urls
 
-    def link_same_page(self, html, backlinked_url, backlinked_html):
+    def link_same_page(self, content, backlinked_url, backlinked_html):
         """
         See whether backedlinked_html contains links to the same page as html
-        html: html file of the original url want to find copy
+        content: content file of the original url want to find copy
         backlinked_html: html which could be linking to the html
 
         Returns: (link, link's html) which is a copy of html if exists. None otherwise
         """
-        outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_url, wayback=False)
-        outgoing_htmls = {}
+        outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
+        outgoing_contents = {}
         for outgoing_link in outgoing_links:
-            outgoing_htmls[outgoing_link] = self.memo.crawl(outgoing_link, proxies=self.PS.select())
-        similars = self.similar.search_similar(html, outgoing_htmls)
-        if len(similars) > 0: 
-            return similars[0]
-        else:
-            return None
+            html = self.memo.crawl(outgoing_link, proxies=self.PS.select())
+            if html is None: continue
+            print(outgoing_link)
+            outgoing_content = text_utils.extract_body(html, version='domdistiller')
+            similars = self.similar.search_similar(content, {outgoing_link: outgoing_content})
+            if len(similars) > 0:
+                return similars[0]
+        return
     
     def find_same_link(self, wayback_sig, liveweb_url, liveweb_html):
         """
@@ -94,13 +96,15 @@ class Discoverer:
         
         returns: (status, url(s)), status includes: found/loop/reorg/notfound
         """
+        print(src, dst)
         wayback_src = self.memo.wayback_index(src)
         broken, reason = sic_transit.broken(src)
+        dst_content = text_utils.extract_body(dst_html, version='domdistiller')
         if wayback_src is None: # No archive in wayback for guessed_url
             if broken:
                 return "not found", None
-            src_html = self.memo.crawl(src)
-            top_similar = self.link_same_page(dst_html, src, src_html)
+            src_html, src = self.memo.crawl(src, final_url=True)
+            top_similar = self.link_same_page(dst_content, src, src_html)
             if top_similar is not None: 
                 return "found", top_similar[0]
         else:
@@ -118,8 +122,8 @@ class Discoverer:
                 if matched_url:
                     return "found", matched_url
                 else:
-                    top_similar = self.link_same_page(dst_html, src, src_html)
-                    if top_simiar is not None: 
+                    top_similar = self.link_same_page(dst_content, src, src_html)
+                    if top_similar is not None: 
                         return "found", top_similar[0]
                     else: 
                         return "notfound", None
@@ -135,7 +139,7 @@ class Discoverer:
         """
         if depth is None: depth = self.depth
         wayback_url = self.memo.wayback_index(url)
-        html = self.memo.crawl(wayback_url[0])
+        html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
         guessed_urls = self.guess_backlinks(url)
         search_queue = Queue()
         seen = set()
@@ -148,9 +152,10 @@ class Discoverer:
             if link not in seen:
                 search_queue.put((url_utils.filter_wayback(link), depth-OUTGOING))
                 seen.add(link)
-        
+
         while not search_queue.empty():
             src, depth = search_queue.get()
+            print(f"got: {src} {depth}")
             status, msg_urls = self.discover_backlinks(src, url, html)
             if status == 'found':
                 return msg_urls

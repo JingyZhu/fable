@@ -57,7 +57,7 @@ class Searcher:
                 searched_contents[url] = text_utils.extract_body(searched_html)
         
             # TODO: May move all comparison techniques to similar class
-            similars = self.similar.search_similar(html, content, searched_contents)
+            similars = self.similar.search_similar(content, searched_contents)
             if len(similars) > 0: 
                 return similars[0]
             else:
