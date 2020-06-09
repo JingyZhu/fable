@@ -40,7 +40,7 @@ class Searcher:
             url = self.memo.wayback_index(url)
         html = self.memo.crawl(url, proxies=self.PS.select())
         title = search.get_title(html)
-        content = text_utils.extract_body(html)
+        content = self.memo.extract_content(html)
         print(f'title: {title}')
         search_results, searched = [], set()
         searched_contents = {}
@@ -54,7 +54,7 @@ class Searcher:
             for url in search_cand:
                 searched_html = self.memo.crawl(url, proxies=self.PS.select())
                 if searched_html is None: continue
-                searched_contents[url] = text_utils.extract_body(searched_html)
+                searched_contents[url] = self.memo.extract_content(searched_html)
         
             # TODO: May move all comparison techniques to similar class
             similars = self.similar.search_similar(content, searched_contents)

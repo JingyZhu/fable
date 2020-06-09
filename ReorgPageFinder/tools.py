@@ -40,6 +40,7 @@ class Memoizer:
             else:
                 return brotli.decompress(html['html']).decode(), html['final_url']
         html = crawl.requests_crawl(url, final_url=final_url, **kwargs)
+        fu = None
         if final_url:
             html, fu = html
         try:
@@ -51,7 +52,10 @@ class Memoizer:
             if final_url: obj.update({'final_url': fu})
             self.db.crawl.update_one({'_id': url}, obj, upsert=True)
         except: pass
-        return html if not final_url else html, fu
+        if not final_url:
+            return html
+        else:
+            return html, fu
     
     def wayback_index(self, url, **kwargs):
         """
@@ -90,8 +94,7 @@ class Memoizer:
             })
         except: pass
         # Get latest 6 snapshots, and random sample 3 for finding representative results
-        cps = cps[-6:] if len(cps) >= 6 else cps
-        cps_sample = random.sample(cps, 3) if len(cps) >= 3 else cps
+        cps_sample = cps[-3:] if len(cps) >= 3 else cps
         cps_dict = {}
         for ts, wayback_url, _ in cps_sample:
             html = self.crawl(wayback_url, proxies=self.PS.select())
@@ -99,7 +102,7 @@ class Memoizer:
             content = text_utils.extract_body(html, version='boilerpipe')
             # title = text_utils.extract_title(html, version='newspaper')
             cps_dict[ts] = (ts, wayback_url, content)
-        rep = max(cps_dict.values(), key=lambda x: len(x[2].split()))
+        rep = sorted(cps_dict.values(), key=lambda x: len(x[2].split()))[int((len(cps_dict)-1)/2)]
         try:
             self.db.wayback_rep.insert_one({
                 "_id": url,
@@ -120,6 +123,17 @@ class Memoizer:
             self.db.update_one({'html': html_bin}, {'content': content})
         except: pass
         return content
+    
+    def extract_title(self, html, **kwargs):
+        html_bin = brotli.compress(html.encode())
+        title = self.db.crawl.find_one({'html': html_bin, 'title': {"$exists": True}})
+        if title:
+            return title['title']
+        title = text_utils.extract_title(html, **kwargs)
+        try:
+            self.db.update_one({'html': html_bin}, {'title': title})
+        except: pass
+        return title
 
 
 class Similar:
