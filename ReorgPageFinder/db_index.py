@@ -11,3 +11,5 @@ import config
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 
 db.crawl.create_index([('html', pymongo.ASCENDING)])
+
+db.searched.create_index([('query', pymongo.ASCENDING), ('engine', pymongo.ASCENDING)])

@@ -50,8 +50,8 @@ class Memoizer:
                 "html": brotli.compress(html.encode())
             }
             if final_url: obj.update({'final_url': fu})
-            self.db.crawl.update_one({'_id': url}, obj, upsert=True)
-        except: pass
+            self.db.crawl.update_one({'_id': url}, {"$set": obj}, upsert=True)
+        except Exception as e: print('crawl:', str(e))
         if not final_url:
             return html
         else:
@@ -71,6 +71,7 @@ class Memoizer:
         }
         cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
         if len(cps) == 0: # No snapshots
+            print("Wayback Index: No snapshots")
             try:
                 self.db.wayback_index.insert_one({
                     "_id": url,
@@ -98,11 +99,15 @@ class Memoizer:
         cps_dict = {}
         for ts, wayback_url, _ in cps_sample:
             html = self.crawl(wayback_url, proxies=self.PS.select())
+            if html is None: continue
             # TODO: Domditiller vs Boilerpipe --> Acc vs Speed?
             content = text_utils.extract_body(html, version='boilerpipe')
             # title = text_utils.extract_title(html, version='newspaper')
             cps_dict[ts] = (ts, wayback_url, content)
-        rep = sorted(cps_dict.values(), key=lambda x: len(x[2].split()))[int((len(cps_dict)-1)/2)]
+        if len(cps_dict) > 0:
+            rep = sorted(cps_dict.values(), key=lambda x: len(x[2].split()))[int((len(cps_dict)-1)/2)]
+        else:
+            rep = cps_sample[-1]
         try:
             self.db.wayback_rep.insert_one({
                 "_id": url,
@@ -114,14 +119,16 @@ class Memoizer:
         return rep[1]
     
     def extract_content(self, html, **kwargs):
+        if html is None:
+            return ''
         html_bin = brotli.compress(html.encode())
         content = self.db.crawl.find_one({'html': html_bin, 'content': {"$exists": True}})
         if content:
             return content['content']
         content = text_utils.extract_body(html, **kwargs)
         try:
-            self.db.update_one({'html': html_bin}, {'content': content})
-        except: pass
+            self.db.crawl.update_one({'html': html_bin}, {"$set": {'content': content}})
+        except Exception as e: print('extract content:', str(e))
         return content
     
     def extract_title(self, html, **kwargs):
@@ -131,8 +138,8 @@ class Memoizer:
             return title['title']
         title = text_utils.extract_title(html, **kwargs)
         try:
-            self.db.update_one({'html': html_bin}, {'title': title})
-        except: pass
+            self.db.crawl.update_one({'html': html_bin}, {"$set": {'title': title}})
+        except Exception as e: print('extract title:', str(e))
         return title
 
 

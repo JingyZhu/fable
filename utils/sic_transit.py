@@ -111,7 +111,8 @@ def construct_rand_urls(url):
         lower_char = [c for c in name if c.islower()]
         upper_char = [c for c in name if c.isupper()]
         num_char = [c for c in name if c.isdigit()]
-        ratio = ceil(25/(len(lower_char) + len(upper_char) + len(num_char)))
+        if (len(lower_char) + len(upper_char) + len(num_char)) == 0: ratio=25
+        else: ratio = ceil(25/(len(lower_char) + len(upper_char) + len(num_char)))
         for c in lower_char:
             name = name.replace(c, ''.join([random.choice(string.ascii_lowercase) for _ in range(ratio)]))
         for c in upper_char:

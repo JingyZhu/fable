@@ -112,7 +112,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
                     time.sleep(20)
                     continue 
                 return [], str(e)
-            if not wait or r.status_code not in [429, 445]:
+            if not wait or r.status_code not in [429, 445, 503]:
                 return [], str(e)
             time.sleep(10)
     if total_link:
@@ -193,12 +193,13 @@ def wayback_year_links(prefix, years, NUM_THREADS=3, max_limit=0, param_dict={},
     return {k: list(v) for k, v in total_r.items()}
 
 
-def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}):
+def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, final_url=False):
     """
     Use requests to get the page
     Return None if fails to get the content
     html: Only return html if set to true
     wait: Will wait if get block
+    final_url: Also return final url of requests if set to true
     """
     filter_ext = ['.pdf']
     requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
@@ -213,8 +214,8 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}):
                 time.sleep(10)
                 continue
             break
-        except:
-            print("There is an exception with requests_crawl")
+        except Exception as e:
+            print("There is an exception with requests_crawl:", str(e))
             return
     if r.status_code >= 400:
         return
@@ -224,7 +225,10 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}):
         return
     r.encoding = r.apparent_encoding
     text = r.text
-    return text
+    if not final_url:
+        return text
+    else:
+        return text, r.url
 
 
 def get_sitemaps(hostname):

@@ -313,7 +313,10 @@ Record all crawled pages and its html
 {
     "url": "url",
     "statuscode": "",
-    "html": "byte"
+    "html": "byte",
+    "final_url": "string",
+    "content": "string (optional)",
+    "title": "string (optional)"
 }
 ```
 

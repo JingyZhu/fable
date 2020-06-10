@@ -166,21 +166,33 @@ class TFidfStatic:
     
     def similar(self, text1, text2):
         if self.workingset_vec is None:
+            inputs_tfidf = TfidfVectorizer()
+            try:
+                _ = inputs_tfidf.fit_transform([text1, text2])
+            except: return 0
             self._init_workingset([text1, text2])
         idx1, idx2 = self.idx[text1], self.idx[text2]
         return cosine_similarity(self.workingset_tfidf[idx1].toarray(), self.workingset_tfidf[idx2].toarray())[0,0]
     
     def topN(self, text, N=10):
         if self.workingset_vec is None:
+            inputs_tfidf = TfidfVectorizer()
+            try:
+                _ = inputs_tfidf.fit_transform([text])
+            except: return ''
             self._init_workingset([text])
         array = self.workingset_tfidf[self.idx[text]].toarray()[0]
         idxes = array.argsort()[-N:]
-        words = self.vectorizer.get_feature_names()
+        words = self.workingset_vec.get_feature_names()
         return [words[i] for i in reversed(idxes)]
 
     def add_corpus(self, inputs):
         if self.workingset_vec is not None:
-            self._clear_workingset
+            self._clear_workingset()
+        inputs_tfidf = TfidfVectorizer()
+        try:
+            _ = inputs_tfidf.fit_transform(inputs)
+        except: return
         self._init_workingset(inputs)
 
 

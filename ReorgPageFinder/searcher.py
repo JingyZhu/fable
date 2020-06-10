@@ -34,11 +34,15 @@ class Searcher:
         he = url_utils.HostExtractor()
         site = he.extract(url, wayback=wayback)
         if '://' not in site: site = f'http://{site}'
-        r = requests.get(site, headers=crawl.requests_header, timeout=10)
-        site = he.extract(r.url)
+        _, final_url = self.memo.crawl(site, final_url=True)
+        site = he.extract(final_url)
         if not wayback:
             url = self.memo.wayback_index(url)
+        if url is None:
+            return
         html = self.memo.crawl(url, proxies=self.PS.select())
+        if html is None:
+            return
         title = search.get_title(html)
         content = self.memo.extract_content(html)
         print(f'title: {title}')
@@ -78,7 +82,11 @@ class Searcher:
                 similar = search_once(search_results)
                 if similar is not None: 
                     return similar
-                search_results = search.bing_search(f'{title} site:{site}', use_db=self.use_db)
+                if site is not None:
+                    site_str = f'site:{site}'
+                else:
+                    site_str = ''
+                search_results = search.bing_search(f'{title} {site_str}', use_db=self.use_db)
                 similar = search_once(search_results)
                 if similar is not None: 
                     return similar
@@ -94,7 +102,11 @@ class Searcher:
                 if similar is not None:
                     return similar
             else:
-                search_results = search.bing_search(f'{topN} site:{site}', use_db=self.use_db)
+                if site is not None:
+                    site_str = f'site:{site}'
+                else: 
+                    site_str = ''
+                search_results = search.bing_search(f'{topN} {site_str}', use_db=self.use_db)
                 similar = search_once(search_results)
                 if similar is not None: 
                     return similar

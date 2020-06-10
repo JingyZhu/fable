@@ -50,6 +50,8 @@ def get_title(html):
     """
     Wrappers for getting decent title of a page
     """
+    if html is None:
+        return ''
     versions = ['domdistiller', 'newspaper']
     for v in versions:
         try:
