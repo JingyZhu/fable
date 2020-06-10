@@ -8,6 +8,7 @@ import brotli
 import re
 from collections import defaultdict
 import random
+import brotli
 
 import sys
 sys.path.append('../')
@@ -207,3 +208,33 @@ class Similar:
             if simi >= self.threshold:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
+    
+    def _init_titles(self, site, version='domdistiller'):
+        self.site = site
+        self.lw_titles, self.lw_counts = {}, defaultdict(int)
+        self.wb_titles, self.wb_counts = {}, defaultdict(int)
+        lw_crawl = list(db.crawl.find({'site': site, 'url': re.compile('^((?!web\.archive\.org).)*$')}))
+        wb_crawl = list(db.crawl.find({'site': site, 'url': re.compile('web.archive.org')}))
+        for lw in lw_crawl:
+            if 'title' not in lw:
+                html = brotli.decompress(lw['html']).decode()
+                title = text_utils.extract_title(html, version=version)
+                try:
+                    self.db.crawl.update_one({'_id': lw['_id']}, {"$set": {'title': title}})
+                except: pass
+                lw['title'] = title
+            self.lw_titles[lw['url']] = title
+            self.lw_counts[title] += 1
+        for wb in wb_crawl:
+            if 'title' not in wb:
+                html = brotli.decompress(wb['html']).decode()
+                title = text_utils.extract_title(html, version=version)
+                try:
+                    self.db.crawl.update_one({'_id': wb['_id']}, {"$set": {'title': title}})
+                except: pass
+                wb['title'] = title
+            self.wb_titles[wb['url']] = title
+            self.wb_counts[title] += 1
+
+    def title_similar(self):
+        pass
