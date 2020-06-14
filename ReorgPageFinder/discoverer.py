@@ -7,6 +7,7 @@ from itertools import chain, combinations
 from bs4 import BeautifulSoup
 from queue import Queue
 from . import tools
+from collections import defaultdict
 
 import sys
 sys.path.append('../')
@@ -15,8 +16,10 @@ from utils import search, crawl, text_utils, url_utils, sic_transit
 
 BUDGET = 11
 GUESS = 3
-OUTGOING = 5
+OUTGOING = 4
 
+def wsum_simi(simi):
+    return 2/3*simi[0] + 1/3*simi[1]
 class Discoverer:
     def __init__(self, depth=BUDGET, corpus=[], proxies={}, memo=None, similar=None):
         self.depth = depth
@@ -65,6 +68,11 @@ class Discoverer:
 
         Returns: (link, link's html) which is a copy of html if exists. None otherwise
         """
+        backlinked_content = self.memo.extract_content(backlinked_html, version='domdistiller')
+        backlinked_title = self.memo.extract_title(backlinked_html, version='domdistiller')
+        similars = self.similar.search_similar(content, {backlinked_url: backlinked_content})
+        if len(similars) > 0:
+            return similars[0]
         outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
         # outgoing_contents = {}
         for outgoing_link in outgoing_links:
@@ -72,6 +80,7 @@ class Discoverer:
             if html is None: continue
             print('link same page:', outgoing_link)
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
+            outgoing_title = self.memo.extract_title(html, version='domdistiller')
             similars = self.similar.search_similar(content, {outgoing_link: outgoing_content})
             if len(similars) > 0:
                 return similars[0]
@@ -89,6 +98,20 @@ class Discoverer:
             if matched_url is not None:
                 return matched_url
         return
+    
+    def loop_cand(self, url, outgoing_url):
+        """
+        See whether outgoing_url is worth looping through
+        Creteria: 1. Same domain 2. No deeper than url
+        """
+        he = url_utils.HostExtractor()
+        if 'web.archive.org' in outgoing_url:
+            outgoing_url = url_utils.filter_wayback(outgoing_url)
+        if he.extract(url) != he.extract(outgoing_url):
+            return False
+        if urlsplit(url).path in urlsplit(outgoing_url).path:
+            return False
+        return True
 
     def discover_backlinks(self, src, dst, dst_html):
         """
@@ -103,6 +126,7 @@ class Discoverer:
         wayback_src = self.memo.wayback_index(src)
         broken, reason = sic_transit.broken(src)
         dst_content = self.memo.extract_content(dst_html, version='domdistiller')
+        dst_title = self.memo.extract_title(dst_html, version='domdistiller')
         if wayback_src is None: # No archive in wayback for guessed_url
             if broken:
                 return "not found", None
@@ -136,52 +160,86 @@ class Discoverer:
             else: # Linked to dst, but broken today
                 return "reorg", wayback_outgoing_sigs 
     
-    def discover(self, url, depth=None, seen=None):
+    def discover(self, url, depth=None, seen=None, trim_size=10):
         """
         Discover the potential reorganized site
+        Trim size: The largest size of outgoing queue
         # TODO: 1. similar implementation
         """
         if depth is None: depth = self.depth
         wayback_url = self.memo.wayback_index(url)
         html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
+        content = self.memo.extract_content(html, version='domdistiller')
+        title = self.memo.extract_title(html, version='domdistiller')
+        repr_text = content if content != '' else title
         guessed_urls = self.guess_backlinks(url)
-        search_queue = Queue()
+        guess_queue = [(g, depth - GUESS) for g in guessed_urls]
+        guess_total = defaultdict(int, {g: depth-GUESS for g in guessed_urls})
         seen = set() if seen is None else seen
-        if depth >= GUESS:
-            for link in guessed_urls:
-                if link not in seen:
-                    search_queue.put((link, depth-GUESS))
-                    seen.add(link)
-        
-        if depth >= OUTGOING:
-            outgoing_links = crawl.outgoing_links(wayback_url, html, wayback=True)
-            for link in outgoing_links:
-                if link not in seen:
-                    search_queue.put((url_utils.filter_wayback(link), depth-OUTGOING))
-                    seen.add(link)
+        # seen.update(guessed_urls)
 
-        while not search_queue.empty():
-            src, depth = search_queue.get()
-            print(f"got: {src} {depth} {search_queue.qsize()}")
-            status, msg_urls = self.discover_backlinks(src, url, html)
-            print(status)
-            if status == 'found':
-                return msg_urls
-            elif status == 'loop':
-                if depth >= GUESS:
-                    guessed_urls = self.guess_backlinks(src)
-                    for link in guessed_urls:
-                        if link not in seen:
-                            assert(depth-GUESS >= 0)
-                            search_queue.put((link, depth-GUESS))
-                            seen.add(link)
-                if depth >= OUTGOING:
-                    outlinks = list(set([m[0] for m in msg_urls]))
-                    for outlink in outlinks:
-                        if outlink not in seen:
-                            assert(depth-OUTGOING >= 0)
-                            search_queue.put((url_utils.filter_wayback(outlink), depth - OUTGOING))
-                            seen.add(outlink)
+        # Add guessed links
+        while len(guess_queue) > 0:
+            link, link_depth = guess_queue.pop(0)
+            if link_depth >= GUESS:
+                for guessed_url in self.guess_backlinks(link):
+                    guess_queue.append((guessed_url, link_depth-GUESS))
+                    guess_total[guessed_url] = max(guess_total[guessed_url], link_depth-GUESS)
+                    # seen.add(guessed_url)
+        guess_total = list(guess_total.items())
+
+        outgoing_queue = []
+
+        outgoing_sigs = crawl.outgoing_links_sig(wayback_url, html, wayback=True)
+        self.similar.tfidf._clear_workingset()
+        scoreboard = defaultdict(lambda: (0, 0))
+        c = [s[1] for s in outgoing_sigs] + [' '.join(s[2]) for s in outgoing_sigs] + [repr_text]
+        self.similar.tfidf.add_corpus(c)
+        for outlink, anchor, sig in outgoing_sigs:
+            outlink = url_utils.filter_wayback(outlink)
+            # For each link, find highest link score
+            if outlink not in seen and self.loop_cand(url, outlink):
+                simis = (self.similar.tfidf.similar(anchor, repr_text), self.similar.tfidf.similar(' '.join(sig), repr_text))
+                scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
+        for outlink, simis in scoreboard.items():
+            outgoing_queue.append((outlink, depth-OUTGOING, simis))
+
+        outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
+        outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
+        print(outgoing_queue)
+        
+        while len(guess_total) + len(outgoing_queue) > 0:
+            # Ops for guessed links
+            two_src = []
+            if len(guess_total) > 0:
+                two_src.append(guess_total.pop(0))
+            if len(outgoing_queue) > 0:
+                two_src.append(outgoing_queue.pop(0)[:2])
+            for item in two_src:
+                src, link_depth = item
+                print(f"Got: {src} depth:{link_depth} guess_total:{len(guess_total)} outgoing_queue:{len(outgoing_queue)}")
+                seen.add(src)
+                status, msg_urls = self.discover_backlinks(src, url, html)
+                print(status)
+                if status == 'found':
+                    return msg_urls
+                elif status == 'loop':
+                    if link_depth >= OUTGOING:
+                        c = [s[1] for s in msg_urls] + [' '.join(s[2]) for s in msg_urls] + [repr_text]
+                        self.similar.tfidf.add_corpus(c)
+                        scoreboard = defaultdict(lambda: (0, 0))
+                        for outlink, anchor, sig in msg_urls:
+                            outlink = url_utils.filter_wayback(outlink)
+                            # For each link, find highest link score
+                            if outlink not in seen and self.loop_cand(url, outlink):
+                                simis = (self.similar.tfidf.similar(anchor, repr_text), self.similar.tfidf.similar(' '.join(sig), repr_text))
+                                scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
+                        for outlink, simis in scoreboard.items():
+                            outgoing_queue.append((outlink, link_depth-OUTGOING, simis))
+            
+            outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
+            outgoing_queue = outgoing_queue[:trim_size+1] if len(outgoing_queue) > trim_size else outgoing_queue
+            print(outgoing_queue)
             # elif status == 'reorg':
             #     reorg_src = self.discover(src, depth=depth, seen=seen)
             #     if reorg_src is not None and reorg_src not in seen:

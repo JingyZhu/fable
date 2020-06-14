@@ -9,11 +9,12 @@ import re
 from collections import defaultdict
 import random
 import brotli
+from dateutil import parser as dparser
 
 import sys
 sys.path.append('../')
 import config
-from utils import text_utils, crawl
+from utils import text_utils, crawl, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 class Memoizer:
@@ -52,7 +53,7 @@ class Memoizer:
             }
             if final_url: obj.update({'final_url': fu})
             self.db.crawl.update_one({'_id': url}, {"$set": obj}, upsert=True)
-        except Exception as e: print('crawl:', str(e))
+        except Exception as e: print(f'crawl: {url} {str(e)}')
         if not final_url:
             return html
         else:
@@ -97,6 +98,7 @@ class Memoizer:
         except: pass
         # Get latest 6 snapshots, and random sample 3 for finding representative results
         cps_sample = cps[-3:] if len(cps) >= 3 else cps
+        cps_sample = [cp for cp in cps_sample if (dparser.parse(cps_sample[-1][0]) - dparser.parse(cp[0])).days <= 180]
         cps_dict = {}
         for ts, wayback_url, _ in cps_sample:
             html = self.crawl(wayback_url, proxies=self.PS.select())
@@ -211,8 +213,8 @@ class Similar:
     
     def _init_titles(self, site, version='domdistiller'):
         self.site = site
-        self.lw_titles, self.lw_counts = {}, defaultdict(int)
-        self.wb_titles, self.wb_counts = {}, defaultdict(int)
+        self.lw_titles = defaultdict(set)
+        self.wb_titles = defaultdict(set)
         lw_crawl = list(db.crawl.find({'site': site, 'url': re.compile('^((?!web\.archive\.org).)*$')}))
         wb_crawl = list(db.crawl.find({'site': site, 'url': re.compile('web.archive.org')}))
         for lw in lw_crawl:
@@ -222,9 +224,7 @@ class Similar:
                 try:
                     self.db.crawl.update_one({'_id': lw['_id']}, {"$set": {'title': title}})
                 except: pass
-                lw['title'] = title
-            self.lw_titles[lw['url']] = title
-            self.lw_counts[title] += 1
+            self.lw_titles[title].add(lw['url'])
         for wb in wb_crawl:
             if 'title' not in wb:
                 html = brotli.decompress(wb['html']).decode()
@@ -232,9 +232,29 @@ class Similar:
                 try:
                     self.db.crawl.update_one({'_id': wb['_id']}, {"$set": {'title': title}})
                 except: pass
-                wb['title'] = title
-            self.wb_titles[wb['url']] = title
-            self.wb_counts[title] += 1
+            self.wb_titles[title].add(url_utils.filter_wayback(wb['url']))
 
-    def title_similar(self):
-        pass
+    def title_similar(self, target_title, target_url, candidates_titles):
+        """
+        See whether there is UNIQUE title from candidates that is similar target
+        candidates: {url: title}, with url in the same host!
+
+        Return a list with all candidate higher than threshold
+        """
+        he = url_utils.HostExtractor()
+        site = he.extract(list(candidates_titles.keys())[0])
+        if site != self.site:
+            self._init_titles(site)
+        if target_title in self.wb_titles:
+            if len(self.wb_titles[target_title]) > 1:
+                return []
+            elif target_url not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
+                return []
+        self.tfidf._clear_workingset()
+        self.tfidf.add_corpus([target_title] + list(candidates_titles.values()))
+        simi_cand = []
+        for url, c in candidates_titles.items():
+            simi = self.tfidf.similar(target_title, c)
+            if simi >= self.threshold:
+                simi_cand.append((url, simi))
+        return sorted(simi_cand, key=lambda x: x[1], reverse=True)
