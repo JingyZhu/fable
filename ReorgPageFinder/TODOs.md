@@ -3,3 +3,6 @@
 - Figure out exact API of similar_search
 - Match by title
 - Partial content match
+- Inferer:
+  - Multi-columns output inference instead of single row
+  - Sheets with closed #words clustered

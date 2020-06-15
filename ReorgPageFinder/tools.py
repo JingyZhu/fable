@@ -5,11 +5,12 @@ Methodologies: Content Match / Parital Match
 import pymongo
 from pymongo import MongoClient
 import brotli
-import re
+import re, os
 from collections import defaultdict
 import random
 import brotli
 from dateutil import parser as dparser
+from urllib.parse import urlsplit, urlparse
 
 import sys
 sys.path.append('../')
@@ -17,6 +18,15 @@ import config
 from utils import text_utils, crawl, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+def update_sites(collection):
+    no_sites = list(collection.find({'site': {'$exists': False}}))
+    he = url_utils.HostExtractor()
+    for no_site in no_sites:
+        site = he.extract(no_site['url'], wayback='web.archive.org' in no_site['url'])
+        try:
+            collection.update_one({'_id': no_site['_id']}, {'$set': {'site': site}})
+        except: pass
+
 class Memoizer:
     """
     Class for reducing crawl and wayback indexing
@@ -159,6 +169,7 @@ class Similar:
             self.tfidf = text_utils.TFidfStatic(corpus)
         else:
             self.tfidf = text_utils.TFidfStatic(corpus)
+            self.db = db # TODO: For testing only
     
     def content_similar(self, content1, content2):
         similarity = self.tfidf.similar(content1, content2)
@@ -212,27 +223,49 @@ class Similar:
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def _init_titles(self, site, version='domdistiller'):
+        update_sites(self.db.crawl)
         self.site = site
         self.lw_titles = defaultdict(set)
         self.wb_titles = defaultdict(set)
-        lw_crawl = list(db.crawl.find({'site': site, 'url': re.compile('^((?!web\.archive\.org).)*$')}))
-        wb_crawl = list(db.crawl.find({'site': site, 'url': re.compile('web.archive.org')}))
+        lw_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('^((?!web\.archive\.org).)*$')}))
+        wb_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('web.archive.org')}))
+        lw_crawl = [lw for lw in lw_crawl if 'title' in lw] + [lw for lw in lw_crawl if 'title' not in lw]
+        wb_crawl = [wb for wb in wb_crawl if 'title' in wb] + [wb for wb in wb_crawl if 'title' not in wb]
+        lw_path, wb_path = defaultdict(int), defaultdict(int)
         for lw in lw_crawl:
-            if 'title' not in lw:
+            loc_dir = (urlsplit(lw['url']).netloc.split(':')[0], os.path.dirname(urlsplit(lw['url']).path))
+            if 'title' not in lw and lw_path[loc_dir] < 2:
                 html = brotli.decompress(lw['html']).decode()
                 title = text_utils.extract_title(html, version=version)
+                if title == '': continue
                 try:
                     self.db.crawl.update_one({'_id': lw['_id']}, {"$set": {'title': title}})
                 except: pass
+            elif 'title' in lw:
+                title = lw['title']
+            else: continue
+            lw_path[loc_dir] += 1
             self.lw_titles[title].add(lw['url'])
+        print('lw_titles', sum([len(v) for v in self.lw_titles.values()]))
+        seen = set()
         for wb in wb_crawl:
-            if 'title' not in wb:
+            wb_url = url_utils.filter_wayback(wb['url'])
+            if wb_url in seen: continue
+            else: seen.add(wb_url)
+            loc_dir = (urlsplit(wb_url).netloc.split(':')[0], os.path.dirname(urlsplit(wb_url).path))
+            if 'title' not in wb and wb_path[loc_dir] < 2:
                 html = brotli.decompress(wb['html']).decode()
                 title = text_utils.extract_title(html, version=version)
+                if title == '': continue
                 try:
                     self.db.crawl.update_one({'_id': wb['_id']}, {"$set": {'title': title}})
                 except: pass
-            self.wb_titles[title].add(url_utils.filter_wayback(wb['url']))
+            elif 'title' in wb:
+                title = wb['title']
+            else: continue
+            wb_path[loc_dir] += 1
+            self.wb_titles[title].add(wb_url)
+        print('wb_titles', sum([len(v) for v in self.wb_titles.values()]))
 
     def title_similar(self, target_title, target_url, candidates_titles):
         """
@@ -258,3 +291,8 @@ class Similar:
             if simi >= self.threshold:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
+    
+    def clear_titles(self):
+        self.site = None
+        self.lw_titles = None
+        self.wb_titles = None

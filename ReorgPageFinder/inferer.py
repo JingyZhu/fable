@@ -27,6 +27,7 @@ class Inferer:
         Two metadata should be in the same format
 
         Returns: {url: [possible reorg_url]}
+        # TODO: Create more sheets with similar/same #words
         """ 
         def normal(s):
             li = string.digits + string.ascii_letters + ' _-'
@@ -84,7 +85,6 @@ class Inferer:
             'sheet_name': 'sheet2',
             'csv': sheet2_csv
         }
-        print(sheet2)
         sheets.append(pickle.dumps(sheet1))
         sheets.append(pickle.dumps(sheet2))
         count = 0
