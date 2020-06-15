@@ -60,7 +60,7 @@ class Discoverer:
             guessed_urls.append(urlunsplit(us_tmp))
         return guessed_urls
 
-    def link_same_page(self, content, backlinked_url, backlinked_html):
+    def link_same_page(self, dst, title, content, backlinked_url, backlinked_html):
         """
         See whether backedlinked_html contains links to the same page as html
         content: content file of the original url want to find copy
@@ -70,18 +70,22 @@ class Discoverer:
         """
         backlinked_content = self.memo.extract_content(backlinked_html, version='domdistiller')
         backlinked_title = self.memo.extract_title(backlinked_html, version='domdistiller')
-        similars = self.similar.search_similar(content, {backlinked_url: backlinked_content})
+        similars = self.similar.similar(dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})
         if len(similars) > 0:
             return similars[0]
+
         outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
         # outgoing_contents = {}
+        he = url_utils.HostExtractor()
         for outgoing_link in outgoing_links:
+            if he.extract(dst) != he.extract(backlinked_url):
+                continue
             html = self.memo.crawl(outgoing_link, proxies=self.PS.select())
             if html is None: continue
             print('link same page:', outgoing_link)
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
             outgoing_title = self.memo.extract_title(html, version='domdistiller')
-            similars = self.similar.search_similar(content, {outgoing_link: outgoing_content})
+            similars = self.similar.similar(dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
             if len(similars) > 0:
                 return similars[0]
         return
@@ -113,7 +117,7 @@ class Discoverer:
             return False
         return True
 
-    def discover_backlinks(self, src, dst, dst_html):
+    def discover_backlinks(self, src, dst, dst_title, dst_content, dst_html):
         """
         For src and dst, see:
             1. If src is archived on wayback
@@ -125,13 +129,11 @@ class Discoverer:
         print(src, dst)
         wayback_src = self.memo.wayback_index(src)
         broken, reason = sic_transit.broken(src)
-        dst_content = self.memo.extract_content(dst_html, version='domdistiller')
-        dst_title = self.memo.extract_title(dst_html, version='domdistiller')
         if wayback_src is None: # No archive in wayback for guessed_url
             if broken:
                 return "not found", None
             src_html, src = self.memo.crawl(src, final_url=True)
-            top_similar = self.link_same_page(dst_content, src, src_html)
+            top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)
             if top_similar is not None: 
                 return "found", top_similar[0]
         else:
@@ -150,7 +152,7 @@ class Discoverer:
                 if matched_url:
                     return "found", matched_url[0]
                 else:
-                    top_similar = self.link_same_page(dst_content, src, src_html)
+                    top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)
                     if top_similar is not None: 
                         return "found", top_similar[0]
                     else: 
@@ -189,7 +191,6 @@ class Discoverer:
         guess_total = list(guess_total.items())
 
         outgoing_queue = []
-
         outgoing_sigs = crawl.outgoing_links_sig(wayback_url, html, wayback=True)
         self.similar.tfidf._clear_workingset()
         scoreboard = defaultdict(lambda: (0, 0))
@@ -219,7 +220,7 @@ class Discoverer:
                 src, link_depth = item
                 print(f"Got: {src} depth:{link_depth} guess_total:{len(guess_total)} outgoing_queue:{len(outgoing_queue)}")
                 seen.add(src)
-                status, msg_urls = self.discover_backlinks(src, url, html)
+                status, msg_urls = self.discover_backlinks(src, url, title, content, html)
                 print(status)
                 if status == 'found':
                     return msg_urls

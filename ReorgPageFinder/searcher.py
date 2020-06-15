@@ -47,11 +47,12 @@ class Searcher:
         content = self.memo.extract_content(html)
         print(f'title: {title}')
         search_results, searched = [], set()
-        searched_contents = {}
 
         def search_once(search_results):
             """Incremental Search"""
-            nonlocal searched, html, content, searched_contents
+            nonlocal url, title, content, html, searched
+            searched_contents = {}
+            searched_titles = {}
             search_cand = [s for s in search_results if s not in searched]
             print(search_cand)
             searched.update(search_results)
@@ -59,13 +60,14 @@ class Searcher:
                 searched_html = self.memo.crawl(url, proxies=self.PS.select())
                 if searched_html is None: continue
                 searched_contents[url] = self.memo.extract_content(searched_html)
+                searched_titles[url] = self.memo.extract_title(searched_html)
         
             # TODO: May move all comparison techniques to similar class
-            similars = self.similar.search_similar(content, searched_contents)
+            similars = self.similar.similar(url, title, content, searched_titles, searched_contents)
             if len(similars) > 0: 
                 return similars[0]
-            else:
-                return None
+            
+            return
 
         if title != '':
             if search_engine == 'google':

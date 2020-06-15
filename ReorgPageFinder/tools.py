@@ -18,6 +18,7 @@ import config
 from utils import text_utils, crawl, url_utils
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+
 def update_sites(collection):
     no_sites = list(collection.find({'site': {'$exists': False}}))
     he = url_utils.HostExtractor()
@@ -26,6 +27,7 @@ def update_sites(collection):
         try:
             collection.update_one({'_id': no_site['_id']}, {'$set': {'site': site}})
         except: pass
+
 
 class Memoizer:
     """
@@ -171,10 +173,6 @@ class Similar:
             self.tfidf = text_utils.TFidfStatic(corpus)
             self.db = db # TODO: For testing only
     
-    def content_similar(self, content1, content2):
-        similarity = self.tfidf.similar(content1, content2)
-        return similarity
-    
     def match_url_sig(self, wayback_sig, liveweb_sigs):
         """
         See whether there is a url signature on liveweb that can match wayback sig
@@ -206,7 +204,7 @@ class Similar:
                     return lws
         return None
     
-    def search_similar(self, target_content, candidates_contents, candidates_html=None):
+    def content_similar(self, target_content, candidates_contents, candidates_html=None):
         """
         See whether there are content from candidates that is similar target
         candidates: {url: content}
@@ -267,7 +265,7 @@ class Similar:
             self.wb_titles[title].add(wb_url)
         print('wb_titles', sum([len(v) for v in self.wb_titles.values()]))
 
-    def title_similar(self, target_title, target_url, candidates_titles):
+    def title_similar(self, target_url, target_title, candidates_titles):
         """
         See whether there is UNIQUE title from candidates that is similar target
         candidates: {url: title}, with url in the same host!
@@ -296,3 +294,14 @@ class Similar:
         self.site = None
         self.lw_titles = None
         self.wb_titles = None
+    
+    def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, cand_htmls=None):
+        """
+        All text-based similar tech is included
+        """
+        if self.site is not None:
+            similars = self.title_similar(tg_url, tg_title, cand_titles)
+            if len(similars) > 0:
+                return similars
+        similars = self.content_similar(tg_content, cand_contents, cand_htmls)
+        return similars
