@@ -47,12 +47,12 @@ class FlashFillHandler:
         """ 
         writer = pd.ExcelWriter(f'output\\{identifier}.xlsx')
         csvs = [pd.DataFrame(csv) for csv in csvs]
-        output_cols = []
+        output_cols, self.headers = [], {}
         for name, df in zip(sheet_names, csvs):
             cols = df.columns.tolist()
             assert(output_name in cols)
             cols = [c for c in cols if c != output_name] + [output_name]
-            self.headers = cols
+            self.headers[name] = cols
             df = df[cols]
             output_cols.append(len(cols))
             df.to_excel(writer, sheet_name=name, index=False, header=False)
@@ -68,7 +68,7 @@ class FlashFillHandler:
         excel = pd.read_excel(xlsx_path, header=None, sheet_name=None, engine='openpyxl')
         outputs = []
         for sheet_name, csv in excel.items():
-            csv.columns = self.headers
+            csv.columns = self.headers[sheet_name]
             outputs.append({
                 'sheet_name': sheet_name,
                 'csv': csv.to_dict(orient='list')

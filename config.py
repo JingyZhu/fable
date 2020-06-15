@@ -9,6 +9,7 @@ MONGO_HOSTNAME='redwings.eecs.umich.edu'
 
 LOCALSERVER_PORT=24680
 
+# TODO: Make this initialization dynamic
 
 if not os.path.exists(os.path.join(os.path.dirname(__file__), 'config.yml')):
     print("No config yaml file find")
@@ -26,3 +27,4 @@ else:
     BING_SEARCH_KEY = config_yml.get('bing_search_key')
     MONGO_USER = config_yml.get('mongo_user')
     MONGO_PWD = config_yml.get('mongo_pwd')
+    RPC_ADDRESS=config_yml.get('rpc_address')
