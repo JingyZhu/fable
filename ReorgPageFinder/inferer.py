@@ -12,6 +12,9 @@ sys.path.append('../')
 import config
 from utils import search, crawl, text_utils, url_utils
 
+import logging
+logger = logging.getLogger('logger')
+
 class Inferer:
     def __init__(self, proxies={}, memo=None, similar=None):
         self.PS = crawl.ProxySelector(proxies)
@@ -93,7 +96,7 @@ class Inferer:
                 outputs = self.proxy.handle(sheets, site)
                 break
             except Exception as e:
-                print('infer: exception on RPC', str(e))
+                logger.warn(f'infer: exception on RPC {str(e)}')
                 count += 1
                 time.sleep(2)
                 continue

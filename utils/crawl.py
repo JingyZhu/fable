@@ -17,6 +17,8 @@ from collections import defaultdict
 from itertools import product
 from bs4 import BeautifulSoup
 import bs4
+import logging
+logger = logging.getLogger('logger')
 
 requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
 
@@ -105,7 +107,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             break
         except Exception as e:
             try:
-                print('Wayback index:', str(e), '\n', r.text.split('\n')[0])
+                logger.warn(f"Wayback index: {str(e)}" + '\n'  + r.text.split('\n')[0])
             except Exception as e:
                 count += 1
                 if count < 3:
@@ -209,13 +211,13 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, final_url=
         try:
             r = requests.get(url, timeout=timeout, proxies=proxies, headers=requests_header)
             if wait and (r.status_code == 429 or r.status_code == 504) and count < 3:  # Requests limit
-                print('requests_crawl:', 'get status code', str(r.status_code))
+                logger.info(f'requests_crawl: get status code {r.status_code}')
                 count += 1
                 time.sleep(10)
                 continue
             break
         except Exception as e:
-            print("There is an exception with requests_crawl:", str(e))
+            logger.warn(f"There is an exception with requests_crawl: {str(e)}")
             return
     if r.status_code >= 400:
         return
@@ -325,7 +327,7 @@ def outgoing_links(url, html, wayback=False):
     try:
         soup = BeautifulSoup(html, 'lxml')
     except:
-        print("Failed to construct soup")
+        logger.warn("Failed to construct soup")
         return []
     if wayback:
         # Filter out navigational part
@@ -367,7 +369,7 @@ def outgoing_links_sig(url, html, wayback=False):
     try:
         soup = BeautifulSoup(html, 'lxml')
     except:
-        print("Failed to construct soup")
+        logger.warn("Failed to construct soup")
         return []
     if wayback:
         # Filter out navigational part

@@ -14,6 +14,9 @@ sys.path.append('../')
 import config
 from utils import search, crawl, text_utils, url_utils, sic_transit
 
+import logging
+logger = logging.getLogger('logger')
+
 BUDGET = 11
 GUESS = 3
 OUTGOING = 4
@@ -82,7 +85,7 @@ class Discoverer:
                 continue
             html = self.memo.crawl(outgoing_link, proxies=self.PS.select())
             if html is None: continue
-            print('link same page:', outgoing_link)
+            logger.info(f'Test if outgoing link same: {outgoing_link}')
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
             outgoing_title = self.memo.extract_title(html, version='domdistiller')
             similars = self.similar.similar(dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
@@ -126,7 +129,7 @@ class Discoverer:
         
         returns: (status, url(s)), status includes: found/loop/reorg/notfound
         """
-        print(src, dst)
+        logger.info(f'Backlinks: {src} {dst}')
         wayback_src = self.memo.wayback_index(src)
         broken, reason = sic_transit.broken(src)
         if wayback_src is None: # No archive in wayback for guessed_url
@@ -145,7 +148,7 @@ class Discoverer:
                     # TODO: linked can be multiple links
                     wayback_linked[0] = True
                     wayback_linked[1].append((wayback_outgoing_link, anchor, sibtext))
-            print('Wayback linked:', wayback_linked[1])
+            logger.info(f'Wayback linked: {wayback_linked[1]}')
             if wayback_linked[0] and not broken: # src linking to dst and is working today
                 src_html, src = self.memo.crawl(src, final_url=True)
                 matched_url = self.find_same_link(wayback_linked[1], src, src_html)
@@ -207,7 +210,6 @@ class Discoverer:
 
         outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
         outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
-        print(outgoing_queue)
         
         while len(guess_total) + len(outgoing_queue) > 0:
             # Ops for guessed links
@@ -218,10 +220,10 @@ class Discoverer:
                 two_src.append(outgoing_queue.pop(0)[:2])
             for item in two_src:
                 src, link_depth = item
-                print(f"Got: {src} depth:{link_depth} guess_total:{len(guess_total)} outgoing_queue:{len(outgoing_queue)}")
+                logger.info(f"Got: {src} depth:{link_depth} guess_total:{len(guess_total)} outgoing_queue:{len(outgoing_queue)}")
                 seen.add(src)
                 status, msg_urls = self.discover_backlinks(src, url, title, content, html)
-                print(status)
+                logger.info(status)
                 if status == 'found':
                     return msg_urls
                 elif status == 'loop':
@@ -240,7 +242,6 @@ class Discoverer:
             
             outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
             outgoing_queue = outgoing_queue[:trim_size+1] if len(outgoing_queue) > trim_size else outgoing_queue
-            print(outgoing_queue)
             # elif status == 'reorg':
             #     reorg_src = self.discover(src, depth=depth, seen=seen)
             #     if reorg_src is not None and reorg_src not in seen:

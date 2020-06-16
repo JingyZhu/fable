@@ -13,6 +13,9 @@ sys.path.append('../')
 import config
 from utils import search, crawl, text_utils, url_utils
 
+import logging
+logger = logging.getLogger('logger')
+
 class Searcher:
     def __init__(self, use_db=True, proxies={}, memo=None, similar=None):
         """
@@ -45,7 +48,7 @@ class Searcher:
             return
         title = search.get_title(html)
         content = self.memo.extract_content(html)
-        print(f'title: {title}')
+        logger.info(f'title: {title}')
         search_results, searched = [], set()
 
         def search_once(search_results):
@@ -55,7 +58,7 @@ class Searcher:
             searched_contents = {}
             searched_titles = {}
             search_cand = [s for s in search_results if s not in searched]
-            print(search_cand)
+            logger.info(f'#Search cands: {len(search_cand)}')
             searched.update(search_results)
             for searched_url in search_cand:
                 searched_html = self.memo.crawl(url, proxies=self.PS.select())
@@ -98,7 +101,7 @@ class Searcher:
         self.similar.tfidf._clear_workingset()
         topN = self.similar.tfidf.topN(content)
         topN = ' '.join(topN)
-        print(f'topN: {topN}')
+        logger.info(f'topN: {topN}')
         if len(topN) > 0:
             if search_engine == 'google':
                 search_results = search.google_search(topN, site_spec_url=site, use_db=self.use_db)

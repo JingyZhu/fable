@@ -17,6 +17,9 @@ sys.path.append('../')
 import config
 from utils import text_utils, crawl, url_utils
 
+import logging
+logger = logging.getLogger('logger')
+
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 
 def update_sites(collection):
@@ -65,7 +68,7 @@ class Memoizer:
             }
             if final_url: obj.update({'final_url': fu})
             self.db.crawl.update_one({'_id': url}, {"$set": obj}, upsert=True)
-        except Exception as e: print(f'crawl: {url} {str(e)}')
+        except Exception as e: logger.warn(f'crawl: {url} {str(e)}')
         if not final_url:
             return html
         else:
@@ -85,7 +88,7 @@ class Memoizer:
         }
         cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
         if len(cps) == 0: # No snapshots
-            print("Wayback Index: No snapshots")
+            logger.info("Wayback Index: No snapshots")
             try:
                 self.db.wayback_index.insert_one({
                     "_id": url,
@@ -143,7 +146,7 @@ class Memoizer:
         content = text_utils.extract_body(html, **kwargs)
         try:
             self.db.crawl.update_one({'html': html_bin}, {"$set": {'content': content}})
-        except Exception as e: print('extract content:', str(e))
+        except Exception as e: logger.warn(f'extract content: {str(e)}')
         return content
     
     def extract_title(self, html, **kwargs):
@@ -154,7 +157,7 @@ class Memoizer:
         title = text_utils.extract_title(html, **kwargs)
         try:
             self.db.crawl.update_one({'html': html_bin}, {"$set": {'title': title}})
-        except Exception as e: print('extract title:', str(e))
+        except Exception as e: logger.warn(f'extract title: {str(e)}')
         return title
 
 
@@ -247,7 +250,7 @@ class Similar:
             else: continue
             lw_path[loc_dir] += 1
             self.lw_titles[title].add(lw['url'])
-        print('lw_titles', sum([len(v) for v in self.lw_titles.values()]))
+        logger.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])}')
         seen = set()
         for wb in wb_crawl:
             wb_url = url_utils.filter_wayback(wb['url'])
@@ -266,7 +269,7 @@ class Similar:
             else: continue
             wb_path[loc_dir] += 1
             self.wb_titles[title].add(wb_url)
-        print('wb_titles', sum([len(v) for v in self.wb_titles.values()]))
+        logger.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])}')
 
     def title_similar(self, target_url, target_title, candidates_titles):
         """
