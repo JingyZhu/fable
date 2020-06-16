@@ -12,7 +12,7 @@ from utils import text_utils, url_utils
 import logging
 logger = logging.getLogger('logger')
 logger.setLevel(logging.INFO)
-formatter = logging.Formatter('%(levelname)s [%(filename)s %(funcName)s:%(lineno)s]: %(message)s')
+formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
 file_handler = logging.FileHandler('ReorgPageFinder.log')
 file_handler.setFormatter(formatter)
 std_handler = logging.StreamHandler()

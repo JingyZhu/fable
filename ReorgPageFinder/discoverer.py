@@ -20,6 +20,7 @@ logger = logging.getLogger('logger')
 BUDGET = 11
 GUESS = 3
 OUTGOING = 4
+CUT = 30
 
 def wsum_simi(simi):
     return 2/3*simi[0] + 1/3*simi[1]
@@ -77,11 +78,27 @@ class Discoverer:
         if len(similars) > 0:
             return similars[0]
 
-        outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
-        # outgoing_contents = {}
+        # outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
         he = url_utils.HostExtractor()
+        outgoing_sigs = crawl.outgoing_links_sig(backlinked_url, backlinked_html, wayback=False)
+        outgoing_sigs = [osig for osig in outgoing_sigs if he.extract(osig[0]) == he.extract(dst)]
+        if len(outgoing_sigs) > CUT:
+            repr_text = content if content != '' else title
+            self.similar.tfidf._clear_workingset()
+            scoreboard = defaultdict(lambda: (0, 0))
+            c = [s[1] for s in outgoing_sigs] + [' '.join(s[2]) for s in outgoing_sigs] + [repr_text]
+            self.similar.tfidf.add_corpus(c)
+            for outgoing_link, anchor, sig in outgoing_sigs:
+                simis = (self.similar.tfidf.similar(anchor, repr_text), self.similar.tfidf.similar(' '.join(sig), repr_text))
+                scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
+            scoreboard = sorted(scoreboard.items(), lambda x: wsum_simi(x[1]), reverse=True)
+            outlinks = [sb[0] for sb in scoreboard[:CUT]]
+        else:
+            outlinks = [osig[0] for osig in outgoing_sigs]
+
+        # outgoing_contents = {}
         for outgoing_link in outgoing_links:
-            if he.extract(dst) != he.extract(backlinked_url):
+            if he.extract(dst) != he.extract(outgoing_link):
                 continue
             html = self.memo.crawl(outgoing_link, proxies=self.PS.select())
             if html is None: continue
@@ -139,6 +156,8 @@ class Discoverer:
             top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)
             if top_similar is not None: 
                 return "found", top_similar[0]
+            else:
+                return "notfound", None
         else:
             wayback_src_html = self.memo.crawl(wayback_src)
             wayback_outgoing_sigs = crawl.outgoing_links_sig(wayback_src, wayback_src_html, wayback=True)

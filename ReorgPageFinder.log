@@ -1,0 +1,1976 @@
+INFO 2020-06-16 16:21:04,114 [tools.py _init_titles:253]: 
+ lw_titles: 321
+INFO 2020-06-16 16:21:04,117 [tools.py _init_titles:272]: 
+ wb_titles: 90
+INFO 2020-06-16 16:21:04,124 [reorgpagefinder_test.py <module>:133]: 
+ SITE: commonsensemedia.org#URLS: 54
+WARNING 2020-06-16 16:21:06,555 [tools.py crawl:71]: 
+ crawl: https://www.commonsensemedia.org/music-reviews/thalia-song-reviews-Common 'NoneType' object has no attribute 'encode'
+WARNING 2020-06-16 16:21:07,097 [tools.py crawl:71]: 
+ crawl: https://www.commonsensemedia.org/music-media/thalia-song-reviews-Common 'NoneType' object has no attribute 'encode'
+WARNING 2020-06-16 16:21:07,690 [tools.py crawl:71]: 
+ crawl: https://www.commonsensemedia.org/music-reviews/cd-single 'NoneType' object has no attribute 'encode'
+WARNING 2020-06-16 16:21:09,837 [tools.py crawl:71]: 
+ crawl: https://www.commonsensemedia.org/movie-reviews/mad-max-special-edition.html; 'NoneType' object has no attribute 'encode'
+WARNING 2020-06-16 16:21:10,416 [tools.py crawl:71]: 
+ crawl: https://www.commonsensemedia.org/ratingss/movie-ratings-family 'NoneType' object has no attribute 'encode'
+INFO 2020-06-16 16:21:10,416 [reorgpagefinder_test.py <module>:144]: 
+ URL: http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:21:17,771 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/movie-reviews depth:8 guess_total:1 outgoing_queue:1
+INFO 2020-06-16 16:21:17,772 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/movie-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:21:18,809 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:21:18,809 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:22:32,471 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/user depth:7 guess_total:1 outgoing_queue:205
+INFO 2020-06-16 16:22:32,472 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/user http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:22:38,131 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:22:38,131 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:23:14,628 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/ depth:5 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:23:14,629 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/ http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:23:14,970 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:23:14,971 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:24:06,004 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-reviews depth:3 guess_total:0 outgoing_queue:127
+INFO 2020-06-16 16:24:06,004 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:24:07,937 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:24:07,937 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:24:07,937 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-reviews depth:4 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:24:07,937 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:24:08,686 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:24:08,686 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:25:18,758 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-reviews depth:1 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:25:18,759 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:25:19,738 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:25:19,738 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:25:19,738 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-lists depth:3 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 16:25:19,738 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-lists http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:25:26,517 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:25:26,518 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:25:26,518 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-reviews depth:4 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 16:25:26,518 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:25:35,430 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:25:35,430 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:26:43,375 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-reviews depth:1 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:26:43,375 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:26:44,214 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:26:44,214 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:26:44,214 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-reviews depth:0 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 16:26:44,214 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:26:45,416 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:26:45,416 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:26:45,416 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-lists depth:4 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 16:26:45,416 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-lists http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:26:46,306 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:26:46,307 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:27:31,077 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-lists depth:1 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:27:31,078 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-lists http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:27:31,856 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:27:31,856 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:27:31,856 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-lists depth:0 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 16:27:31,856 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-lists http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:27:32,686 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:27:32,686 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:27:32,686 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-reviews/a-shaun-the-sheep-movie-farmageddon depth:1 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 16:27:32,686 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-reviews/a-shaun-the-sheep-movie-farmageddon http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:27:32,883 [tools.py wayback_index:91]: 
+ Wayback Index: No snapshots
+INFO 2020-06-16 16:27:47,254 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/app-lists
+INFO 2020-06-16 16:27:56,340 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/character-strengths-and-life-skills
+INFO 2020-06-16 16:28:05,485 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/en-las-noticias
+INFO 2020-06-16 16:28:11,628 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/
+INFO 2020-06-16 16:28:18,511 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/best-for-character-development-lists
+INFO 2020-06-16 16:28:28,172 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/lists/tv-and-movies-that-celebrate-grit
+INFO 2020-06-16 16:28:39,294 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/character-strengths-and-life-skills/how-can-i-use-media-to-teach-my-kid-teamwork
+INFO 2020-06-16 16:28:48,864 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/for-summer-learning-press-play-on-podcasts
+INFO 2020-06-16 16:28:57,042 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/flag/confirm/flag/flag_abuse_node/6155746?destination=node/6136549
+INFO 2020-06-16 16:29:08,000 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search?f%5B0%5D=field_reference_review_ent_prod%253Afield_term_movie_studios%3A6115
+INFO 2020-06-16 16:29:18,328 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/alien
+INFO 2020-06-16 16:29:30,035 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/a-shaun-the-sheep-movie-farmageddon?width=660&height=420&inline=true#mobile-fixed-social-icons
+INFO 2020-06-16 16:29:40,523 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-partners
+INFO 2020-06-16 16:29:47,044 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/seal
+INFO 2020-06-16 16:29:53,191 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reading/is-it-ok-for-kids-to-read-books-outside-their-reading-levels
+INFO 2020-06-16 16:30:00,750 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-youtube
+INFO 2020-06-16 16:30:08,340 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission
+INFO 2020-06-16 16:30:15,929 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/John%20Sparkes
+INFO 2020-06-16 16:30:25,588 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/website-reviews
+INFO 2020-06-16 16:30:31,723 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/social-media
+INFO 2020-06-16 16:30:38,299 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-parental-controls
+INFO 2020-06-16 16:30:46,175 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews
+INFO 2020-06-16 16:30:55,380 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/wallace-gromit-the-curse-of-the-were-rabbit
+INFO 2020-06-16 16:31:04,289 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/kids-action
+INFO 2020-06-16 16:31:14,327 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/a-shaun-the-sheep-movie-farmageddon/user-reviews/adult
+INFO 2020-06-16 16:31:23,750 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/privacy-and-internet-safety
+INFO 2020-06-16 16:31:31,303 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/chicken-run
+INFO 2020-06-16 16:31:42,244 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/what-to-watch-read-and-play-while-your-kids-are-stuck-indoors
+INFO 2020-06-16 16:31:49,226 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/espanol/blog/libros-sobre-racismo-y-justicia-social
+INFO 2020-06-16 16:32:01,477 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/5-tips-to-make-family-movie-night-a-success
+INFO 2020-06-16 16:32:11,435 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-lists
+INFO 2020-06-16 16:32:19,788 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/doctor-who
+INFO 2020-06-16 16:32:29,263 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-roblox-0
+INFO 2020-06-16 16:32:40,235 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/shaun-the-sheep
+INFO 2020-06-16 16:32:49,768 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-google-classroom
+INFO 2020-06-16 16:32:57,152 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/teens
+INFO 2020-06-16 16:33:07,577 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/timmy-time
+INFO 2020-06-16 16:33:17,055 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/website-lists
+INFO 2020-06-16 16:33:24,866 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/resources-for-families-during-the-coronavirus-pandemic
+INFO 2020-06-16 16:33:34,128 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/home
+INFO 2020-06-16 16:33:43,962 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=/node/add/csm-user-review%3Fnid%3D6136549&source=add-user-review
+INFO 2020-06-16 16:33:54,075 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parenttrapped
+INFO 2020-06-16 16:34:01,761 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/flag/confirm/flag/flag_abuse_node/6152822?destination=node/6136549
+INFO 2020-06-16 16:34:10,204 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org
+INFO 2020-06-16 16:34:19,694 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search?f%5B0%5D=field_reference_review_ent_prod%253Afield_term_ent_prod_awards%3A36616
+INFO 2020-06-16 16:34:29,399 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/how-to-raise-a-reader
+INFO 2020-06-16 16:34:35,904 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-lists
+INFO 2020-06-16 16:34:42,412 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/game-lists
+INFO 2020-06-16 16:34:49,092 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-youtube-kids
+INFO 2020-06-16 16:34:55,792 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/best-for-learning-lists
+INFO 2020-06-16 16:35:02,294 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/nuestras-resenas
+INFO 2020-06-16 16:35:08,793 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/recursos-para-las-familias-durante-la-pandemia-del-coronavirus
+INFO 2020-06-16 16:35:15,083 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-minecraft
+INFO 2020-06-16 16:35:22,929 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino
+INFO 2020-06-16 16:35:29,437 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-snapchat
+INFO 2020-06-16 16:35:38,725 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reviews/category/movie/character-strengths/empathy-48456
+INFO 2020-06-16 16:35:50,320 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/Will%20Becher
+INFO 2020-06-16 16:35:59,793 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/et-the-extra-terrestrial
+INFO 2020-06-16 16:36:11,222 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/lists/offbeat-animated-movies
+INFO 2020-06-16 16:36:21,393 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-fortnite
+INFO 2020-06-16 16:36:28,830 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/offices
+INFO 2020-06-16 16:36:35,505 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/app-reviews
+INFO 2020-06-16 16:36:41,850 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=kids-action
+INFO 2020-06-16 16:36:49,436 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/flag/confirm/flag/flag_abuse_node/6160452?destination=node/6136549
+INFO 2020-06-16 16:36:59,328 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/Joe%20Sugg
+INFO 2020-06-16 16:37:12,102 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/Amalia%20Vitale
+INFO 2020-06-16 16:37:21,645 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-zoom
+INFO 2020-06-16 16:37:32,031 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/the-x-files
+INFO 2020-06-16 16:37:44,051 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/wallace-gromit
+INFO 2020-06-16 16:37:53,585 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-messenger-kids
+INFO 2020-06-16 16:37:59,935 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/help-your-family-de-stress-during-coronavirus-uncertainty
+INFO 2020-06-16 16:38:05,950 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parents-ultimate-guides
+INFO 2020-06-16 16:38:12,261 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parent-concerns
+INFO 2020-06-16 16:38:18,530 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reviews/category/movie/genre/family-and-kids-4541
+INFO 2020-06-16 16:38:26,582 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/video/modal/iva/6136540?height=420&iframe=1&width=660
+INFO 2020-06-16 16:38:37,754 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/kate%20harbour
+INFO 2020-06-16 16:38:48,090 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/educacion
+INFO 2020-06-16 16:38:54,066 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/guide/special-needs
+INFO 2020-06-16 16:39:00,665 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/supporters/latino-partners
+INFO 2020-06-16 16:39:09,256 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/Justin%20Fletcher
+INFO 2020-06-16 16:39:19,481 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reviews/category/movie/character-strengths/teamwork-48486
+INFO 2020-06-16 16:39:29,318 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy
+INFO 2020-06-16 16:39:35,450 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/a-shaun-the-sheep-movie-farmageddon
+INFO 2020-06-16 16:39:44,158 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/plopman-10
+INFO 2020-06-16 16:39:53,780 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team/our-board
+INFO 2020-06-16 16:40:00,917 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/learning-with-technology
+INFO 2020-06-16 16:40:07,768 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog
+INFO 2020-06-16 16:40:14,529 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/latino
+INFO 2020-06-16 16:40:23,903 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reviews/category/movie/character-strengths/compassion-48441
+INFO 2020-06-16 16:40:35,726 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/flushed-away
+INFO 2020-06-16 16:40:45,285 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/affiliate-links
+INFO 2020-06-16 16:40:53,410 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/Richard%20Phelan
+INFO 2020-06-16 16:41:04,709 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/flag/confirm/flag/flag_abuse_node/6163436?destination=node/6136549
+INFO 2020-06-16 16:41:13,491 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/jobs
+INFO 2020-06-16 16:41:19,791 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/little-kids
+INFO 2020-06-16 16:41:26,748 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/newsletters
+INFO 2020-06-16 16:41:33,623 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/violence-in-the-media
+INFO 2020-06-16 16:41:39,986 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/cellphone-parenting
+INFO 2020-06-16 16:41:46,279 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/about-our-ratings
+INFO 2020-06-16 16:41:52,896 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews
+INFO 2020-06-16 16:42:01,277 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/big-kids
+INFO 2020-06-16 16:42:08,524 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/donate
+INFO 2020-06-16 16:42:19,060 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reviews/category/movie/topic/horses-and-farm-animals-21622
+INFO 2020-06-16 16:42:28,560 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/youtube-reviews
+INFO 2020-06-16 16:42:36,347 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-tiktok
+INFO 2020-06-16 16:42:44,052 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/plus
+INFO 2020-06-16 16:42:50,709 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team
+INFO 2020-06-16 16:42:59,518 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/a-shaun-the-sheep-movie-farmageddon/user-reviews/child
+INFO 2020-06-16 16:43:09,178 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/common-sense-annual-report
+INFO 2020-06-16 16:43:15,751 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/news/press-releases
+INFO 2020-06-16 16:43:23,697 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/screen-time
+INFO 2020-06-16 16:43:31,799 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/amr-al-qudah
+INFO 2020-06-16 16:43:41,884 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/login?destination=node/6136549
+INFO 2020-06-16 16:43:53,557 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reviews/category/movie/topic/space-and-aliens-21634
+INFO 2020-06-16 16:44:04,417 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/site-terms-use
+INFO 2020-06-16 16:44:11,480 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/community-guidelines
+INFO 2020-06-16 16:44:17,949 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/video/what-is
+INFO 2020-06-16 16:44:26,249 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/daddylion40
+INFO 2020-06-16 16:44:36,145 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/game-reviews
+INFO 2020-06-16 16:44:42,850 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews
+INFO 2020-06-16 16:44:49,247 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team/our-board#/advisors
+INFO 2020-06-16 16:44:55,922 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/nuestra-mision
+INFO 2020-06-16 16:45:02,630 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/events/conversations
+INFO 2020-06-16 16:45:09,505 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/common-sense-events
+INFO 2020-06-16 16:45:15,699 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/espanol/blog
+INFO 2020-06-16 16:45:21,841 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-lists
+INFO 2020-06-16 16:45:29,009 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/danny-brogan/bio
+INFO 2020-06-16 16:45:40,330 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/video/modal/6156437?height=420&iframe=1&width=660
+INFO 2020-06-16 16:45:46,124 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/preschoolers
+INFO 2020-06-16 16:45:52,227 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/tweens
+INFO 2020-06-16 16:45:58,774 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/video/espanol
+INFO 2020-06-16 16:46:05,116 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/how-to-help-kids-sort-fact-from-fiction-about-the-coronavirus
+INFO 2020-06-16 16:46:13,582 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/lists/best-family-movie-laughs
+INFO 2020-06-16 16:46:25,314 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/family-media-agreement
+INFO 2020-06-16 16:46:33,965 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/wallace-and-gromit-a-matter-of-loaf-and-death
+INFO 2020-06-16 16:46:45,200 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews/shaun-the-sheep-movie
+INFO 2020-06-16 16:46:55,707 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=node/6136549
+INFO 2020-06-16 16:47:04,555 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/login?destination=recommendations/watch
+INFO 2020-06-16 16:47:10,961 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/research
+INFO 2020-06-16 16:47:17,691 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 16:47:17,692 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/movie/status/theaters-4535 depth:4 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 16:47:17,692 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/movie/status/theaters-4535 http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:47:29,847 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:47:29,847 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:32,694 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/movie/status/theaters-4535 depth:1 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:48:32,695 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/movie/status/theaters-4535 http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:33,720 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:33,720 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:33,720 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/movie/status/theaters-4535 depth:0 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 16:48:33,720 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/movie/status/theaters-4535 http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:34,897 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:34,897 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:34,897 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/movie/status/theaters-4535 depth:0 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 16:48:34,897 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/movie/status/theaters-4535 http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:36,452 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:36,452 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:36,452 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/ depth:0 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 16:48:36,452 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/ http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:36,850 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:36,850 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:36,850 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/ depth:0 guess_total:0 outgoing_queue:6
+INFO 2020-06-16 16:48:36,850 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/ http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:37,061 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:37,061 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:37,061 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/ depth:0 guess_total:0 outgoing_queue:5
+INFO 2020-06-16 16:48:37,062 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/ http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:37,273 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:37,274 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:37,274 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-lists depth:0 guess_total:0 outgoing_queue:4
+INFO 2020-06-16 16:48:37,274 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-lists http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:45,796 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:45,796 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:45,797 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-lists depth:0 guess_total:0 outgoing_queue:3
+INFO 2020-06-16 16:48:45,797 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-lists http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:46,356 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:46,356 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:46,356 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-lists depth:0 guess_total:0 outgoing_queue:2
+INFO 2020-06-16 16:48:46,356 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-lists http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:47,220 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:47,220 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:47,220 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/book-reviews depth:0 guess_total:0 outgoing_queue:1
+INFO 2020-06-16 16:48:47,220 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/book-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:48,034 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:48,034 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:48,034 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/website-reviews depth:0 guess_total:0 outgoing_queue:0
+INFO 2020-06-16 16:48:48,034 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/website-reviews http://www.commonsensemedia.org/movie-reviews/Mad-Max-Special-Edition.html;.html
+INFO 2020-06-16 16:48:59,564 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:48:59,565 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:48:59,565 [reorgpagefinder_test.py <module>:144]: 
+ URL: http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:49:56,510 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/game-reviews depth:8 guess_total:1 outgoing_queue:10
+INFO 2020-06-16 16:49:56,510 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/game-reviews http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:50:05,371 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:50:05,372 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:51:28,707 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-reviews/hannah-montana-movie depth:7 guess_total:1 outgoing_queue:249
+INFO 2020-06-16 16:51:28,707 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-reviews/hannah-montana-movie http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:51:33,304 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:51:33,305 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:52:19,980 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/ depth:5 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:52:19,980 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/ http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:52:20,281 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:52:20,281 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:53:10,869 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/movie-reviews/hannah-montana-movie depth:3 guess_total:0 outgoing_queue:127
+INFO 2020-06-16 16:53:10,869 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/movie-reviews/hannah-montana-movie http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:53:22,995 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:53:22,996 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:53:22,996 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-reviews/rhythm-heaven depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:53:22,997 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-reviews/rhythm-heaven http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:53:29,689 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:53:29,689 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:54:29,190 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-reviews/backyard-baseball-10 depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:54:29,190 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-reviews/backyard-baseball-10 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:54:36,900 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:54:36,900 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:55:37,017 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-wii-4469 depth:4 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:55:37,018 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-wii-4469 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:55:53,179 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:55:53,180 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:57:15,436 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/tv-lists/all-things-hannah-montana depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:57:15,437 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/tv-lists/all-things-hannah-montana http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:57:21,425 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:57:21,426 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:57:46,507 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-reviews/Hannah-Montana-DS.html depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:57:46,508 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-reviews/Hannah-Montana-DS.html http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:57:59,755 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:57:59,755 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:57:59,756 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-reviews/mysims-party depth:7 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 16:57:59,756 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-reviews/mysims-party http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:58:04,095 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:58:04,095 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 16:59:02,550 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-wii-u-4472 depth:4 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 16:59:02,551 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-wii-u-4472 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 16:59:08,146 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 16:59:08,146 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:00:25,136 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-reviews/hannah-montana-ds depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:00:25,136 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-reviews/hannah-montana-ds http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:00:29,498 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:00:29,498 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:00:29,498 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-reviews/world-championship-games-track-and-field-event depth:7 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:00:29,498 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-reviews/world-championship-games-track-and-field-event http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:00:34,488 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:00:34,488 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:01:10,040 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-reviews/hannah-montana-movie#what-parents-need-to-know depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:01:10,041 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-reviews/hannah-montana-movie#what-parents-need-to-know http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:01:11,134 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:01:11,134 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:01:56,024 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464 depth:4 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:01:56,025 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:02:05,151 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:02:05,152 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:26,212 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464/platform/nintendo-wii-4469 depth:0 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:03:26,213 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464/platform/nintendo-wii-4469 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:03:32,039 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:03:32,040 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:32,040 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464/platform/nintendo-wii-u-4472 depth:0 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:03:32,040 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464/platform/nintendo-wii-u-4472 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:03:38,089 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:03:38,090 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:38,090 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464/platform/nintendo-wii-u-4472 depth:0 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:03:38,090 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464/platform/nintendo-wii-u-4472 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:03:39,716 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:03:39,717 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:39,717 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464/platform/nintendo-wii-4469 depth:0 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 17:03:39,717 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-ds-4464/platform/nintendo-wii-4469 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:03:41,719 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:03:41,720 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:41,720 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/search?filters=type%3Acsm_review%20im_nr_csm_review2field_entertainment_product_im_vid_51%3A43860%20ss_nr_csm_review2field_entertainment_product_type%3Acsm_game depth:3 guess_total:0 outgoing_queue:6
+INFO 2020-06-16 17:03:41,720 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/search?filters=type%3Acsm_review%20im_nr_csm_review2field_entertainment_product_im_vid_51%3A43860%20ss_nr_csm_review2field_entertainment_product_type%3Acsm_game http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:03:48,726 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:03:48,727 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:48,727 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/tv-reviews/Hannah-Montana.html depth:3 guess_total:0 outgoing_queue:5
+INFO 2020-06-16 17:03:48,727 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/tv-reviews/Hannah-Montana.html http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:03:57,038 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:03:57,038 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:57,038 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/parent-concerns depth:1 guess_total:0 outgoing_queue:4
+INFO 2020-06-16 17:03:57,038 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/parent-concerns http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:03:57,723 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:03:57,723 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:57,723 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/parent-concerns depth:0 guess_total:0 outgoing_queue:3
+INFO 2020-06-16 17:03:57,723 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/parent-concerns http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:03:58,748 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:03:58,748 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:03:58,748 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/game-reviews depth:0 guess_total:0 outgoing_queue:2
+INFO 2020-06-16 17:03:58,749 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/game-reviews http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:04:00,517 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:04:00,517 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:04:00,517 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-wii-4469/platform/nintendo-wii-u-4472 depth:0 guess_total:0 outgoing_queue:1
+INFO 2020-06-16 17:04:00,517 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reviews/category/game/platform/nintendo-wii-4469/platform/nintendo-wii-u-4472 http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:04:05,901 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:04:05,902 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:04:05,902 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/game-reviews depth:0 guess_total:0 outgoing_queue:0
+INFO 2020-06-16 17:04:05,902 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/game-reviews http://www.commonsensemedia.org:80/game-reviews/kid-games
+INFO 2020-06-16 17:04:06,791 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:04:06,791 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:04:06,792 [reorgpagefinder_test.py <module>:144]: 
+ URL: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:04:25,669 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report/web-review depth:8 guess_total:3 outgoing_queue:10
+INFO 2020-06-16 17:04:25,670 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report/web-review http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:04:26,351 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:04:26,352 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/tv/i-n depth:7 guess_total:3 outgoing_queue:10
+INFO 2020-06-16 17:04:26,352 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/tv/i-n http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:04:29,027 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:04:29,028 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:04:57,806 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047 depth:8 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:04:57,806 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047 http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:04:58,087 [tools.py wayback_index:91]: 
+ Wayback Index: No snapshots
+INFO 2020-06-16 17:04:59,715 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:04:59,716 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/movie/i-n depth:7 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:04:59,717 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/movie/i-n http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:05:04,353 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:05:04,353 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:05:31,943 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report depth:5 guess_total:1 outgoing_queue:10
+INFO 2020-06-16 17:05:31,943 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:05:32,651 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:05:32,652 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/movie/v-z depth:7 guess_total:1 outgoing_queue:10
+INFO 2020-06-16 17:05:32,652 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/movie/v-z http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:05:36,502 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:05:36,503 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:06:02,834 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse depth:2 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:06:02,835 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:06:03,655 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:06:03,656 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/by-age depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:06:03,656 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/by-age http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:06:04,356 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:06:04,356 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:06:45,193 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/tv-reviews/Stylista.html#what-parents-need-to-know depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:06:45,193 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/tv-reviews/Stylista.html#what-parents-need-to-know http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:06:58,437 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:06:58,438 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:06:58,438 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/movie/o-u depth:7 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:06:58,438 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/movie/o-u http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:07:02,052 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:07:02,052 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:07:28,978 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/website-reviews depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:07:28,979 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/website-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:07:34,396 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:07:34,397 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:08:43,659 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/website/o-u depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:08:43,660 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/website/o-u http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:08:46,573 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:08:46,573 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:09:13,747 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/game/o-u depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:09:13,748 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/game/o-u http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:09:20,797 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:09:20,797 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:09:47,136 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/game/a-d depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:09:47,136 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/game/a-d http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:09:49,905 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:09:49,906 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:10:15,010 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/user depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:10:15,011 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/user http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:10:17,362 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:10:17,362 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:10:54,339 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/movie/e-h depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:10:54,339 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/movie/e-h http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:10:59,003 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:10:59,003 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:11:23,578 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/tv-reviews/kidnap-rescue depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:11:23,578 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/tv-reviews/kidnap-rescue http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:11:23,790 [tools.py wayback_index:91]: 
+ Wayback Index: No snapshots
+INFO 2020-06-16 17:11:33,636 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/app-lists
+INFO 2020-06-16 17:11:36,640 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/en-las-noticias
+INFO 2020-06-16 17:11:40,020 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/
+INFO 2020-06-16 17:11:43,677 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/best-for-character-development-lists
+INFO 2020-06-16 17:11:49,014 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/kidnap-rescue?width=660&height=420&inline=true#mobile-fixed-social-icons
+INFO 2020-06-16 17:11:56,148 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/for-summer-learning-press-play-on-podcasts
+INFO 2020-06-16 17:11:59,644 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-partners
+INFO 2020-06-16 17:12:03,153 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/seal
+INFO 2020-06-16 17:12:08,282 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/login?destination=node/1263063
+INFO 2020-06-16 17:12:13,971 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reading/is-it-ok-for-kids-to-read-books-outside-their-reading-levels
+INFO 2020-06-16 17:12:18,300 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-youtube
+INFO 2020-06-16 17:12:22,816 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission
+INFO 2020-06-16 17:12:36,129 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/lists/drama-tv-for-teens
+INFO 2020-06-16 17:12:44,153 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/website-reviews
+INFO 2020-06-16 17:12:47,788 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/social-media
+INFO 2020-06-16 17:12:51,923 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-parental-controls
+INFO 2020-06-16 17:12:55,965 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews
+INFO 2020-06-16 17:12:59,534 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/kids-action
+INFO 2020-06-16 17:13:02,772 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/privacy-and-internet-safety
+INFO 2020-06-16 17:13:06,043 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/what-to-watch-read-and-play-while-your-kids-are-stuck-indoors
+INFO 2020-06-16 17:13:11,226 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/Ty%20Ritter
+INFO 2020-06-16 17:13:17,065 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/espanol/blog/libros-sobre-racismo-y-justicia-social
+INFO 2020-06-16 17:13:21,981 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=/node/add/csm-user-review%3Fnid%3D1263063&source=add-user-review
+INFO 2020-06-16 17:13:29,236 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-lists
+INFO 2020-06-16 17:13:33,042 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-roblox-0
+INFO 2020-06-16 17:13:37,448 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-google-classroom
+INFO 2020-06-16 17:13:41,542 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/teens
+INFO 2020-06-16 17:13:45,171 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/website-lists
+INFO 2020-06-16 17:13:48,989 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/resources-for-families-during-the-coronavirus-pandemic
+INFO 2020-06-16 17:13:52,584 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parenttrapped
+INFO 2020-06-16 17:13:57,386 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org
+INFO 2020-06-16 17:14:01,554 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/how-to-raise-a-reader
+INFO 2020-06-16 17:14:05,474 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-lists
+INFO 2020-06-16 17:14:08,990 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/game-lists
+INFO 2020-06-16 17:14:12,672 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-youtube-kids
+INFO 2020-06-16 17:14:16,330 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/best-for-learning-lists
+INFO 2020-06-16 17:14:19,930 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/nuestras-resenas
+INFO 2020-06-16 17:14:23,548 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/recursos-para-las-familias-durante-la-pandemia-del-coronavirus
+INFO 2020-06-16 17:14:27,091 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-minecraft
+INFO 2020-06-16 17:14:32,054 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino
+INFO 2020-06-16 17:14:35,942 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-snapchat
+INFO 2020-06-16 17:14:39,991 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-fortnite
+INFO 2020-06-16 17:14:44,514 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/offices
+INFO 2020-06-16 17:14:49,226 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/Brad%20Barker
+INFO 2020-06-16 17:14:55,085 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/app-reviews
+INFO 2020-06-16 17:14:58,713 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=kids-action
+INFO 2020-06-16 17:15:03,849 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/melissa-camacho/bio
+INFO 2020-06-16 17:15:11,769 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/kidnap-rescue
+INFO 2020-06-16 17:15:15,609 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-zoom
+INFO 2020-06-16 17:15:19,332 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-messenger-kids
+INFO 2020-06-16 17:15:22,760 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/help-your-family-de-stress-during-coronavirus-uncertainty
+INFO 2020-06-16 17:15:26,621 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parents-ultimate-guides
+INFO 2020-06-16 17:15:30,859 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parent-concerns
+INFO 2020-06-16 17:15:34,026 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/educacion
+INFO 2020-06-16 17:15:38,797 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/guide/special-needs
+INFO 2020-06-16 17:15:42,666 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/supporters/latino-partners
+INFO 2020-06-16 17:15:46,374 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy
+INFO 2020-06-16 17:15:49,889 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team/our-board
+INFO 2020-06-16 17:15:53,548 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/learning-with-technology
+INFO 2020-06-16 17:15:57,141 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog
+INFO 2020-06-16 17:16:01,135 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/latino
+INFO 2020-06-16 17:16:06,295 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/tips-on-how-to-deal-with-media-violence
+INFO 2020-06-16 17:16:15,101 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/affiliate-links
+INFO 2020-06-16 17:16:20,545 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/csi-crime-scene-investigation
+INFO 2020-06-16 17:16:29,730 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/without-a-trace
+INFO 2020-06-16 17:16:38,659 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/lists/classic-streaming-tv-shows
+INFO 2020-06-16 17:16:45,464 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/jobs
+INFO 2020-06-16 17:16:48,948 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/little-kids
+INFO 2020-06-16 17:16:52,844 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/newsletters
+INFO 2020-06-16 17:16:56,241 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/violence-in-the-media
+INFO 2020-06-16 17:16:59,721 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/cellphone-parenting
+INFO 2020-06-16 17:17:03,336 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/about-our-ratings
+INFO 2020-06-16 17:17:07,637 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews
+INFO 2020-06-16 17:17:11,146 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/big-kids
+INFO 2020-06-16 17:17:14,737 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/donate
+INFO 2020-06-16 17:17:18,229 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/youtube-reviews
+INFO 2020-06-16 17:17:22,387 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-tiktok
+INFO 2020-06-16 17:17:28,811 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews/law-order
+INFO 2020-06-16 17:17:36,673 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/plus
+INFO 2020-06-16 17:17:40,109 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team
+INFO 2020-06-16 17:17:45,422 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=node/1263063
+INFO 2020-06-16 17:17:52,964 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/David%20Little
+INFO 2020-06-16 17:17:59,697 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/common-sense-annual-report
+INFO 2020-06-16 17:18:03,135 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/news/press-releases
+INFO 2020-06-16 17:18:07,109 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/screen-time
+INFO 2020-06-16 17:18:13,043 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/lists/sibling-watch-together-tv
+INFO 2020-06-16 17:18:22,102 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/site-terms-use
+INFO 2020-06-16 17:18:25,917 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/community-guidelines
+INFO 2020-06-16 17:18:29,695 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/video/what-is
+INFO 2020-06-16 17:18:33,733 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/game-reviews
+INFO 2020-06-16 17:18:40,217 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search?f%5B0%5D=field_reference_review_ent_prod%253Afield_term_tv_networks%3A20297
+INFO 2020-06-16 17:18:46,348 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews
+INFO 2020-06-16 17:18:50,034 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team/our-board#/advisors
+INFO 2020-06-16 17:18:53,626 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/nuestra-mision
+INFO 2020-06-16 17:19:00,619 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reviews/category/tv/genre/reality-tv-20248
+INFO 2020-06-16 17:19:07,043 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/events/conversations
+INFO 2020-06-16 17:19:10,616 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/common-sense-events
+INFO 2020-06-16 17:19:13,995 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/espanol/blog
+INFO 2020-06-16 17:19:17,748 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-lists
+INFO 2020-06-16 17:19:21,964 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/preschoolers
+INFO 2020-06-16 17:19:25,584 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/tweens
+INFO 2020-06-16 17:19:29,223 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/video/espanol
+INFO 2020-06-16 17:19:38,118 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/lists/scary-tv
+INFO 2020-06-16 17:19:45,993 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/how-to-help-kids-sort-fact-from-fiction-about-the-coronavirus
+INFO 2020-06-16 17:19:49,767 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/family-media-agreement
+INFO 2020-06-16 17:19:53,013 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/login?destination=recommendations/watch
+INFO 2020-06-16 17:19:56,491 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/research
+INFO 2020-06-16 17:20:00,187 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:20:00,187 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy depth:3 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:20:00,187 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:01,356 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:01,356 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:01,356 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/music/e-h depth:3 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:20:01,356 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/music/e-h http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:06,432 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:06,433 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:06,433 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/music/i-n depth:3 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 17:20:06,433 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/music/i-n http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:07,461 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:07,461 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:07,461 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/tv/o-u depth:3 guess_total:0 outgoing_queue:6
+INFO 2020-06-16 17:20:07,461 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/tv/o-u http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:08,422 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:08,422 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:08,422 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/website-reviews?page=6 depth:3 guess_total:0 outgoing_queue:5
+INFO 2020-06-16 17:20:08,422 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/website-reviews?page=6 http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:14,838 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:14,839 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:14,839 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/music-lists depth:3 guess_total:0 outgoing_queue:4
+INFO 2020-06-16 17:20:14,839 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/music-lists http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:20,187 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:20,188 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:20,188 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/music/e-h depth:3 guess_total:0 outgoing_queue:3
+INFO 2020-06-16 17:20:20,188 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/music/e-h http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:21,353 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:21,353 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:21,353 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/book/e-h depth:3 guess_total:0 outgoing_queue:2
+INFO 2020-06-16 17:20:21,353 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/book/e-h http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:24,849 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:24,849 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:24,849 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/blog depth:3 guess_total:0 outgoing_queue:1
+INFO 2020-06-16 17:20:24,849 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/blog http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:31,718 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:31,718 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:31,718 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/press-room depth:3 guess_total:0 outgoing_queue:0
+INFO 2020-06-16 17:20:31,718 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/press-room http://www.commonsensemedia.org:80/csm-abuse/report/web-review/470047?destination=node/358529
+INFO 2020-06-16 17:20:32,408 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:20:32,408 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:20:32,408 [reorgpagefinder_test.py <module>:144]: 
+ URL: http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:21:09,608 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/reviews-list/game depth:8 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:21:09,608 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/reviews-list/game http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:21:09,844 [tools.py wayback_index:91]: 
+ Wayback Index: No snapshots
+INFO 2020-06-16 17:21:10,768 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:21:10,769 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/ depth:7 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:21:10,769 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/ http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:21:11,054 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:21:11,054 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:22:01,742 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/reviews-list depth:5 guess_total:1 outgoing_queue:10
+INFO 2020-06-16 17:22:01,742 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/reviews-list http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:01,919 [tools.py wayback_index:91]: 
+ Wayback Index: No snapshots
+INFO 2020-06-16 17:22:02,629 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:22:02,630 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/best-for-character-development-lists depth:3 guess_total:1 outgoing_queue:10
+INFO 2020-06-16 17:22:02,630 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/best-for-character-development-lists http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:08,871 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:22:08,872 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:22:08,872 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/ depth:2 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:22:08,872 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/ http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:09,171 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:22:09,171 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:22:09,172 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-reviews depth:3 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:22:09,172 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-reviews http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:09,971 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:22:09,972 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:22:09,972 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/find-schools depth:7 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:22:09,972 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/find-schools http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:11,027 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:22:11,027 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:22:43,954 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/contact?category=8 depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:22:43,955 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/contact?category=8 http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:53,312 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:22:53,313 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:22:53,313 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reading/is-it-ok-for-kids-to-read-books-outside-their-reading-levels depth:3 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:22:53,313 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reading/is-it-ok-for-kids-to-read-books-outside-their-reading-levels http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:55,110 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:22:55,110 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:22:55,110 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/book-reviews depth:3 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:22:55,110 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/book-reviews http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:55,725 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:22:55,725 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:22:55,725 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy depth:7 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 17:22:55,725 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:22:57,035 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:22:57,035 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:40,395 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/childrens-privacy-policy depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:23:40,396 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/childrens-privacy-policy http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:44,331 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:44,331 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:44,331 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#89f9fbe0ffe8eaf0c9eae6e4e4e6e7faece7faeca7e6fbee depth:3 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:23:44,331 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#89f9fbe0ffe8eaf0c9eae6e4e4e6e7faece7faeca7e6fbee http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:44,670 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:44,670 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:44,670 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#39494b504f585a40795a56545456574a5c574a5c17564b5e depth:3 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:23:44,670 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#39494b504f585a40795a56545456574a5c574a5c17564b5e http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:45,029 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:45,029 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:45,029 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy depth:3 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 17:23:45,030 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:46,269 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:46,269 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:46,269 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#a2c1cdcfd2cecbc3ccc1c7e2c1cdcfcfcdccd1c7ccd1c78ccdd0c5 depth:3 guess_total:0 outgoing_queue:6
+INFO 2020-06-16 17:23:46,269 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#a2c1cdcfd2cecbc3ccc1c7e2c1cdcfcfcdccd1c7ccd1c78ccdd0c5 http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:46,542 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:46,543 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:46,543 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-reviews depth:3 guess_total:0 outgoing_queue:5
+INFO 2020-06-16 17:23:46,543 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-reviews http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:47,340 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:47,340 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:47,340 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-reviews depth:3 guess_total:0 outgoing_queue:4
+INFO 2020-06-16 17:23:47,340 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-reviews http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:48,242 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:48,242 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:48,242 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/donate depth:3 guess_total:0 outgoing_queue:3
+INFO 2020-06-16 17:23:48,242 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/donate http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:53,160 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:53,161 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:53,161 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/movie-lists depth:3 guess_total:0 outgoing_queue:2
+INFO 2020-06-16 17:23:53,161 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/movie-lists http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:54,434 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:54,434 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:54,434 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission depth:3 guess_total:0 outgoing_queue:1
+INFO 2020-06-16 17:23:54,434 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:55,164 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:55,164 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:55,165 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission depth:3 guess_total:0 outgoing_queue:0
+INFO 2020-06-16 17:23:55,165 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission http://www.commonsensemedia.org:80/reviews-list/game/a
+INFO 2020-06-16 17:23:56,414 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:23:56,414 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:23:56,414 [reorgpagefinder_test.py <module>:144]: 
+ URL: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:24:18,187 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report/web-review depth:8 guess_total:3 outgoing_queue:10
+INFO 2020-06-16 17:24:18,188 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report/web-review http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:24:18,864 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:24:18,865 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/ depth:7 guess_total:3 outgoing_queue:10
+INFO 2020-06-16 17:24:18,865 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/ http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:24:19,143 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:24:19,143 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:09,210 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232 depth:8 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:25:09,210 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232 http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:09,454 [tools.py wayback_index:91]: 
+ Wayback Index: No snapshots
+INFO 2020-06-16 17:25:12,552 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:25:12,553 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/best-for-character-development-lists depth:3 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:25:12,553 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/best-for-character-development-lists http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:14,379 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:14,380 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:14,380 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report depth:5 guess_total:1 outgoing_queue:9
+INFO 2020-06-16 17:25:14,380 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:15,459 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:25:15,460 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-reviews depth:3 guess_total:1 outgoing_queue:9
+INFO 2020-06-16 17:25:15,461 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:16,433 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:16,433 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:16,433 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse depth:2 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:25:16,434 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:17,129 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:25:17,130 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/reading/is-it-ok-for-kids-to-read-books-outside-their-reading-levels depth:3 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:25:17,130 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/reading/is-it-ok-for-kids-to-read-books-outside-their-reading-levels http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:18,202 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:18,202 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:18,202 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/book-reviews depth:3 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 17:25:18,203 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/book-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:18,973 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:18,973 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:18,973 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/tv-reviews depth:3 guess_total:0 outgoing_queue:6
+INFO 2020-06-16 17:25:18,973 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/tv-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:20,271 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:20,271 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:20,271 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/donate depth:3 guess_total:0 outgoing_queue:5
+INFO 2020-06-16 17:25:20,271 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/donate http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:21,370 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:21,370 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:21,370 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission depth:3 guess_total:0 outgoing_queue:4
+INFO 2020-06-16 17:25:21,371 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:22,245 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:22,245 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:22,245 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/cookie-policy depth:3 guess_total:0 outgoing_queue:3
+INFO 2020-06-16 17:25:22,245 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/cookie-policy http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:31,647 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:31,648 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:31,648 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/meet-our-team depth:3 guess_total:0 outgoing_queue:2
+INFO 2020-06-16 17:25:31,648 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/meet-our-team http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:40,049 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:40,049 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:40,050 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/game-reviews depth:3 guess_total:0 outgoing_queue:1
+INFO 2020-06-16 17:25:40,050 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/game-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:41,322 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:41,322 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:25:41,322 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy depth:7 guess_total:0 outgoing_queue:0
+INFO 2020-06-16 17:25:41,322 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:25:42,085 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:25:42,085 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:20,378 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/childrens-privacy-policy depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:26:20,379 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/childrens-privacy-policy http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:21,111 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:21,111 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:21,111 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#89f9fbe0ffe8eaf0c9eae6e4e4e6e7faece7faeca7e6fbee depth:3 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:26:21,111 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#89f9fbe0ffe8eaf0c9eae6e4e4e6e7faece7faeca7e6fbee http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:21,213 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:21,214 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:21,214 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/blog/how-to-raise-a-reader depth:3 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:26:21,214 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/blog/how-to-raise-a-reader http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:32,238 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:32,238 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:32,238 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/site-terms-use depth:3 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 17:26:32,238 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/site-terms-use http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:42,475 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:42,476 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:42,476 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#39494b504f585a40795a56545456574a5c574a5c17564b5e depth:3 guess_total:0 outgoing_queue:6
+INFO 2020-06-16 17:26:42,476 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/cdn-cgi/l/email-protection#39494b504f585a40795a56545456574a5c574a5c17564b5e http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:42,548 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:42,549 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:42,549 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/app-reviews depth:3 guess_total:0 outgoing_queue:5
+INFO 2020-06-16 17:26:42,549 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/app-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:50,400 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:50,400 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:50,400 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy#third-party-service-providers depth:3 guess_total:0 outgoing_queue:4
+INFO 2020-06-16 17:26:50,400 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy#third-party-service-providers http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:52,152 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:52,152 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:52,152 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy#social-login depth:3 guess_total:0 outgoing_queue:3
+INFO 2020-06-16 17:26:52,152 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy#social-login http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:53,840 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:53,840 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:53,840 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy/third-party-service-providers depth:3 guess_total:0 outgoing_queue:2
+INFO 2020-06-16 17:26:53,840 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy/third-party-service-providers http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:56,676 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:56,676 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:56,677 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy#privacy-policy depth:3 guess_total:0 outgoing_queue:1
+INFO 2020-06-16 17:26:56,677 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy#privacy-policy http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:57,999 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:58,000 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:58,000 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/contact depth:3 guess_total:0 outgoing_queue:0
+INFO 2020-06-16 17:26:58,000 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/contact http://www.commonsensemedia.org:80/csm-abuse/report/web-review/612232?destination=node/355852
+INFO 2020-06-16 17:26:59,718 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:26:59,719 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:26:59,719 [reorgpagefinder_test.py <module>:144]: 
+ URL: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:27:18,440 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report/web-review depth:8 guess_total:3 outgoing_queue:10
+INFO 2020-06-16 17:27:18,441 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report/web-review http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:27:18,539 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:27:18,540 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/advice-for-parents depth:7 guess_total:3 outgoing_queue:10
+INFO 2020-06-16 17:27:18,540 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/advice-for-parents http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:27:21,741 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:27:21,741 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:28:04,804 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538 depth:8 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:28:04,805 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538 http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:28:05,095 [tools.py wayback_index:91]: 
+ Wayback Index: No snapshots
+INFO 2020-06-16 17:28:09,757 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:28:09,758 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/book/a-d depth:7 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:28:09,758 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/book/a-d http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:28:11,075 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:28:11,075 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:28:37,236 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse/report depth:5 guess_total:1 outgoing_queue:10
+INFO 2020-06-16 17:28:37,236 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse/report http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:28:37,327 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:28:37,328 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/movie/i-n depth:7 guess_total:1 outgoing_queue:10
+INFO 2020-06-16 17:28:37,328 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/movie/i-n http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:28:40,453 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:28:40,454 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:29:07,349 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/csm-abuse depth:2 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:29:07,349 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/csm-abuse http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:29:07,443 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:29:07,444 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:29:07,444 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:29:09,009 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:29:09,009 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:29:55,221 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/movie/o-u depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:29:55,222 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/movie/o-u http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:29:56,560 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:29:56,560 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:30:21,873 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/game/o-u depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:30:21,873 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/game/o-u http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:30:24,630 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:30:24,630 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:30:51,001 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/book-reviews depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:30:51,002 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/book-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:30:52,075 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:30:52,075 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:32:07,800 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/movie/a-d depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:32:07,801 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/movie/a-d http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:32:09,015 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:32:09,015 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:32:32,398 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/music-reviews depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:32:32,398 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/music-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:32:33,629 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:32:33,630 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:33:43,138 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/by-age depth:7 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:33:43,138 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/by-age http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:33:43,840 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:33:43,840 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:34:19,518 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/tv-reviews/Stylista.html#what-parents-need-to-know depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:34:19,518 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/tv-reviews/Stylista.html#what-parents-need-to-know http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:34:24,211 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:34:24,211 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:34:24,211 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/tv/o-u depth:7 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:34:24,212 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/tv/o-u http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:34:25,393 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:34:25,393 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:34:50,235 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/educators/educate-families depth:3 guess_total:0 outgoing_queue:10
+INFO 2020-06-16 17:34:50,235 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/educators/educate-families http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:34:58,745 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:34:58,746 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:34:58,746 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/book-reviews/dreamer depth:3 guess_total:0 outgoing_queue:9
+INFO 2020-06-16 17:34:58,746 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/book-reviews/dreamer http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:01,392 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:01,393 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:01,393 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy depth:3 guess_total:0 outgoing_queue:8
+INFO 2020-06-16 17:35:01,393 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/about-us/our-mission/privacy-policy http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:02,822 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:02,822 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:02,822 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy/third-party-service-providers depth:3 guess_total:0 outgoing_queue:7
+INFO 2020-06-16 17:35:02,823 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy/third-party-service-providers http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:04,419 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:04,419 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:04,419 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/music/i-n depth:3 guess_total:0 outgoing_queue:6
+INFO 2020-06-16 17:35:04,419 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/music/i-n http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:06,060 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:06,060 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:06,060 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/reviews-list/music/e-h depth:3 guess_total:0 outgoing_queue:5
+INFO 2020-06-16 17:35:06,060 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/reviews-list/music/e-h http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:07,198 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:07,198 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:07,198 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/meet-our-team depth:3 guess_total:0 outgoing_queue:4
+INFO 2020-06-16 17:35:07,198 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/meet-our-team http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:08,876 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:08,876 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:08,876 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/educators depth:3 guess_total:0 outgoing_queue:3
+INFO 2020-06-16 17:35:08,876 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/educators http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:09,996 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:09,996 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:09,996 [discoverer.py discover:225]: 
+ Got: https://www.commonsensemedia.org/movie-reviews depth:3 guess_total:0 outgoing_queue:2
+INFO 2020-06-16 17:35:09,996 [discoverer.py discover_backlinks:132]: 
+ Backlinks: https://www.commonsensemedia.org/movie-reviews http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:10,849 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:10,849 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:10,849 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/game-lists depth:3 guess_total:0 outgoing_queue:1
+INFO 2020-06-16 17:35:10,849 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/game-lists http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:19,981 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:19,982 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:19,982 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/press-room depth:3 guess_total:0 outgoing_queue:0
+INFO 2020-06-16 17:35:19,982 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/press-room http://www.commonsensemedia.org:80/csm-abuse/report/web-review/618538?destination=node/357223
+INFO 2020-06-16 17:35:20,163 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:35:20,163 [discoverer.py discover:228]: 
+ loop
+INFO 2020-06-16 17:35:20,164 [reorgpagefinder_test.py <module>:144]: 
+ URL: http://www.commonsensemedia.org:80/book-reviews/season-0/details
+INFO 2020-06-16 17:35:40,614 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org:80/book-reviews/season-0 depth:8 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:35:40,615 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org:80/book-reviews/season-0 http://www.commonsensemedia.org:80/book-reviews/season-0/details
+INFO 2020-06-16 17:35:48,381 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: [('http://web.archive.org/web/20090623073601/http://www.commonsensemedia.org/book-reviews/season-0/details', 'full review', ('Read our', 'by')), ('http://web.archive.org/web/20090623073601/http://www.commonsensemedia.org/book-reviews/season-0/details#is-it-any-good', 'Is it any good?', ('Book summary',)), ('http://web.archive.org/web/20090623073601/http://www.commonsensemedia.org/book-reviews/season-0/details', "Publisher's details", ('Book summary',)), ('http://web.archive.org/web/20090623073601/http://www.commonsensemedia.org/book-reviews/season-0/details#whats-the-story', 'Book summary', ("Publisher's details", 'Is it any good?'))]
+INFO 2020-06-16 17:36:37,670 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/app-lists
+INFO 2020-06-16 17:36:43,438 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/en-las-noticias
+INFO 2020-06-16 17:36:52,137 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/flag/confirm/flag/flag_abuse_node/1307489?destination=node/1255412
+INFO 2020-06-16 17:37:00,989 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/
+INFO 2020-06-16 17:37:08,401 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/best-for-character-development-lists
+INFO 2020-06-16 17:37:17,473 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews/the-season/user-reviews/adult
+INFO 2020-06-16 17:37:27,019 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/for-summer-learning-press-play-on-podcasts
+INFO 2020-06-16 17:37:33,865 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-partners
+INFO 2020-06-16 17:37:40,588 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/seal
+INFO 2020-06-16 17:37:48,340 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/flag/confirm/flag/flag_abuse_node/5303151?destination=node/1255412
+INFO 2020-06-16 17:37:57,367 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reading/is-it-ok-for-kids-to-read-books-outside-their-reading-levels
+INFO 2020-06-16 17:38:05,123 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-youtube
+INFO 2020-06-16 17:38:13,513 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission
+INFO 2020-06-16 17:38:21,457 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/chlointhedark
+INFO 2020-06-16 17:38:30,470 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/website-reviews
+INFO 2020-06-16 17:38:37,341 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/social-media
+INFO 2020-06-16 17:38:44,021 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-parental-controls
+INFO 2020-06-16 17:38:51,060 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-reviews
+INFO 2020-06-16 17:38:57,929 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/kids-action
+INFO 2020-06-16 17:39:06,380 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=/node/add/csm-user-review%3Fnid%3D1255412&source=add-user-review
+INFO 2020-06-16 17:39:14,668 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/privacy-and-internet-safety
+INFO 2020-06-16 17:39:22,214 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/kate-pavao/bio
+INFO 2020-06-16 17:39:31,605 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/what-to-watch-read-and-play-while-your-kids-are-stuck-indoors
+INFO 2020-06-16 17:39:40,286 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews/the-debs
+INFO 2020-06-16 17:39:50,449 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/espanol/blog/libros-sobre-racismo-y-justicia-social
+INFO 2020-06-16 17:39:57,405 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-lists
+INFO 2020-06-16 17:40:03,446 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/how-comics-helped-my-kid-love-reading
+INFO 2020-06-16 17:40:09,549 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-roblox-0
+INFO 2020-06-16 17:40:16,139 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-google-classroom
+INFO 2020-06-16 17:40:23,129 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/teens
+INFO 2020-06-16 17:40:30,241 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/website-lists
+INFO 2020-06-16 17:40:37,101 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/resources-for-families-during-the-coronavirus-pandemic
+INFO 2020-06-16 17:40:43,820 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parenttrapped
+INFO 2020-06-16 17:40:50,551 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org
+INFO 2020-06-16 17:40:57,237 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/how-to-raise-a-reader
+INFO 2020-06-16 17:41:04,217 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/tv-lists
+INFO 2020-06-16 17:41:10,786 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/game-lists
+INFO 2020-06-16 17:41:17,431 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-youtube-kids
+INFO 2020-06-16 17:41:25,581 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search/Sarah%20MacLean
+INFO 2020-06-16 17:41:38,099 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/roselillypotter
+INFO 2020-06-16 17:41:46,741 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/best-for-learning-lists
+INFO 2020-06-16 17:41:54,978 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews/airhead
+INFO 2020-06-16 17:42:04,473 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/nuestras-resenas
+INFO 2020-06-16 17:42:10,497 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/recursos-para-las-familias-durante-la-pandemia-del-coronavirus
+INFO 2020-06-16 17:42:16,699 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-minecraft
+INFO 2020-06-16 17:42:23,317 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino
+INFO 2020-06-16 17:42:29,802 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-snapchat
+INFO 2020-06-16 17:42:36,069 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/search?f%5B0%5D=field_reference_review_ent_prod%253Afield_term_book_type%3A144
+INFO 2020-06-16 17:42:42,188 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-fortnite
+INFO 2020-06-16 17:42:48,900 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/offices
+INFO 2020-06-16 17:42:54,667 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/app-reviews
+INFO 2020-06-16 17:43:01,455 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=kids-action
+INFO 2020-06-16 17:43:09,427 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-zoom
+INFO 2020-06-16 17:43:18,198 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews/the-season?width=660&height=420&inline=true#mobile-fixed-social-icons
+INFO 2020-06-16 17:43:26,825 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-messenger-kids
+INFO 2020-06-16 17:43:33,505 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/help-your-family-de-stress-during-coronavirus-uncertainty
+INFO 2020-06-16 17:43:40,322 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parents-ultimate-guides
+INFO 2020-06-16 17:43:46,992 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/parent-concerns
+INFO 2020-06-16 17:43:57,640 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/register?destination=node/1255412
+INFO 2020-06-16 17:44:06,456 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/educacion
+INFO 2020-06-16 17:44:12,523 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/guide/special-needs
+INFO 2020-06-16 17:44:18,371 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/supporters/latino-partners
+INFO 2020-06-16 17:44:24,296 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/privacy-policy
+INFO 2020-06-16 17:44:30,272 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team/our-board
+INFO 2020-06-16 17:44:37,756 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/learning-with-technology
+INFO 2020-06-16 17:44:43,788 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog
+INFO 2020-06-16 17:44:49,960 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/latino
+INFO 2020-06-16 17:44:58,566 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/users/sangel-7
+INFO 2020-06-16 17:45:07,302 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/affiliate-links
+INFO 2020-06-16 17:45:13,237 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/jobs
+INFO 2020-06-16 17:45:19,443 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/little-kids
+INFO 2020-06-16 17:45:26,064 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/newsletters
+INFO 2020-06-16 17:45:33,313 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/violence-in-the-media
+INFO 2020-06-16 17:45:39,462 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/cellphone-parenting
+INFO 2020-06-16 17:45:45,860 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/about-our-ratings
+INFO 2020-06-16 17:45:51,850 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews
+INFO 2020-06-16 17:45:58,603 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/big-kids
+INFO 2020-06-16 17:46:05,052 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/donate
+INFO 2020-06-16 17:46:11,400 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/youtube-reviews
+INFO 2020-06-16 17:46:18,172 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/parents-ultimate-guide-to-tiktok
+INFO 2020-06-16 17:46:25,409 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/plus
+INFO 2020-06-16 17:46:32,646 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team
+INFO 2020-06-16 17:46:40,018 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/flag/confirm/flag/flag_abuse_node/5443041?destination=node/1255412
+INFO 2020-06-16 17:46:48,548 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/common-sense-annual-report
+INFO 2020-06-16 17:46:54,714 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews/the-season
+INFO 2020-06-16 17:47:02,061 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/news/press-releases
+INFO 2020-06-16 17:47:08,252 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/screen-time
+INFO 2020-06-16 17:47:25,413 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/book-reviews/the-season/user-reviews/child
+INFO 2020-06-16 17:47:35,191 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/site-terms-use
+INFO 2020-06-16 17:47:42,378 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/login?destination=node/1255412
+INFO 2020-06-16 17:47:50,599 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/about-us/our-mission/community-guidelines
+INFO 2020-06-16 17:47:56,527 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/video/what-is
+INFO 2020-06-16 17:48:03,244 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/game-reviews
+INFO 2020-06-16 17:48:09,632 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-reviews
+INFO 2020-06-16 17:48:15,978 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/meet-our-team/our-board#/advisors
+INFO 2020-06-16 17:48:21,957 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/latino/nuestra-mision
+INFO 2020-06-16 17:48:27,825 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/events/conversations
+INFO 2020-06-16 17:48:33,946 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/common-sense-events
+INFO 2020-06-16 17:48:39,867 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/espanol/blog
+INFO 2020-06-16 17:48:45,880 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/movie-lists
+INFO 2020-06-16 17:48:51,972 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/preschoolers
+INFO 2020-06-16 17:48:57,829 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/tweens
+INFO 2020-06-16 17:49:05,835 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/video/espanol
+INFO 2020-06-16 17:49:12,058 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/blog/how-to-help-kids-sort-fact-from-fiction-about-the-coronavirus
+INFO 2020-06-16 17:49:18,532 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/reviews/category/book/genre/coming-of-age-188
+INFO 2020-06-16 17:49:25,176 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/family-media-agreement
+INFO 2020-06-16 17:49:31,096 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/user/login?destination=recommendations/watch
+INFO 2020-06-16 17:49:37,246 [discoverer.py link_same_page:88]: 
+ Test if outgoing link same: https://www.commonsensemedia.org/research
+INFO 2020-06-16 17:49:43,502 [discoverer.py discover:228]: 
+ notfound
+INFO 2020-06-16 17:49:43,503 [discoverer.py discover:225]: 
+ Got: http://www.commonsensemedia.org/book-reviews/genre/coming-of-age depth:7 guess_total:2 outgoing_queue:10
+INFO 2020-06-16 17:49:43,503 [discoverer.py discover_backlinks:132]: 
+ Backlinks: http://www.commonsensemedia.org/book-reviews/genre/coming-of-age http://www.commonsensemedia.org:80/book-reviews/season-0/details
+INFO 2020-06-16 17:49:54,208 [discoverer.py discover_backlinks:153]: 
+ Wayback linked: []
+INFO 2020-06-16 17:49:54,208 [discoverer.py discover:228]: 
+ loop
