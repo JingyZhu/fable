@@ -131,7 +131,7 @@ class Discoverer:
         broken, reason = sic_transit.broken(src)
         if wayback_src is None: # No archive in wayback for guessed_url
             if broken:
-                return "not found", None
+                return "notfound", None
             src_html, src = self.memo.crawl(src, final_url=True)
             top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)
             if top_similar is not None: 

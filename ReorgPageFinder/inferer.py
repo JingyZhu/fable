@@ -39,6 +39,7 @@ class Inferer:
         sheets = []
         sheet1_csv = defaultdict(list)
         sheet2_csv = defaultdict(list)
+        sheet3_csv = defaultdict(list)
         for ex_input, reorg_url in examples:
             url, meta = ex_input
             us = urlsplit(url)
@@ -48,6 +49,7 @@ class Inferer:
             if us.query: url_inputs.append(us.query)
             for i, url_piece in enumerate(url_inputs):
                 sheet1_csv[f'URL{i}'].append(url_piece)
+                sheet3_csv[f'URL{i}'].append(url_piece)
             if isinstance(meta, tuple):
                 for i, meta_piece in enumerate(meta):
                     sheet1_csv[f'Meta{i}'].append(normal(meta_piece))
@@ -57,6 +59,7 @@ class Inferer:
                 sheet2_csv[f'Meta0'].append(normal(meta))
             sheet1_csv['Output'].append(reorg_url)
             sheet2_csv['Output'].append(reorg_url)
+            sheet3_csv['Output'].append(reorg_url)
         urls_idx = {}
         for i, (url, meta) in enumerate(urls):
             us = urlsplit(url)
@@ -68,6 +71,7 @@ class Inferer:
             if us.query: url_inputs.append(us.query)
             for i, url_piece in enumerate(url_inputs):
                 sheet1_csv[f'URL{i}'].append(url_piece)
+                sheet3_csv[f'URL{i}'].append(url_piece)
             if isinstance(meta, tuple):
                 for i, meta_piece in enumerate(meta):
                     sheet1_csv[f'Meta{i}'].append(normal(meta_piece))
@@ -77,16 +81,12 @@ class Inferer:
                 sheet2_csv[f'Meta0'].append(normal(meta))
             sheet1_csv['Output'].append('')
             sheet2_csv['Output'].append('')
-        sheet1 = {
-            'sheet_name': 'sheet1',
-            'csv': sheet1_csv
-        }
-        sheet2 = {
-            'sheet_name': 'sheet2',
-            'csv': sheet2_csv
-        }
-        sheets.append(pickle.dumps(sheet1))
-        sheets.append(pickle.dumps(sheet2))
+            sheet3_csv['Output'].append('')
+        sheets = [sheet1_csv, sheet2_csv, sheet3_csv]
+        sheets = [pickle.dumps({
+            'sheet_name': f'sheet{i+1}',
+            'csv': sheet
+        }) for i, sheet in enumerate(sheets)]
         count = 0
         while count < 3:
             try:
@@ -99,10 +99,34 @@ class Inferer:
                 continue
         outputs = [pickle.loads(o.data) for o in outputs]
         outputs = [pd.DataFrame(o['csv']) for o in outputs]
-        poss_infer = defaultdict(list)
+        poss_infer = defaultdict(set)
         for output in outputs:
             for url, _ in urls:
                 idx = urls_idx[url]
                 reorg_url = output.iloc[idx]['Output']
-                poss_infer[url].append(reorg_url)
-        return poss_infer
+                poss_infer[url].add(reorg_url)
+        return {k: list(v) for k, v in poss_infer.items()}
+    
+    def if_reorg(self, url, reorg_urls):
+        """
+        reorg_urls: all urls infered by inferer
+        """
+        reorg_content = {}
+        reorg_title = {}
+        for reorg_url in reorg_urls:
+            reorg_html = self.memo.crawl(reorg_url)
+            if reorg_html is None:
+                continue
+            reorg_content[reorg_url] = self.memo.extract_content(reorg_html)
+            reorg_title[reorg_url] = self.memo.extract_title(reorg_html)
+        if len(reorg_content) + len(reorg_title) == 0:
+            return None, "reorg pages not exists"
+        wayback_url = self.memo.wayback_index(url)
+        html = self.memo.crawl(wayback_url)
+        content = self.memo.extract_content(html)
+        title = self.memo.extract_title(html)
+        similars = self.similar.similar(url, title, content, reorg_title, reorg_content)
+        if len(similars) > 0:
+            return similars[0]
+        else:
+            return None, "no similar pages"

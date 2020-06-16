@@ -51,16 +51,18 @@ class Searcher:
         def search_once(search_results):
             """Incremental Search"""
             nonlocal url, title, content, html, searched
+            he = url_utils.HostExtractor()
             searched_contents = {}
             searched_titles = {}
             search_cand = [s for s in search_results if s not in searched]
             print(search_cand)
             searched.update(search_results)
-            for url in search_cand:
+            for searched_url in search_cand:
                 searched_html = self.memo.crawl(url, proxies=self.PS.select())
                 if searched_html is None: continue
-                searched_contents[url] = self.memo.extract_content(searched_html)
-                searched_titles[url] = self.memo.extract_title(searched_html)
+                searched_contents[searched_url] = self.memo.extract_content(searched_html)
+                if he.extract(url) == he.extract(searched_url):
+                    searched_titles[searched_url] = self.memo.extract_title(searched_html)
         
             # TODO: May move all comparison techniques to similar class
             similars = self.similar.similar(url, title, content, searched_titles, searched_contents)
@@ -112,5 +114,4 @@ class Searcher:
                 similar = search_once(search_results)
                 if similar is not None: 
                     return similar
-
         return

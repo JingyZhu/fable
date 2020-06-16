@@ -172,6 +172,7 @@ class Similar:
         else:
             self.tfidf = text_utils.TFidfStatic(corpus)
             self.db = db # TODO: For testing only
+        self.site = None
     
     def match_url_sig(self, wayback_sig, liveweb_sigs):
         """
@@ -222,6 +223,8 @@ class Similar:
     
     def _init_titles(self, site, version='domdistiller'):
         update_sites(self.db.crawl)
+        if site == self.site:
+            return
         self.site = site
         self.lw_titles = defaultdict(set)
         self.wb_titles = defaultdict(set)

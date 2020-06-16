@@ -1,23 +1,26 @@
-from ReorgPageFinder import discoverer, searcher, tools
+from ReorgPageFinder import discoverer, searcher, inferer, tools
 import pymongo
 from pymongo import MongoClient
+from urllib.parse import urlsplit
+import os
+from collections import defaultdict
 
 import config
-from utils import text_utils
+from utils import text_utils, url_utils
 
 db_broken = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+he = url_utils.HostExtractor()
 
 sites = ['commonsensemedia.org', # Guess + similar link
-        'filecart.com',  # Loop + similar link
+        # 'filecart.com',  # Loop + similar link
         # 'imageworksllc.com',  
         # 'mobilemarketingmagazine.com',  # Search + Content
-        'onlinepolicy.org',  # Guess + Content
-        'planetc1.com', # Search
-        'smartsheet.com'
+        # 'onlinepolicy.org',  # Guess + Content
+        # 'planetc1.com', # Search
+        # 'smartsheet.com'
 ]
 
-urls = []
 # for site in sites:
 #     site_urls = db_broken.url_status_implicit_broken.find({'hostname': site, "$or": [{"broken": True}, {"sic_broken": True}]})
 #     urls += list(site_urls)
@@ -25,8 +28,8 @@ urls = []
 # urls = [(u['url'], u['hostname']) for u in urls]
 # print(len(urls))
 
-# memo = tools.Memoizer()
-# similar = tools.Similar()
+memo = tools.Memoizer()
+similar = tools.Similar()
 
 # se = searcher.Searcher(memo=memo, similar=similar)
 # for i, (url, hostname) in enumerate(urls):
@@ -59,10 +62,81 @@ urls = []
 #             })
 #         except: pass
 
-for site in sites:
-    site_urls = db.reorg.find({'reorg_url': {'$exists': False}, 'hostname': site})
-    urls += list(site_urls)
-urls = [(u['url'], u['hostname']) for u in urls]
-print(len(urls))
+def get_dirr(url):
+    us = urlsplit(url)
+    return (us.netloc, os.path.dirname(us.path))
 
-# dis = discoverer.Discoverer(memo=memo, similar=similar)
+def same_dir(url1, url2):
+    return get_dirr(url1) == get_dirr(url2)
+
+
+dis = discoverer.Discoverer(memo=memo, similar=similar)
+ifr = inferer.Inferer(memo=memo, similar=similar)
+
+def query_inferer(examples, site):
+    """
+    examples: (list) passed by referece
+
+    Return urls that successfully infered. For callers' saving work
+    """
+    global ifr, db, memo
+    if len(examples) <= 0:
+        return []
+    broken_urls = db.reorg.find({'hostname': site, 'reorg_url': {'$exists': False}})
+    infer_urls = []
+    for infer_url in list(broken_urls):
+        if not same_dirr(infer_url['url'], examples[0][0][0]):
+            continue
+        if 'title' not in infer_url:
+            wayback_infer_url = memo.wayback_index(infer_url)
+            wayback_infer_html = memo.crawl(wayback_infer_url)
+            title = memo.extract_title(wayback_infer_html)
+            db.reorg.update_one({'_id': infer_url['_id']}, {'$set': {'title': title}})
+        else: title = infer_url['title'] 
+        infer_urls.append((infer_url['url'], (title)))
+    infered_dict = ifr.infer(examples, infer_urls, site=site)
+    infer_urls = {iu[0]: iu for iu in infer_urls}
+    success = []
+    for infer_url, cand in infered_dict.items():
+        reorg_url, reason = ifr.if_reorg(infer_url, cand)
+        if reorg_url is not None:
+            db.reorg.update_one({'url': infer_url}, {'$set': {'reorg_url': reorg_url, 'by': 'infer'}})
+            examples.append((iu, reorg_url))
+            success.append(infer_url)
+    return success
+
+
+
+for site in sites:
+    reorg_urls = db.reorg.find({'hostname': site, 'reorg_url': {'$exists': True}})
+    reorg_urls = list(reorg_urls)
+    reorg_dirs = defaultdict(list)
+    for reorg_url in reorg_urls:
+        dirr = get_dirr(reorg_url['url'])
+        reorg_dirs[dirr].append((reorg_url['url'], (reorg_url['title']), reorg_url['reorg_url']))
+    similar._init_titles(site=site)
+    broken_urls = db.reorg.find({'hostname': site, 'reorg_url': {'$exists': False}})
+    print(f'SITE: {site}\n#URLS: {len(broken_urls)}')
+    broken_urls = set(broken_urls)
+    for reorg_dirr, examples in reorg_dirs:
+        success = query_inferer(examples, site)
+        while len(success) > 0:
+            print('Success', success)
+            for s in success: broken_urls.discard(s)
+            success = query_inferer(examples, site)
+
+    while len(broken_urls) > 0:
+        url = broken_urls.pop()
+        print('URL:', url)
+        reorg_url = dis.discover(url)
+        if reorg_url is not None:
+            print('Found reorg:', reorg_url)
+            db.reorg.update_one({'url': url}, {'$set': {'reorg_url': reorg_url, 'by': 'discover'}})
+            dirr = get_dirr(url)
+            examples = reorg_dirs[dirr]
+            success = query_inferer(examples, site)
+            while len(success) > 0:
+                print('Success', success)
+                for s in success: broken_urls.discard(s)
+                success = query_inferer(examples, site)
+            
