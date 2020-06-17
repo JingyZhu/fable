@@ -194,10 +194,14 @@ class Discoverer:
         # TODO: 1. similar implementation
         """
         if depth is None: depth = self.depth
-        wayback_url = self.memo.wayback_index(url)
-        html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
-        content = self.memo.extract_content(html, version='domdistiller')
-        title = self.memo.extract_title(html, version='domdistiller')
+        try:
+            wayback_url = self.memo.wayback_index(url)
+            html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
+            content = self.memo.extract_content(html, version='domdistiller')
+            title = self.memo.extract_title(html, version='domdistiller')
+        except Exception as e:
+            logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+            return
         repr_text = content if content != '' else title
         guessed_urls = self.guess_backlinks(url)
         guess_queue = [(g, depth - GUESS) for g in guessed_urls]

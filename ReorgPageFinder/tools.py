@@ -58,7 +58,7 @@ class Memoizer:
                 return brotli.decompress(html['html']).decode(), html['final_url']
         html = crawl.requests_crawl(url, final_url=final_url, **kwargs)
         fu = None
-        if final_url:
+        if final_url and html is not None:
             html, fu = html
         try:
             obj = {
@@ -86,22 +86,9 @@ class Memoizer:
             "filter": ['statuscode:200', 'mimetype:text/html'],
             "collapse": "timestamp:8"
         }
-        cps, _ = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
+        cps, status = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
         if len(cps) == 0: # No snapshots
-            logger.info("Wayback Index: No snapshots")
-            try:
-                self.db.wayback_index.insert_one({
-                    "_id": url,
-                    'url': url,
-                    'ts': []
-                })
-                self.db.wayback_rep.insert_one({
-                    "_id": url,
-                    "url": url,
-                    "ts": None,
-                    "wayback_url": None
-                })
-            except: pass
+            logger.info(f"Wayback Index: No snapshots {status}")
             return
         cps.sort(key=lambda x: x[0])
         try:
@@ -150,6 +137,8 @@ class Memoizer:
         return content
     
     def extract_title(self, html, **kwargs):
+        if html is None:
+            return ''
         html_bin = brotli.compress(html.encode())
         title = self.db.crawl.find_one({'html': html_bin, 'title': {"$exists": True}})
         if title:

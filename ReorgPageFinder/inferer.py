@@ -96,7 +96,7 @@ class Inferer:
                 outputs = self.proxy.handle(sheets, site)
                 break
             except Exception as e:
-                logger.warn(f'infer: exception on RPC {str(e)}')
+                logger.error(f'infer: exception on RPC {str(e)}')
                 count += 1
                 time.sleep(2)
                 continue
@@ -127,6 +127,7 @@ class Inferer:
             return None, "reorg pages not exists"
         wayback_url = self.memo.wayback_index(url)
         html = self.memo.crawl(wayback_url)
+        if html is None: return None, "url fail to load on wayback"
         content = self.memo.extract_content(html)
         title = self.memo.extract_title(html)
         similars = self.similar.similar(url, title, content, reorg_title, reorg_content)

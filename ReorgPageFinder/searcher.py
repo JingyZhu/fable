@@ -38,6 +38,7 @@ class Searcher:
         site = he.extract(url, wayback=wayback)
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
+        if final_url is None: return
         site = he.extract(final_url)
         if not wayback:
             url = self.memo.wayback_index(url)

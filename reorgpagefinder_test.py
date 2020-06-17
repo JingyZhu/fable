@@ -30,7 +30,7 @@ sites = [
         # 'filecart.com',  # Loop + similar link
         # 'imageworksllc.com',  
         # 'onlinepolicy.org',  # Guess + Content
-        'mobilemarketingmagazine.com',  # Search + Content
+        # 'mobilemarketingmagazine.com',  # Search + Content
         'planetc1.com', # Search
         'smartsheet.com'
 ]
@@ -79,6 +79,8 @@ similar = tools.Similar()
 
 def get_dirr(url):
     us = urlsplit(url)
+    if us.path[-1] == '/' and us.path != '/':
+        us = us._replace(path=us.path[:-1])
     return (us.netloc, os.path.dirname(us.path))
 
 def same_dirr(url1, url2):
@@ -98,20 +100,26 @@ def query_inferer(examples, site):
     if len(examples) <= 0:
         return []
     broken_urls = db.reorg.find({'hostname': site, 'reorg_url': {'$exists': False}})
+    db.reorg.update_many({'hostname': site, "title": ""}, {"$unset": {"title": ""}})
     infer_urls = []
     for infer_url in list(broken_urls):
         if not same_dirr(infer_url['url'], examples[0][0][0]):
             continue
         if 'title' not in infer_url:
-            wayback_infer_url = memo.wayback_index(infer_url['url'])
-            wayback_infer_html = memo.crawl(wayback_infer_url)
-            title = memo.extract_title(wayback_infer_html)
-            db.reorg.update_one({'_id': infer_url['_id']}, {'$set': {'title': title}})
+            try:
+                wayback_infer_url = memo.wayback_index(infer_url['url'])
+                wayback_infer_html = memo.crawl(wayback_infer_url)
+                title = memo.extract_title(wayback_infer_html)
+                db.reorg.update_one({'_id': infer_url['_id']}, {'$set': {'title': title}})
+            except Exception as e:
+                logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+                return []
         else: title = infer_url['title'] 
         infer_urls.append((infer_url['url'], (title)))
     if len(infer_urls) <=0:
         return []
     infered_dict = ifr.infer(examples, infer_urls, site=site + str(time.time()))
+    # logger.info(f'example: {examples}')
     logger.info(f'infered_dict: {infered_dict}')
     infer_urls = {iu[0]: iu for iu in infer_urls}
     success = []
