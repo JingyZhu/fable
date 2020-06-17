@@ -271,7 +271,7 @@ class Similar:
             self.wb_titles[title].add(wb_url)
         logger.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])}')
 
-    def title_similar(self, target_url, target_title, candidates_titles):
+    def title_similar(self, target_url, target_title, candidates_titles, fixed=True):
         """
         See whether there is UNIQUE title from candidates that is similar target
         candidates: {url: title}, with url in the same host!
@@ -279,7 +279,7 @@ class Similar:
         Return a list with all candidate higher than threshold
         """
         he = url_utils.HostExtractor()
-        site = he.extract(list(candidates_titles.keys())[0])
+        site = he.extract(target_url)
         if site != self.site:
             self._init_titles(site)
         if target_title in self.wb_titles:
@@ -291,6 +291,14 @@ class Similar:
         self.tfidf.add_corpus([target_title] + list(candidates_titles.values()))
         simi_cand = []
         for url, c in candidates_titles.items():
+            site = he.extract(url)
+            if site != self.site and not fixed:
+                self._init_titles(site)
+            if c in self.lw_titles:
+                if len(self.lw_titles[c]) > 1:
+                    continue
+                elif url not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
+                    continue
             simi = self.tfidf.similar(target_title, c)
             if simi >= self.threshold:
                 simi_cand.append((url, simi))
@@ -301,12 +309,13 @@ class Similar:
         self.lw_titles = None
         self.wb_titles = None
     
-    def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, cand_htmls=None):
+    def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, cand_htmls=None, fixed=True):
         """
         All text-based similar tech is included
+        Fixed: Whether title similarity is allowed across different sites
         """
         if self.site is not None:
-            similars = self.title_similar(tg_url, tg_title, cand_titles)
+            similars = self.title_similar(tg_url, tg_title, cand_titles, fixed=fixed)
             if len(similars) > 0:
                 return similars
         similars = self.content_similar(tg_content, cand_contents, cand_htmls)

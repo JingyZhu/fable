@@ -25,11 +25,12 @@ db_broken = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, passw
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 he = url_utils.HostExtractor()
 
-sites = ['commonsensemedia.org', # Guess + similar link
+sites = [
+        # 'commonsensemedia.org', # Guess + similar link
         'filecart.com',  # Loop + similar link
         # 'imageworksllc.com',  
-        # 'mobilemarketingmagazine.com',  # Search + Content
         'onlinepolicy.org',  # Guess + Content
+        'mobilemarketingmagazine.com',  # Search + Content
         # 'planetc1.com', # Search
         # 'smartsheet.com'
 ]
@@ -114,6 +115,7 @@ def query_inferer(examples, site):
     infer_urls = {iu[0]: iu for iu in infer_urls}
     success = []
     for infer_url, cand in infered_dict.items():
+        # logger.info(f'Infer url: {infer_url} {cand}')
         reorg_url, reason = ifr.if_reorg(infer_url, cand)
         if reorg_url is not None:
             db.reorg.update_one({'url': infer_url}, {'$set': {'reorg_url': reorg_url, 'by': 'infer'}})

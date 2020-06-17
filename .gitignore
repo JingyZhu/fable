@@ -23,3 +23,6 @@ search/schedule.py
 backlinks.csv
 sample.csv
 alexa_top1k.txt
+
+jupyter.log
+ReorgPageFinder.log

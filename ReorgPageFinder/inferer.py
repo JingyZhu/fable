@@ -107,6 +107,7 @@ class Inferer:
             for url, _ in urls:
                 idx = urls_idx[url]
                 reorg_url = output.iloc[idx]['Output']
+                if not isinstance(reorg_url, str): continue
                 poss_infer[url].add(reorg_url)
         return {k: list(v) for k, v in poss_infer.items()}
     

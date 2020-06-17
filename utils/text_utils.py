@@ -493,7 +493,7 @@ def extract_title(html, version='mine'):
         "domdistiller": domdistiller_title_extract
     }
     title = func_dict[version](html, lang=lang)
-    if "Wayback Machine" in title: return ""
+    if title is None or "Wayback Machine" in title: return ""
     return title
 
 

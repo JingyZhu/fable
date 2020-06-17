@@ -19,22 +19,23 @@ class FlashFillHandler:
         outputs = self.xlsx_csv(xlsx_path)
         return [pickle.dumps(o) for o in outputs] 
     
-    def fill(self, xlsx_path, output_cols,visible=False):
+    def fill(self, xlsx_path, output_cols, visible=False):
         """
         xlsx can have multiple sheet for higher throughput
-        output_col: list, len=length of sheet. The #col for flashfill to be run
+        output_col: list(list), len=length of sheet. The #col for flashfill to be run
         """
         app = xw.App(visible=False)
         wb = app.books.open(xlsx_path)
-        for col, ws in zip(output_cols, wb.sheets): 
-            assert(col < 26)
-            idx = string.ascii_uppercase[col-1]
-            try:
-                r = ws.range(f'{idx}1')
-                r.api.flashfill()
-                wb.save()
-            except Exception as e:
-                print(str(e))
+        for cols, ws in zip(output_cols, wb.sheets): 
+            assert(cols[-1] < 26)
+            for col in cols:
+                idx = string.ascii_uppercase[col]
+                try:
+                    r = ws.range(f'{idx}1')
+                    r.api.flashfill()
+                    wb.save()
+                except Exception as e:
+                    print('Flashfill:', str(e))
         app.kill()
 
     def csv_xlsx(self, csvs, sheet_names, identifier, output_name='Output'):
@@ -51,10 +52,12 @@ class FlashFillHandler:
         for name, df in zip(sheet_names, csvs):
             cols = df.columns.tolist()
             assert(output_name in cols)
-            cols = [c for c in cols if c != output_name] + [output_name]
+            input_col = [c for c in cols if output_name not in c]
+            output_col = [c for c in cols if output_name in c]
+            cols = input_col + output_col
             self.headers[name] = cols
             df = df[cols]
-            output_cols.append(len(cols))
+            output_cols.append(list(range(len(input_col), len(cols))))
             df.to_excel(writer, sheet_name=name, index=False, header=False)
         writer.save()
         return f"output\\{identifier}.xlsx", output_cols

@@ -64,11 +64,12 @@ class Discoverer:
             guessed_urls.append(urlunsplit(us_tmp))
         return guessed_urls
 
-    def link_same_page(self, dst, title, content, backlinked_url, backlinked_html):
+    def link_same_page(self, dst, title, content, backlinked_url, backlinked_html, cut=CUT):
         """
         See whether backedlinked_html contains links to the same page as html
         content: content file of the original url want to find copy
         backlinked_html: html which could be linking to the html
+        cut: Max number of outlinks to test on. If set to <=0, there is no limit
 
         Returns: (link, link's html) which is a copy of html if exists. None otherwise
         """
@@ -82,19 +83,21 @@ class Discoverer:
         he = url_utils.HostExtractor()
         outgoing_sigs = crawl.outgoing_links_sig(backlinked_url, backlinked_html, wayback=False)
         outgoing_sigs = [osig for osig in outgoing_sigs if he.extract(osig[0]) == he.extract(dst)]
-        if len(outgoing_sigs) > CUT:
+        if cut <= 0:
+            cut = len(outgoing_sigs)
+        if len(outgoing_sigs) > cut:
             repr_text = content if content != '' else title
             self.similar.tfidf._clear_workingset()
             scoreboard = defaultdict(lambda: (0, 0))
             c = [s[1] for s in outgoing_sigs] + [' '.join(s[2]) for s in outgoing_sigs] + [repr_text]
             self.similar.tfidf.add_corpus(c)
-            for outgoing_link, anchor, sig in outgoing_sigs:
+            for outlink, anchor, sig in outgoing_sigs:
                 simis = (self.similar.tfidf.similar(anchor, repr_text), self.similar.tfidf.similar(' '.join(sig), repr_text))
                 scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
             scoreboard = sorted(scoreboard.items(), lambda x: wsum_simi(x[1]), reverse=True)
-            outlinks = [sb[0] for sb in scoreboard[:CUT]]
+            outgoing_links = [sb[0] for sb in scoreboard[:cut]]
         else:
-            outlinks = [osig[0] for osig in outgoing_sigs]
+            outgoing_links = [osig[0] for osig in outgoing_sigs]
 
         # outgoing_contents = {}
         for outgoing_link in outgoing_links:
