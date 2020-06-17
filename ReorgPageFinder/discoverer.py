@@ -94,7 +94,7 @@ class Discoverer:
             for outlink, anchor, sig in outgoing_sigs:
                 simis = (self.similar.tfidf.similar(anchor, repr_text), self.similar.tfidf.similar(' '.join(sig), repr_text))
                 scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
-            scoreboard = sorted(scoreboard.items(), lambda x: wsum_simi(x[1]), reverse=True)
+            scoreboard = sorted(scoreboard.items(), key=lambda x: wsum_simi(x[1]), reverse=True)
             outgoing_links = [sb[0] for sb in scoreboard[:cut]]
         else:
             outgoing_links = [osig[0] for osig in outgoing_sigs]

@@ -154,7 +154,10 @@ class Memoizer:
         title = self.db.crawl.find_one({'html': html_bin, 'title': {"$exists": True}})
         if title:
             return title['title']
+        # Require to be extracted next time
         title = text_utils.extract_title(html, **kwargs)
+        if title == "":
+            return title
         try:
             self.db.crawl.update_one({'html': html_bin}, {"$set": {'title': title}})
         except Exception as e: logger.warn(f'extract title: {str(e)}')
@@ -167,6 +170,7 @@ class Similar:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
         self.threshold = 0.8
+        self.short_threshold = self.threshold - 0.1
         if use_db:
             self.db =  db
             corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
@@ -195,7 +199,7 @@ class Similar:
             link, anchor, sig = lws
             if anchor_count[(link, anchor)] < 2: # UNIQUE anchor
                 simi = self.tfidf.similar(wayback_sig[1], anchor)
-                if simi >= self.threshold:
+                if simi >= self.short_threshold:
                     return lws
             else:
                 if wayback_sig[1] != anchor:
@@ -204,7 +208,7 @@ class Similar:
                 for ws in wayback_sig[2]:
                     for ls in sig:
                         simi = max(simi, self.tfidf.simiar(ws, ls))
-                if simi >= self.threshold:
+                if simi >= self.short_threshold:
                     return lws
         return None
     
@@ -300,7 +304,7 @@ class Similar:
                 elif url not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
                     continue
             simi = self.tfidf.similar(target_title, c)
-            if simi >= self.threshold:
+            if simi >= (self.short_threshold + self.threshold) / 2:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     

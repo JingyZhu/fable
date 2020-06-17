@@ -487,14 +487,23 @@ def extract_title(html, version='mine'):
     """
     lang = lang_meta(html)
     if html == '': return ''
+    backup_versions = ['domdistiller', 'newspaper']
+    backup_versions = [v for v in backup_versions if v != version]
     func_dict = {
         "newspaper": newspaper_title_extract,
         "mine": mine_title_extract,
         "domdistiller": domdistiller_title_extract
     }
     title = func_dict[version](html, lang=lang)
-    if title is None or "Wayback Machine" in title: return ""
-    return title
+    try:
+        for v in [version] + backup_versions:
+            title = func_dict[v](html, lang=lang)
+            if title is not None: return title if "Wayback Machine" not in title else ""
+            else:
+                continue
+    except Exception as e:
+        print("extract body:", str(e))
+    return ""
 
 
 def k_shingling(text1, text2, k=5):

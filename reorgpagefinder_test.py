@@ -27,12 +27,12 @@ he = url_utils.HostExtractor()
 
 sites = [
         # 'commonsensemedia.org', # Guess + similar link
-        'filecart.com',  # Loop + similar link
+        # 'filecart.com',  # Loop + similar link
         # 'imageworksllc.com',  
-        'onlinepolicy.org',  # Guess + Content
+        # 'onlinepolicy.org',  # Guess + Content
         'mobilemarketingmagazine.com',  # Search + Content
-        # 'planetc1.com', # Search
-        # 'smartsheet.com'
+        'planetc1.com', # Search
+        'smartsheet.com'
 ]
 
 # for site in sites:
@@ -112,6 +112,7 @@ def query_inferer(examples, site):
     if len(infer_urls) <=0:
         return []
     infered_dict = ifr.infer(examples, infer_urls, site=site + str(time.time()))
+    logger.info(f'infered_dict: {infered_dict}')
     infer_urls = {iu[0]: iu for iu in infer_urls}
     success = []
     for infer_url, cand in infered_dict.items():
@@ -137,7 +138,7 @@ for site in sites:
     for reorg_dirr, examples in reorg_dirs.items():
         success = query_inferer(examples, site)
         while len(success) > 0:
-            print('Success', success)
+            logger.info(f'Success {success}')
             for s in success: broken_urls.discard(s)
             success = query_inferer(examples, site)
 
@@ -147,8 +148,12 @@ for site in sites:
         reorg_url = dis.discover(url)
         if reorg_url is not None:
             logger.info(f'Found reorg: {reorg_url}')
-            db.reorg.update_one({'url': url}, {'$set': {'reorg_url': reorg_url, 'by': 'discover'}})
+            wayback_url = memo.wayback_index(url)
+            html = memo.crawl(wayback_url)
+            title = memo.extract_title(html, version='domdistiller')
+            db.reorg.update_one({'url': url}, {'$set': {'reorg_url': reorg_url, 'by': 'discover', 'title': title}})
             dirr = get_dirr(url)
+            reorg_dirs[dirr].append(((url, (title)), reorg_url))
             examples = reorg_dirs[dirr]
             success = query_inferer(examples, site)
             while len(success) > 0:
