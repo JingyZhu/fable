@@ -39,6 +39,20 @@ class Inferer:
                 if ch in li: rs += ch
                 else: rs += ' '
             return rs
+        max_url = 0
+        # Aligh URL to same length
+        for ex_input, _ in examples:
+            url, _ = ex_input
+            us = urlsplit(url)
+            path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
+            if us.query: path_len += 1
+            max_url = max(path_len, max_url)
+        for url, _ in urls:
+            us = urlsplit(url)
+            path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
+            if us.query: path_len += 1
+            max_url = max(path_len, max_url)
+
         sheets = []
         sheet1_csv = defaultdict(list)
         sheet2_csv = defaultdict(list)
@@ -53,6 +67,10 @@ class Inferer:
             for i, url_piece in enumerate(url_inputs):
                 sheet1_csv[f'URL{i}'].append(url_piece)
                 sheet3_csv[f'URL{i}'].append(url_piece)
+            if len(url_inputs) < max_url:
+                for i in range(len(url_inputs), max_url):
+                    sheet1_csv[f'URL{i}'].append('')
+                    sheet3_csv[f'URL{i}'].append('')
             if isinstance(meta, tuple):
                 for i, meta_piece in enumerate(meta):
                     sheet1_csv[f'Meta{i}'].append(normal(meta_piece))
@@ -75,6 +93,10 @@ class Inferer:
             for i, url_piece in enumerate(url_inputs):
                 sheet1_csv[f'URL{i}'].append(url_piece)
                 sheet3_csv[f'URL{i}'].append(url_piece)
+            if len(url_inputs) < max_url:
+                for i in range(len(url_inputs), max_url):
+                    sheet1_csv[f'URL{i}'].append('')
+                    sheet3_csv[f'URL{i}'].append('')
             if isinstance(meta, tuple):
                 for i, meta_piece in enumerate(meta):
                     sheet1_csv[f'Meta{i}'].append(normal(meta_piece))

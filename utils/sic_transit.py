@@ -165,13 +165,17 @@ def filter_redir(r):
     return new_his
 
 
-def broken(url):
+def broken(url, html=False):
     """
     Entry func: detect whether this url is broken
     Return: bool (broken), reason
     """
     resp, msg = send_request(url)
     status, _ = get_status(url, resp, msg)
+    headers = {k.lower(): v for k, v in resp.headers.items()}
+    content_type = headers['content-type'] if 'content-type' in headers else ''
+    if html and 'html' not in content_type:
+        return False, "Not html"
     if re.compile('^([45]|DNSError|OtherError)').match(status):
         return True, status
     # Construct new url with random filename

@@ -151,7 +151,7 @@ class Discoverer:
         """
         logger.info(f'Backlinks: {src} {dst}')
         wayback_src = self.memo.wayback_index(src)
-        broken, reason = sic_transit.broken(src)
+        broken, reason = sic_transit.broken(src, html=True)
         if wayback_src is None: # No archive in wayback for guessed_url
             if broken:
                 return "notfound", None

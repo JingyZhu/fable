@@ -220,6 +220,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, final_url=
             logger.warn(f"There is an exception with requests_crawl: {str(e)}")
             return
     if r.status_code >= 400:
+        if r.status_code == 403: logger.info(f'requests_crawl: Get status code 403')
         return
     headers = {k.lower(): v for k, v in r.headers.items()}
     content_type = headers['content-type'] if 'content-type' in headers else ''

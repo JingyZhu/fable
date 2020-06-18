@@ -31,7 +31,7 @@ sites = [
         # 'imageworksllc.com',  
         # 'onlinepolicy.org',  # Guess + Content
         # 'mobilemarketingmagazine.com',  # Search + Content
-        'planetc1.com', # Search
+        # 'planetc1.com', # Search
         'smartsheet.com'
 ]
 
