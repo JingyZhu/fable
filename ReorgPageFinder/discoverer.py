@@ -155,7 +155,7 @@ class Discoverer:
         if wayback_src is None: # No archive in wayback for guessed_url
             if broken:
                 return "notfound", None
-            src_html, src = self.memo.crawl(src, final_url=True)
+            src_html, src = self.memo.crawl(src, final_url=True, max_retry=5)
             top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)
             if top_similar is not None: 
                 return "found", top_similar[0]

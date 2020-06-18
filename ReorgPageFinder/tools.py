@@ -6,6 +6,7 @@ import pymongo
 from pymongo import MongoClient
 import brotli
 import re, os
+import time
 from collections import defaultdict
 import random
 import brotli
@@ -45,8 +46,12 @@ class Memoizer:
             self.db = db
         self.PS = crawl.ProxySelector(proxies)
     
-    def crawl(self, url, final_url=False, **kwargs):
-        """TODO: non-db version"""
+    def crawl(self, url, final_url=False, max_retry=0, **kwargs):
+        """
+        final_url: Whether also return final redirected URLS
+        max_retry: Number of max retry times
+        TODO: non-db version
+        """
         if not final_url:
             html = self.db.crawl.find_one({'_id': url})
         else:
@@ -55,8 +60,13 @@ class Memoizer:
             if not final_url:
                 return brotli.decompress(html['html']).decode()
             else:
-                return brotli.decompress(html['html']).decode(), html['final_url']
+                return brotli.decompress(html['html']).decode(), html['final_url']   
+        retry = 0
         html = crawl.requests_crawl(url, final_url=final_url, **kwargs)
+        while retry < max_retry and html in [None, (None, None)] :
+            retry += 1
+            time.sleep(5)
+            html = crawl.requests_crawl(url, final_url=final_url, **kwargs)
         fu = None
         if final_url and html is not None:
             html, fu = html
