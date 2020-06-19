@@ -154,6 +154,7 @@ class Discoverer:
         broken, reason = sic_transit.broken(src, html=True)
         if wayback_src is None: # No archive in wayback for guessed_url
             if broken:
+                logger.info(f'Discover backlinks broken: {reason}')
                 return "notfound", None
             src_html, src = self.memo.crawl(src, final_url=True, max_retry=5)
             top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)

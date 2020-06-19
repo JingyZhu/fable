@@ -12,6 +12,8 @@ from math import ceil
 sys.path.append('../')
 import config
 from utils import text_utils
+import logging
+logger = logging.getLogger('logger')
 
 def send_request(url):
     resp = None
@@ -172,12 +174,13 @@ def broken(url, html=False):
     """
     resp, msg = send_request(url)
     status, _ = get_status(url, resp, msg)
+    if re.compile('^([45]|DNSError|OtherError)').match(status):
+        return True, status
     headers = {k.lower(): v for k, v in resp.headers.items()}
     content_type = headers['content-type'] if 'content-type' in headers else ''
     if html and 'html' not in content_type:
-        return False, "Not html"
-    if re.compile('^([45]|DNSError|OtherError)').match(status):
-        return True, status
+        logger.info('sic transit broken: Not HTML')
+        return True, "Not html"
     # Construct new url with random filename
     random_urls = construct_rand_urls(url)
     broken_decision, reasons = [], []

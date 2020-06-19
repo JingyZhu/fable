@@ -118,7 +118,7 @@ class Inferer:
                 outputs = self.proxy.handle(sheets, site)
                 break
             except Exception as e:
-                logger.error(f'infer: exception on RPC {str(e)} {pickle.loads(sheets[0])}')
+                logger.error(f'infer: exception on RPC {str(e)}')
                 count += 1
                 time.sleep(2)
                 continue
