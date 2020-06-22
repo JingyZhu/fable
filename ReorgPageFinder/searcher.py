@@ -71,25 +71,21 @@ class Searcher:
             # TODO: May move all comparison techniques to similar class
             similars = self.similar.similar(url, title, content, searched_titles, searched_contents)
             if len(similars) > 0: 
-                return similars[0]
-            
+                return similars[0][0]
             return
 
         if title != '':
             if search_engine == 'google':
-                search_results = search.google_search(f'"{title}"', use_db=self.use_db)
-                similar = search_once(search_results)
-                if similar is not None: 
-                    return similar
                 search_results = search.google_search(f'{title}', site_spec_url=site)
                 similar = search_once(search_results)
                 if similar is not None: 
                     return similar
+                if len(search_results) >= 8:
+                    search_results = search.google_search(f'"{title}"', use_db=self.use_db)
+                    similar = search_once(search_results)
+                    if similar is not None: 
+                        return similar
             else:
-                search_results = search.bing_search(f'+"{title}"', use_db=self.use_db)
-                similar = search_once(search_results)
-                if similar is not None: 
-                    return similar
                 if site is not None:
                     site_str = f'site:{site}'
                 else:
@@ -98,6 +94,11 @@ class Searcher:
                 similar = search_once(search_results)
                 if similar is not None: 
                     return similar
+                if len(search_results) >= 8:
+                    search_results = search.bing_search(f'+"{title}"', use_db=self.use_db)
+                    similar = search_once(search_results)
+                    if similar is not None: 
+                        return similar
         
         self.similar.tfidf._clear_workingset()
         topN = self.similar.tfidf.topN(content)

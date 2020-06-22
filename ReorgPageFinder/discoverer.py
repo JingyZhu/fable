@@ -24,6 +24,7 @@ CUT = 30
 
 def wsum_simi(simi):
     return 2/3*simi[0] + 1/3*simi[1]
+
 class Discoverer:
     def __init__(self, depth=BUDGET, corpus=[], proxies={}, memo=None, similar=None):
         self.depth = depth

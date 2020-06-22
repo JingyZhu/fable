@@ -39,14 +39,23 @@ class Inferer:
                 if ch in li: rs += ch
                 else: rs += ' '
             return rs
-        max_url = 0
+        max_url, max_reorg_url = 0, 0
+        output_query = False
         # Aligh URL to same length
-        for ex_input, _ in examples:
+        for ex_input, reorg_url in examples:
             url, _ = ex_input
             us = urlsplit(url)
             path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
-            if us.query: path_len += 1
+            if us.query: 
+                output_query = True
+                path_len += 1
             max_url = max(path_len, max_url)
+            us_reorg = urlsplit(reorg_url)
+            path_len = len(list(filter(lambda x: x != '', us_reorg.path.split('/')))) + 1
+            if us_reorg.query:
+                output_query=True
+                path_len += 1
+            max_reorg_url = max(path_len, max_reorg_url)
         for url, _ in urls:
             us = urlsplit(url)
             path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
@@ -73,14 +82,23 @@ class Inferer:
                     sheet3_csv[f'URL{i}'].append('')
             if isinstance(meta, tuple):
                 for i, meta_piece in enumerate(meta):
-                    sheet1_csv[f'Meta{i}'].append(normal(meta_piece))
-                    sheet2_csv[f'Meta{i}'].append(normal(meta_piece))
+                    sheet1_csv[f'Meta{2*i}'].append(normal(meta_piece))
+                    sheet2_csv[f'Meta{2*i}'].append(normal(meta_piece))
+                    sheet1_csv[f'Meta{2*i+1}'].append(normal(meta_piece.lower()))
+                    sheet2_csv[f'Meta{2*i+1}'].append(normal(meta_piece.lower()))
             elif isinstance(meta, str):
                 sheet1_csv[f'Meta0'].append(normal(meta))
                 sheet2_csv[f'Meta0'].append(normal(meta))
-            sheet1_csv['Output'].append(reorg_url)
-            sheet2_csv['Output'].append(reorg_url)
-            sheet3_csv['Output'].append(reorg_url)
+                sheet1_csv[f'Meta1'].append(normal(meta.lower()))
+                sheet2_csv[f'Meta1'].append(normal(meta.lower()))
+            us_reorg = urlsplit(reorg_url)
+            path_reorg_list = list(filter(lambda x: x != '', us_reorg.path.split('/')))
+            url_reorg_inputs = [f"{us_reorg.scheme}://{us_reorg.netloc.split(':')[0]}"] + path_reorg_list
+            if us_reorg.query: url_reorg_inputs.append(us_reorg.query)
+            for i, reorg_url_piece in enumerate(url_reorg_inputs):
+                sheet1_csv[f'Output_{i}'].append(reorg_url_piece)
+                sheet2_csv[f'Output_{i}'].append(reorg_url_piece)
+                sheet3_csv[f'Output_{i}'].append(reorg_url_piece)
         urls_idx = {}
         for i, (url, meta) in enumerate(urls):
             us = urlsplit(url)
@@ -99,14 +117,19 @@ class Inferer:
                     sheet3_csv[f'URL{i}'].append('')
             if isinstance(meta, tuple):
                 for i, meta_piece in enumerate(meta):
-                    sheet1_csv[f'Meta{i}'].append(normal(meta_piece))
-                    sheet2_csv[f'Meta{i}'].append(normal(meta_piece))
+                    sheet1_csv[f'Meta{2*i}'].append(normal(meta_piece))
+                    sheet2_csv[f'Meta{2*i}'].append(normal(meta_piece))
+                    sheet1_csv[f'Meta{2*i+1}'].append(normal(meta_piece.lower()))
+                    sheet2_csv[f'Meta{2*i+1}'].append(normal(meta_piece.lower()))
             elif isinstance(meta, str):
                 sheet1_csv[f'Meta0'].append(normal(meta))
                 sheet2_csv[f'Meta0'].append(normal(meta))
-            sheet1_csv['Output'].append('')
-            sheet2_csv['Output'].append('')
-            sheet3_csv['Output'].append('')
+                sheet1_csv[f'Meta1'].append(normal(meta.lower()))
+                sheet2_csv[f'Meta1'].append(normal(meta.lower()))
+            for i in range(max_reorg_url):
+                sheet1_csv[f'Output_{i}'].append('')
+                sheet2_csv[f'Output_{i}'].append('')
+                sheet3_csv[f'Output_{i}'].append('')
         sheets = [sheet1_csv, sheet2_csv, sheet3_csv]
         sheets = [pickle.dumps({
             'sheet_name': f'sheet{i+1}',
@@ -128,8 +151,21 @@ class Inferer:
         for output in outputs:
             for url, _ in urls:
                 idx = urls_idx[url]
-                reorg_url = output.iloc[idx]['Output']
-                if not isinstance(reorg_url, str): continue
+                reorg_url_lists = output.filter(regex='^Output', axis=1).iloc[idx]
+                num_outputs = len(reorg_url_lists)
+                scheme_netloc = reorg_url_lists['Output_0']
+                reorg_paths = []
+                for j in range(1, num_outputs - output_query):
+                    reorg_part = reorg_url_lists[f'Output_{j}']
+                    if not isinstance(reorg_part, str):
+                        break
+                    reorg_paths.append(reorg_part)
+                if len(reorg_paths) < num_outputs - output_query - 1:
+                    continue
+                reorg_paths = '/'.join(reorg_paths)
+                reorg_url = f'{scheme_netloc}/{reorg_paths}'
+                if output_query:
+                    reorg_url += f'?{reorg_url_lists[f"Output_{j}"]}'
                 poss_infer[url].add(reorg_url)
         return {k: list(v) for k, v in poss_infer.items()}
     
