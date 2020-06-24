@@ -51,7 +51,7 @@ class FlashFillHandler:
         output_cols, self.headers = [], {}
         for name, df in zip(sheet_names, csvs):
             cols = df.columns.tolist()
-            assert(output_name in cols)
+            # assert(output_name in cols)
             input_col = [c for c in cols if output_name not in c]
             output_col = [c for c in cols if output_name in c]
             cols = input_col + output_col
