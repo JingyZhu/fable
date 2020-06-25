@@ -173,7 +173,7 @@ class Similar:
         if use_db:
             self.db =  db
             corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
-            corpus = [c['content'] for c in list(corpus)]
+            corpus = [c['content'] for c in list(corpus)[:10000]] # TODO: Temp
             self.tfidf = text_utils.TFidfStatic(corpus)
         else:
             self.tfidf = text_utils.TFidfStatic(corpus)
@@ -231,6 +231,7 @@ class Similar:
         update_sites(self.db.crawl)
         if site == self.site:
             return
+        logger.info(f'_init_titles {site}')
         self.site = site
         self.lw_titles = defaultdict(set)
         self.wb_titles = defaultdict(set)

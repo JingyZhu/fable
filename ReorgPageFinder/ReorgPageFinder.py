@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 import os
 from collections import defaultdict
 import time
+import json
 
 import config
 from utils import text_utils, url_utils, crawl
@@ -87,9 +88,9 @@ class ReorgPageFinder:
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
         self.logger = logger if logger is not None else self._init_logger()
-        self.searcher = searcher(memo=self.memo, similar=self.similar, proxies=proxies)
-        self.discoverer = discoverer(memo=self.memo, similar=self.similar, proxies=proxies)
-        self.inferer = inferer(memo=self.memo, similar=self.similar, proxies=proxies)
+        self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar, proxies=proxies)
+        self.discoverer = discoverer.Discoverer(memo=self.memo, similar=self.similar, proxies=proxies)
+        self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.db = db
         self.site = None
         self.pattern_dict = None
@@ -119,7 +120,16 @@ class ReorgPageFinder:
         for reorg_url in list(reorg_urls):
             self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url['reorg_url'])
 
+    def clear_site(self):
+        self.site = None
+        self.pattern_dict = None
+
     def _add_url_to_patterns(self, url, title, reorg):
+        """
+        Only applies to same domain currently
+        """
+        if he.extract(reorg) != he.extract(url):
+            return
         patterns = gen_path_pattern(url)
         for pat in patterns:
             self.pattern_dict[pat].append(((url, title), reorg))
@@ -141,7 +151,7 @@ class ReorgPageFinder:
         infer_urls = defaultdict(list) # Pattern: urls
         for infer_url in list(broken_urls):
             for pat in patterns:
-                if not pattern_match(pat, infer_url['infer_url']):
+                if not pattern_match(pat, infer_url['url']):
                     continue
                 if 'title' not in infer_url:
                     try:
@@ -159,15 +169,17 @@ class ReorgPageFinder:
         success = []
         for pat, pat_urls in infer_urls.items():
             infered_dict = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site + str(time.time()))
-            self.logger.info(f'infered_dict: {infered_dict}')
+            self.logger.info(f'infered_dict: {json.dumps(infered_dict, indent=4)}')
             pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]}
             for infer_url, cand in infered_dict.items():
                 # logger.info(f'Infer url: {infer_url} {cand}')
                 reorg_url, reason = self.inferer.if_reorg(infer_url, cand)
                 if reorg_url is not None:
                     self.db.reorg.update_one({'url': infer_url}, {'$set': {'reorg_url': reorg_url, 'by': 'infer'}})
-                    self._add_url_to_patterns(*unpack_ex(pat_infer_urls[infer_url]))
-                    success.append(pat_infer_urls[infer_url])
+                    self.logger.info(f'Found by infer: {infer_url} --> {reorg_url}')
+                    suc = ((pat_infer_urls[infer_url]), reorg_url)
+                    self._add_url_to_patterns(*unpack_ex(suc))
+                    success.append(suc)
         return success
 
     def infer(self):
@@ -200,9 +212,12 @@ class ReorgPageFinder:
             searched = self.searcher.search(url, search_engine='bing')
             if searched is None:
                 searched = self.searcher.search(url, search_engine='google')
-            wayback_url = self.memo.wayback_index(url)
-            html = self.memo.crawl(wayback_url)
-            title = self.memo.extract_title(html, version='domdistiller')
+            try:
+                wayback_url = self.memo.wayback_index(url)
+                html = self.memo.crawl(wayback_url)
+                title = self.memo.extract_title(html, version='domdistiller')
+            except:
+                self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
             update_dict = {'title': title}
             if searched is not None:
                 self.logger.info(f"HIT: {searched}")
@@ -251,10 +266,15 @@ class ReorgPageFinder:
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
             if 'title' not in has_title:
-                wayback_url = self.memo.wayback_index(url)
-                html = self.memo.crawl(wayback_url)
-                title = self.memo.extract_title(html, version='domdistiller')
+                try:
+                    wayback_url = self.memo.wayback_index(url)
+                    html = self.memo.crawl(wayback_url)
+                    title = self.memo.extract_title(html, version='domdistiller')
+                except:
+                    self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
                 update_dict = {'title': title}
+            else:
+                title = has_title['title']
             if searched is not None:
                 self.logger.info(f"HIT: {searched}")
                 update_dict.update({'reorg_url': searched, 'by': 'search'})
@@ -301,10 +321,15 @@ class ReorgPageFinder:
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
             if 'title' not in has_title:
-                wayback_url = self.memo.wayback_index(url)
-                html = self.memo.crawl(wayback_url)
-                title = self.memo.extract_title(html, version='domdistiller')
+                try:
+                    wayback_url = self.memo.wayback_index(url)
+                    html = self.memo.crawl(wayback_url)
+                    title = self.memo.extract_title(html, version='domdistiller')
+                except:
+                    self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
                 update_dict = {'title': title}
+            else:
+                title = has_title['title']
             if discovered is not None:
                 self.logger.info(f'Found reorg: {discovered}')
                 update_dict.update({'reorg_url': discovered, 'by': 'discover'})

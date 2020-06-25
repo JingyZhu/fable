@@ -27,28 +27,23 @@ class Searcher:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar() 
 
-    def search(self, url, wayback=False, search_engine='bing'):
-        """
-        wayback: Whether the url is snapshot on the wayback
-        # TODO: Only run later query when previous found no results
-        """
+    def search(self, url, search_engine='bing'):
         if search_engine not in ['google', 'bing']:
             raise Exception("Search engine could support for google and bing")
         he = url_utils.HostExtractor()
-        site = he.extract(url, wayback=wayback)
+        site = he.extract(url)
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
         if final_url is None: return
         site = he.extract(final_url)
-        if not wayback:
-            url = self.memo.wayback_index(url)
-        if url is None:
+        try:
+            wayback_url = self.memo.wayback_index(url)
+            html = self.memo.crawl(wayback_url, proxies=self.PS.select())
+            title = self.memo.extract_title(html, version='domdistiller')
+            content = self.memo.extract_content(html)
+        except Exception as e:
+            logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             return
-        html = self.memo.crawl(url, proxies=self.PS.select())
-        if html is None:
-            return
-        title = search.get_title(html)
-        content = self.memo.extract_content(html)
         logger.info(f'title: {title}')
         search_results, searched = [], set()
 
@@ -62,7 +57,7 @@ class Searcher:
             logger.info(f'#Search cands: {len(search_cand)}')
             searched.update(search_results)
             for searched_url in search_cand:
-                searched_html = self.memo.crawl(url, proxies=self.PS.select())
+                searched_html = self.memo.crawl(searched_url, proxies=self.PS.select())
                 if searched_html is None: continue
                 searched_contents[searched_url] = self.memo.extract_content(searched_html)
                 if he.extract(url) == he.extract(searched_url):

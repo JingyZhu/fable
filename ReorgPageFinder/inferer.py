@@ -99,6 +99,11 @@ class Inferer:
                 sheet1_csv[f'Output_{i}'].append(reorg_url_piece)
                 sheet2_csv[f'Output_{i}'].append(reorg_url_piece)
                 sheet3_csv[f'Output_{i}'].append(reorg_url_piece)
+            if i < max_reorg_url:
+                for i in range(len(url_reorg_inputs), max_reorg_url):
+                    sheet1_csv[f'Output_{i}'].append('')
+                    sheet2_csv[f'Output_{i}'].append('')
+                    sheet3_csv[f'Output_{i}'].append('')
         urls_idx = {}
         for i, (url, meta) in enumerate(urls):
             us = urlsplit(url)
@@ -165,7 +170,7 @@ class Inferer:
                 reorg_paths = '/'.join(reorg_paths)
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
                 if output_query:
-                    reorg_url += f'?{reorg_url_lists[f"Output_{j}"]}'
+                    reorg_url += f'?{reorg_url_lists[f"Output_{num_outputs-1}"]}'
                 poss_infer[url].add(reorg_url)
         return {k: list(v) for k, v in poss_infer.items()}
     
