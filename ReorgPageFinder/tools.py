@@ -173,7 +173,7 @@ class Similar:
         if use_db:
             self.db =  db
             corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
-            corpus = [c['content'] for c in list(corpus)[:10000]] # TODO: Temp
+            corpus = [c['content'] for c in list(corpus)] # TODO: Temp
             self.tfidf = text_utils.TFidfStatic(corpus)
         else:
             self.tfidf = text_utils.TFidfStatic(corpus)

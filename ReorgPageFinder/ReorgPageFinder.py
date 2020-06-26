@@ -218,6 +218,7 @@ class ReorgPageFinder:
                 title = self.memo.extract_title(html, version='domdistiller')
             except:
                 self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                continue
             update_dict = {'title': title}
             if searched is not None:
                 self.logger.info(f"HIT: {searched}")
@@ -272,6 +273,7 @@ class ReorgPageFinder:
                     title = self.memo.extract_title(html, version='domdistiller')
                 except:
                     self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                    continue
                 update_dict = {'title': title}
             else:
                 title = has_title['title']
@@ -327,6 +329,7 @@ class ReorgPageFinder:
                     title = self.memo.extract_title(html, version='domdistiller')
                 except:
                     self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                    continue
                 update_dict = {'title': title}
             else:
                 title = has_title['title']

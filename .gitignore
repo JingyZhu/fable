@@ -13,6 +13,7 @@ tmp/
 .ipynb_checkpoints/
 
 temp.py
+test.py
 broken_inspection.ipynb
 ReorgPageFinder.ipynb
 test.ipynb

@@ -10,17 +10,17 @@ import config
 from utils import text_utils, url_utils
 
 sites = [
-        # 'commonsensemedia.org', # Guess + similar link
+        'commonsensemedia.org', # Guess + similar link
         # 'filecart.com',  # Loop + similar link
         # 'imageworksllc.com',  
         # 'onlinepolicy.org',  # Guess + Content
         # 'mobilemarketingmagazine.com',  # Search + Content
-        'planetc1.com', # Search
+        # 'planetc1.com', # Search
         # 'smartsheet.com'
 ]
 
 rpf = ReorgPageFinder.ReorgPageFinder()
 for site in sites:
     rpf.init_site(site, [])
-#     rpf.infer()
+    rpf.infer()
     rpf.second_search()

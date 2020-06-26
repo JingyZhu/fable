@@ -48,6 +48,12 @@ class ProxySelector:
         if proxy == {}: return
         else: return "{}://{}".format(scheme, proxy[scheme] )
 
+class RobotParser:
+    """
+    Logic related to Robot
+        - Get robots.txt and cache it.
+        - Detect the 
+    """
 
 def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     """

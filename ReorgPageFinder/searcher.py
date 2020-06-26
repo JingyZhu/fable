@@ -54,14 +54,16 @@ class Searcher:
             searched_contents = {}
             searched_titles = {}
             search_cand = [s for s in search_results if s not in searched]
-            logger.info(f'#Search cands: {len(search_cand)}')
+            logger.info(f'#Search cands: {search_cand}')
             searched.update(search_results)
             for searched_url in search_cand:
                 searched_html = self.memo.crawl(searched_url, proxies=self.PS.select())
                 if searched_html is None: continue
                 searched_contents[searched_url] = self.memo.extract_content(searched_html)
+                logger.info(f'extract_content: {searched_url}')
                 if he.extract(url) == he.extract(searched_url):
                     searched_titles[searched_url] = self.memo.extract_title(searched_html)
+                    logger.info(f'extract_title: {searched_url}')
         
             # TODO: May move all comparison techniques to similar class
             similars = self.similar.similar(url, title, content, searched_titles, searched_contents)
