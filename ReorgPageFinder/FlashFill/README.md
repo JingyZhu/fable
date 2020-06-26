@@ -18,7 +18,7 @@ python .\rpc.py
 ### From client side
 Follows the sample of client.py
 - Argument passed format: [pickled{'sheet_name': str, 'csv': dict}]
-- Output column that want to flashfill to infer on must be in the name of "Output"
-- Return value will be same as input. UnPickled required. Results will be in the "Ouput" column
+- Output column that want to flashfill to infer on must be in the prefix of "Output"
+- Return value will be same as input. UnPickled required. Results will be in the prefix of "Ouput" column
 
-Note: Currently #cols no more than 26, Only support flashfill on 1 col.
+Note: Currently #cols no more than 26.

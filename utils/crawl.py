@@ -10,13 +10,18 @@ import base64
 import threading, queue
 import itertools
 import cchardet
-from reppy.robots import Robots
 from urllib.parse import urlparse, urljoin
 import json
 from collections import defaultdict
 from itertools import product
 from bs4 import BeautifulSoup
 import bs4
+
+from urllib.robotparser import RobotFileParser
+from reppy.robot import Robots
+from reppy.cache import RobotsCache
+from reppy.ttl import HeaderWithDefaultPolicy
+
 import logging
 logger = logging.getLogger('logger')
 
@@ -52,8 +57,27 @@ class RobotParser:
     """
     Logic related to Robot
         - Get robots.txt and cache it.
-        - Detect the 
+        - Properly delay for specified crawl_delay 
     """
+    def __init__(self, useragent='*'):
+        policy = HeaderWithDefaultPolicy(default=3600, minimum=600)
+        self.rp = RobotsCache(capacity=1000, ttl_policy=policy)
+        self.useragent = '*'
+        self.last_request = defaultdict(int) # {hostname: last request ts}
+    
+    def allowed(self, url, useragent=None):
+        if useragent is None: useragent = self.useragent
+        allow = self.rp.allowed(url, useragent)
+        if allow:
+            delay = self.rp.get(url).agent(useragent).delay
+            if delay is None: return allow
+            diff = time.time() - self.last_request[urlparse(url).netloc]
+            if delay > diff: time.sleep(delay - diff)
+            self.last_request[urlparse(url).netloc] = time.time()
+        return allow
+
+rp = RobotParser()
+
 
 def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     """
@@ -201,18 +225,26 @@ def wayback_year_links(prefix, years, NUM_THREADS=3, max_limit=0, param_dict={},
     return {k: list(v) for k, v in total_r.items()}
 
 
-def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, final_url=False):
+def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False):
     """
     Use requests to get the page
     Return None if fails to get the content
     html: Only return html if set to true
     wait: Will wait if get block
-    final_url: Also return final url of requests if set to true
+    raw: Return raw response instead of html if set to True
+
+    Return:
+        If good crawl: str/response
+        Elif bad crawl: None
+        Else (not eligible): None, Reason
     """
     filter_ext = ['.pdf']
     requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
-    if os.path.splitext(url)[1] in filter_ext: return
+    if os.path.splitext(url)[1] in filter_ext: 
+        return None, 'Filtered ext'
     count = 0
+    if not rp.allowed(url, requests_header['user-agent']):
+        return None, "Not Allowed by Robot.txt"
     while True:
         try:
             r = requests.get(url, timeout=timeout, proxies=proxies, headers=requests_header)
@@ -228,16 +260,15 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, final_url=
     if r.status_code >= 400:
         if r.status_code == 403: logger.info(f'requests_crawl: Get status code 403')
         return
-    headers = {k.lower(): v for k, v in r.headers.items()}
+    headers = {k.lower(): v.lower() for k, v in r.headers.items()}
     content_type = headers['content-type'] if 'content-type' in headers else ''
     if html and 'html' not in content_type:
         return
     r.encoding = r.apparent_encoding
-    text = r.text
-    if not final_url:
-        return text
+    if raw:
+        return r
     else:
-        return text, r.url
+        return r.text
 
 
 def get_sitemaps(hostname):

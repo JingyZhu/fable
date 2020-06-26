@@ -22,6 +22,7 @@ import logging
 logger = logging.getLogger('logger')
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+DEFAULT_CACHE = 3600*24
 
 def update_sites(collection):
     no_sites = list(collection.find({'site': {'$exists': False}}))
@@ -56,25 +57,56 @@ class Memoizer:
             html = self.db.crawl.find_one({'_id': url})
         else:
             html = self.db.crawl.find_one({'_id': url, 'final_url': {"$exists": True}})
-        if html:
+        if html and html['ttl'] > time.time():
             if not final_url:
                 return brotli.decompress(html['html']).decode()
             else:
                 return brotli.decompress(html['html']).decode(), html['final_url']   
         retry = 0
-        html = crawl.requests_crawl(url, final_url=final_url, **kwargs)
-        while retry < max_retry and html in [None, (None, None)] :
+        resp = crawl.requests_crawl(url, raw=True, **kwargs)
+        if isinstance(resp, tuple) and resp[0] is None:
+            logger.info(f'requests_crawl: Blocked url {url}, {resp[1]}')
+            if not final_url:
+                return None
+            else:
+                return None, None
+
+        # Retry if get bad crawl
+        while retry < max_retry and resp is None :
             retry += 1
             time.sleep(5)
-            html = crawl.requests_crawl(url, final_url=final_url, **kwargs)
-        fu = None
-        if final_url and html is not None:
-            html, fu = html
+            resp = crawl.requests_crawl(url, raw=True, **kwargs)
+        if resp is None:
+            logger.info(f'requests_crawl: Unable to get HTML of {url}')
+            if not final_url:
+                return None
+            else:
+                return None, None
+        html = resp.text
+        if final_url:
+            fu = resp.url
+
+        # Calculate cache expire date
+        headers = {k.lower(): v.lower() for k, v in resp.headers.items()}
+        cache_age = DEFAULT_CACHE
+        if 'cache-control' in headers:
+            v = headers['cache-control']
+            pp_in = 'public' in v or 'private' in v
+            maxage_in = 'max-age' in v
+            v = v.split(',')
+            if maxage_in:
+                age = [int(vv.split('=')[1]) for vv in v if 'max-age' in vv][0]
+                cache_age = max(cache_age, age)
+            elif pp_in:
+                cache_age = DEFAULT_CACHE*30
+        ttl = time.time() + cache_age
+
         try:
             obj = {
                 "_id": url,
                 "url": url,
-                "html": brotli.compress(html.encode())
+                "html": brotli.compress(html.encode()),
+                "ttl": ttl
             }
             if final_url: obj.update({'final_url': fu})
             self.db.crawl.update_one({'_id': url}, {"$set": obj}, upsert=True)

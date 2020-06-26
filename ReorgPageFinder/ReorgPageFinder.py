@@ -14,16 +14,6 @@ db_broken = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, passw
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 he = url_utils.HostExtractor()
 
-sites = [
-        # 'commonsensemedia.org', # Guess + similar link
-        # 'filecart.com',  # Loop + similar link
-        # 'imageworksllc.com',  
-        # 'onlinepolicy.org',  # Guess + Content
-        # 'mobilemarketingmagazine.com',  # Search + Content
-        # 'planetc1.com', # Search
-        'smartsheet.com'
-]
-
 
 def unpack_ex(ex):
     (url, title), reorg = ex
