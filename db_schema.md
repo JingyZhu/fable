@@ -1,5 +1,77 @@
+# DB: ReorgPageFinder
+### crawl
+Record all crawled pages and its html
+```json
+{
+    "url": "url",
+    "statuscode": "",
+    "html": "byte",
+    "final_url": "string",
+    "content": "string (optional)",
+    "title": "string (optional)",
+    "last_crawl_ts": "int"
+}
+```
 
-## web_decay
+### corpus
+Used to initialize tfidf for document corpus
+```json
+{
+    "url": "string",
+    "src": "string",
+    "html": "Bytes (compressed by brotli)",
+    "content": "string",
+    "Others": "Not useful"
+}
+```
+
+### wayback_index
+Wayback indexed timestamps
+```json
+{
+    "_id": "url",
+    "url": "string",
+    "ts": "[int]"
+}
+```
+
+### wayback_rep
+Wayback most representative ts for a url
+```json
+{
+    "_id": "url",
+    "url": "string",
+    "ts": "int",
+    "wayback_url": "string"
+}
+```
+
+### reorg
+Set of URLs for trying to find copies on
+```json
+{
+    "url": "url",
+    "hhostname": "hostname",
+    "title": "title",
+    "by": "string (Found by which technique)",
+    "reorg_url": "str (Reorganized URL)"
+}
+```
+
+### checked
+Set of already tried URLs with certain techniques
+```json
+{
+    "_id": "url",
+    "url": "url",
+    "hostname": "hostname",
+    "search_1": "bool/true (First pass of search)",
+    "search_2": "bool/true (Second pass of search)",
+    "discover": "bool/true (discover)"
+}
+```
+
+## DB: web_decay
 
 ### seeds
 Union of seeds from DMOZ from 2005, 2011, 2013, 2017. Around 7M links in total
@@ -303,52 +375,5 @@ Index on subhost
     "afterStatus": "str",
     "beforeTech": {},
     "afterTech" {}
-}
-```
-
-# DB: ReorgPageFinder
-### crawl
-Record all crawled pages and its html
-```json
-{
-    "url": "url",
-    "statuscode": "",
-    "html": "byte",
-    "final_url": "string",
-    "content": "string (optional)",
-    "title": "string (optional)"
-}
-```
-
-### corpus
-Used to initialize tfidf for document corpus
-```json
-{
-    "url": "string",
-    "src": "string",
-    "html": "Bytes (compressed by brotli)",
-    "content": "string",
-    "Others": "Not useful"
-}
-```
-
-### wayback_index
-Wayback indexed timestamps
-```json
-{
-    "_id": "url",
-    "url": "string",
-    "ts": "[int]"
-}
-```
-
-### wayback_rep
-Wayback most representative ts for a url
-```json
-{
-    "_id": "url",
-    "url": "string",
-    "ts": "int",
-    "wayback_url": "string"
 }
 ```
