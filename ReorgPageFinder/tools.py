@@ -53,15 +53,20 @@ class Memoizer:
         max_retry: Number of max retry times
         TODO: non-db version
         """
+        is_wayback = 'web.archive.org/web' in url
         if not final_url:
             html = self.db.crawl.find_one({'_id': url})
         else:
             html = self.db.crawl.find_one({'_id': url, 'final_url': {"$exists": True}})
-        if html and html['ttl'] > time.time():
+        if html and (html['ttl'] > time.time() or is_wayback):
             if not final_url:
                 return brotli.decompress(html['html']).decode()
             else:
-                return brotli.decompress(html['html']).decode(), html['final_url']   
+                return brotli.decompress(html['html']).decode(), html['final_url']  
+        elif html:
+            try:
+                self.db.crawl.update_one({'_id': url}, {'$unset': {'title': '', 'content': ''}}) 
+            except: pass
         retry = 0
         resp = crawl.requests_crawl(url, raw=True, **kwargs)
         if isinstance(resp, tuple) and resp[0] is None:

@@ -12,14 +12,17 @@ from math import ceil
 sys.path.append('../')
 import config
 from utils import text_utils
+from utils.crawl import rp 
 import logging
 logger = logging.getLogger('logger')
 
 def send_request(url):
     resp = None
-    requests_header = {'user-agent': "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
+    requests_header = {'user-agent': "Our-Project-Page/1.0 (http://www-personal.umich.edu/~jingyz/ReorgPageFinder/) Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
 
     req_failed = True
+    if not rp.allowed(url, requests_header['user-agent']):
+        return None, 'Not Allowed'
     try:
         resp = requests.get(url, headers=requests_header, timeout=15)
         req_failed = False
@@ -170,9 +173,13 @@ def filter_redir(r):
 def broken(url, html=False):
     """
     Entry func: detect whether this url is broken
-    Return: bool (broken), reason
+    html: Require the url to be html.
+
+    Return: True/False/"N/A", reason
     """
     resp, msg = send_request(url)
+    if msg == 'Not Allowed':
+        return 'N/A', msg
     status, _ = get_status(url, resp, msg)
     if re.compile('^([45]|DNSError|OtherError)').match(status):
         return True, status
@@ -186,6 +193,8 @@ def broken(url, html=False):
     broken_decision, reasons = [], []
     for random_url in random_urls:
         random_resp, msg = send_request(random_url)
+        if msg == 'Not Allowed':
+            continue
         random_status, _ = get_status(random_url, random_resp, msg)
         if re.compile('^([45]|DNSError|OtherError)').match(random_status):
             broken_decision.append(False)
@@ -208,7 +217,10 @@ def broken(url, html=False):
             continue
         broken_decision.append(False)
         reasons.append("no features match")
-    return not False in broken_decision, reasons
+    if len(reasons) == 0:
+        return 'N/A', 'Guess URLs not allowed'
+    else:
+        return not False in broken_decision, reasons
     
 
 

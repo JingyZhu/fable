@@ -6,6 +6,7 @@ import os
 from collections import defaultdict
 import time
 import json
+import logging
 
 import config
 from utils import text_utils, url_utils, crawl
@@ -86,7 +87,6 @@ class ReorgPageFinder:
         self.pattern_dict = None
     
     def _init_logger(self):
-        import logging
         logger = logging.getLogger('logger')
         logger.setLevel(logging.INFO)
         formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
@@ -109,10 +109,17 @@ class ReorgPageFinder:
         self.pattern_dict = defaultdict(list)
         for reorg_url in list(reorg_urls):
             self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url['reorg_url'])
+        if len(self.logger.handlers) > 2:
+            self.logger.handlers.pop()
+        formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
+        file_handler = logging.FileHandler(f'./logs/{site}.log')
+        file_handler.setFormatter(formatter)
+        self.logger.addHandler(file_handler)
 
     def clear_site(self):
         self.site = None
         self.pattern_dict = None
+        self.logger.handlers.pop()
 
     def _add_url_to_patterns(self, url, title, reorg):
         """
