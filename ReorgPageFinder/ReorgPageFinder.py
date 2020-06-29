@@ -241,7 +241,7 @@ class ReorgPageFinder:
                         broken_urls.discard(unpack_ex(suc)[0])
                         self._add_url_to_patterns(*unpack_ex(suc))
                     examples = success
-                    self.query_inferer(examples)
+                    success = self.query_inferer(examples)
 
     def second_search(self):
         if self.similar.site is None or self.similar.site != self.site:
@@ -299,7 +299,7 @@ class ReorgPageFinder:
                         broken_urls.discard(unpack_ex(suc)[0])
                         self._add_url_to_patterns(*unpack_ex(suc))
                     examples = success
-                    self.query_inferer(examples)
+                    success = self.query_inferer(examples)
     
     def discover(self):
         if self.similar.site is None or self.similar.site != self.site:
@@ -355,7 +355,7 @@ class ReorgPageFinder:
                         broken_urls.discard(unpack_ex(suc)[0])
                         self._add_url_to_patterns(*unpack_ex(suc))
                     examples = success
-                    self.query_inferer(examples)
+                    success = self.query_inferer(examples)
 
 # for site in sites:
 #     reorg_urls = db.reorg.find({'hostname': site, 'reorg_url': {'$exists': True}})
