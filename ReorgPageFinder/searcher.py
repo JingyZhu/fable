@@ -34,8 +34,8 @@ class Searcher:
         site = he.extract(url)
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
-        if final_url is None: return
-        site = he.extract(final_url)
+        if final_url is not None:
+            site = he.extract(final_url)
         try:
             wayback_url = self.memo.wayback_index(url)
             html = self.memo.crawl(wayback_url, proxies=self.PS.select())
@@ -60,10 +60,8 @@ class Searcher:
                 searched_html = self.memo.crawl(searched_url, proxies=self.PS.select())
                 if searched_html is None: continue
                 searched_contents[searched_url] = self.memo.extract_content(searched_html)
-                logger.info(f'extract_content: {searched_url}')
                 if he.extract(url) == he.extract(searched_url):
                     searched_titles[searched_url] = self.memo.extract_title(searched_html)
-                    logger.info(f'extract_title: {searched_url}')
         
             # TODO: May move all comparison techniques to similar class
             similars = self.similar.similar(url, title, content, searched_titles, searched_contents)

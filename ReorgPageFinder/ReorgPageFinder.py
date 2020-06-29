@@ -315,7 +315,7 @@ class ReorgPageFinder:
         while len(broken_urls) > 0:
             url = broken_urls.pop()
             i += 1
-            self.logger.info(f'URL: {url}')
+            self.logger.info(f'URL: {i} {url}')
             discovered = self.discoverer.discover(url)
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})

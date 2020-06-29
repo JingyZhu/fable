@@ -64,16 +64,27 @@ class RobotParser:
         self.rp = RobotsCache(capacity=1000, ttl_policy=policy)
         self.useragent = '*'
         self.last_request = defaultdict(int) # {hostname: last request ts}
-    
+        self.req_status = {} # Robot url: status_code/'error'
+
     def allowed(self, url, useragent=None):
         if useragent is None: useragent = self.useragent
+        scheme, netloc = urlparse(url).scheme, urlparse(url).netloc
+        robot_url = f'{scheme}://{netloc}/robots.txt'
+        if robot_url not in self.req_status:
+            try:
+                r = requests.get(robot_url, timeout=5, headers={'user-agent': useragent})
+                self.req_status[robot_url] = r.status_code
+            except:
+                self.req_status[robot_url] = 'error'
+        if self.req_status[robot_url] >= 400 or self.req_status[robot_url] == 'error':
+            return True
         allow = self.rp.allowed(url, useragent)
         if allow:
             delay = self.rp.get(url).agent(useragent).delay
             if delay is None: return allow
-            diff = time.time() - self.last_request[urlparse(url).netloc]
+            diff = time.time() - self.last_request[netloc]
             if delay > diff: time.sleep(delay - diff)
-            self.last_request[urlparse(url).netloc] = time.time()
+            self.last_request[netloc] = time.time()
         return allow
 
 rp = RobotParser()

@@ -7,3 +7,5 @@
 - Inferer:
   - Multi-columns output inference instead of single row
   - Sheets with closed #words clustered
+- Debug
+  - reppy's fetch error
