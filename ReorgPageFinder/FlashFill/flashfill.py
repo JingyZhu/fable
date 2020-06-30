@@ -68,13 +68,14 @@ class FlashFillHandler:
 
         returns: Same as input of csv_xlsx
         """ 
-        excel = pd.read_excel(xlsx_path, header=None, sheet_name=None, engine='openpyxl')
         outputs = []
-        for sheet_name, csv in excel.items():
-            csv.columns = self.headers[sheet_name]
-            outputs.append({
-                'sheet_name': sheet_name,
-                'csv': csv.to_dict(orient='list')
-            })
+        with open(xlsx_path, 'rb') as xlsx_file:
+            excel = pd.read_excel(xlsx_file, header=None, sheet_name=None, engine='openpyxl')
+            for sheet_name, csv in excel.items():
+                csv.columns = self.headers[sheet_name]
+                outputs.append({
+                    'sheet_name': sheet_name,
+                    'csv': csv.to_dict(orient='list')
+                })
         os.remove(xlsx_path)
         return outputs

@@ -70,6 +70,8 @@ class RobotParser:
         if useragent is None: useragent = self.useragent
         scheme, netloc = urlparse(url).scheme, urlparse(url).netloc
         robot_url = f'{scheme}://{netloc}/robots.txt'
+
+        # reppy consider 403, 500 as disallow_all. Overwriting this rule
         if robot_url not in self.req_status:
             try:
                 r = requests.get(robot_url, timeout=5, headers={'user-agent': useragent})
@@ -78,6 +80,7 @@ class RobotParser:
                 self.req_status[robot_url] = 'error'
         if self.req_status[robot_url] == 'error' or self.req_status[robot_url] >= 400 :
             return True
+
         allow = self.rp.allowed(url, useragent)
         if allow:
             delay = self.rp.get(url).agent(useragent).delay

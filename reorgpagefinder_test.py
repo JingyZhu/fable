@@ -13,7 +13,7 @@ from utils import text_utils, url_utils
 db_wd = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 sites = json.load(open('reorg_benchmark.json', 'r'))
 sites.sort()
-sites = sites[1:4]
+sites = sites[3:7]
 
 rpf = ReorgPageFinder.ReorgPageFinder()
 
