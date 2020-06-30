@@ -18,7 +18,7 @@ logger = logging.getLogger('logger')
 
 def send_request(url):
     resp = None
-    requests_header = {'user-agent': "Our-Project-Page/1.0 (http://www-personal.umich.edu/~jingyz/ReorgPageFinder/) Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
+    requests_header = {'user-agent': config.config('user_agent')}
 
     req_failed = True
     if not rp.allowed(url, requests_header['user-agent']):

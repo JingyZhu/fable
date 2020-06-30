@@ -143,7 +143,7 @@ class Inferer:
         count = 0
         while count < 3:
             try:
-                outputs = self.proxy.handle(sheets, site)
+                outputs = self.proxy.handle(sheets, site + str(time.time()))
                 break
             except Exception as e:
                 logger.error(f'infer: exception on RPC {str(e)}')
@@ -162,11 +162,11 @@ class Inferer:
                 reorg_paths = []
                 for j in range(1, num_outputs - output_query):
                     reorg_part = reorg_url_lists[f'Output_{j}']
-                    if not isinstance(reorg_part, str):
-                        break
+                    if not isinstance(reorg_part, str) or reorg_part.lower() == 'nan':
+                        continue
                     reorg_paths.append(reorg_part)
-                if len(reorg_paths) < num_outputs - output_query - 1:
-                    continue
+                # if len(reorg_paths) < num_outputs - output_query - 1:
+                #     continue
                 reorg_paths = '/'.join(reorg_paths)
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
                 if output_query:

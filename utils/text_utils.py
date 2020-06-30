@@ -31,7 +31,7 @@ except:
     print("No config.py, Specify you own port")
 
 # Need to be modified
-tmp_path = config.TMPPATH
+tmp_path = config.TMP_PATH
 PORT = config.LOCALSERVER_PORT # If no config.py, modify to self chosen port
 # Need to be modified
 

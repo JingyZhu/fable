@@ -47,7 +47,7 @@ class HostExtractor:
 
 
 class UrlRuleInferer:
-    def __init__(self, tmp_path=config.TMPPATH):
+    def __init__(self, tmp_path=config.TMP_PATH):
         self.path = tmp_path
         self.learned = False
         self.rule_dict = {}

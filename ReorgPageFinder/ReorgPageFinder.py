@@ -124,12 +124,15 @@ class ReorgPageFinder:
     def _add_url_to_patterns(self, url, title, reorg):
         """
         Only applies to same domain currently
+        Return bool on whether success
         """
         if he.extract(reorg) != he.extract(url):
-            return
+            return False
         patterns = gen_path_pattern(url)
+        if len(patterns) <= 0: return False
         for pat in patterns:
             self.pattern_dict[pat].append(((url, title), reorg))
+        return True
 
     def query_inferer(self, examples):
         """
@@ -165,7 +168,7 @@ class ReorgPageFinder:
             return []
         success = []
         for pat, pat_urls in infer_urls.items():
-            infered_dict = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site + str(time.time()))
+            infered_dict = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site)
             self.logger.info(f'infered_dict: {json.dumps(infered_dict, indent=4)}')
             pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]}
             for infer_url, cand in infered_dict.items():
@@ -234,12 +237,18 @@ class ReorgPageFinder:
             except: pass
             if searched is not None:
                 example = ((url, title), searched)
-                self._add_url_to_patterns(*unpack_ex(example))
+                added = self._add_url_to_patterns(*unpack_ex(example))
+                if not added: 
+                    return
                 success = self.query_inferer([example])
                 while len(success) > 0:
+                    added = False
                     for suc in success:
                         broken_urls.discard(unpack_ex(suc)[0])
-                        self._add_url_to_patterns(*unpack_ex(suc))
+                        a = self._add_url_to_patterns(*unpack_ex(suc))
+                        added = added or a
+                    if not added: 
+                        break 
                     examples = success
                     success = self.query_inferer(examples)
 
@@ -292,12 +301,18 @@ class ReorgPageFinder:
             except: pass
             if searched is not None:
                 example = ((url, title), searched)
-                self._add_url_to_patterns(*unpack_ex(example))
+                added = self._add_url_to_patterns(*unpack_ex(example))
+                if not added: 
+                    return
                 success = self.query_inferer([example])
                 while len(success) > 0:
+                    added = False
                     for suc in success:
                         broken_urls.discard(unpack_ex(suc)[0])
-                        self._add_url_to_patterns(*unpack_ex(suc))
+                        a = self._add_url_to_patterns(*unpack_ex(suc))
+                        added = added or a
+                    if not added: 
+                        break
                     examples = success
                     success = self.query_inferer(examples)
     
@@ -348,12 +363,18 @@ class ReorgPageFinder:
             except: pass
             if discovered is not None:
                 example = ((url, title), discovered)
-                self._add_url_to_patterns(*unpack_ex(example))
+                added = self._add_url_to_patterns(*unpack_ex(example))
+                if not added:
+                    return
                 success = self.query_inferer([example])
                 while len(success) > 0:
+                    added = False
                     for suc in success:
                         broken_urls.discard(unpack_ex(suc)[0])
-                        self._add_url_to_patterns(*unpack_ex(suc))
+                        a = self._add_url_to_patterns(*unpack_ex(suc))
+                        added = added or a
+                    if not added:
+                        break
                     examples = success
                     success = self.query_inferer(examples)
 

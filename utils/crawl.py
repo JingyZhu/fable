@@ -21,11 +21,14 @@ from urllib.robotparser import RobotFileParser
 from reppy.robots import Robots
 from reppy.cache import RobotsCache
 from reppy.ttl import HeaderWithDefaultPolicy
+import sys
+sys.path.append('../')
+import config
 
 import logging
 logger = logging.getLogger('logger')
 
-requests_header = {'user-agent': "Our-Project-Page/1.0 (http://www-personal.umich.edu/~jingyz/ReorgPageFinder/) Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
+requests_header = {'user-agent': config.config('user_agent')}
 
 
 class ProxySelector:
@@ -67,7 +70,10 @@ class RobotParser:
         self.req_status = {} # Robot url: status_code/'error'
 
     def allowed(self, url, useragent=None):
+        if config.config('user_agent') != self.useragent:
+            self.useragent = config.config('user_agent')
         if useragent is None: useragent = self.useragent
+        self.rp.kwargs['headers'] = {'user-agent': useragent}
         scheme, netloc = urlparse(url).scheme, urlparse(url).netloc
         robot_url = f'{scheme}://{netloc}/robots.txt'
 
@@ -252,8 +258,8 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
         Elif bad crawl: None
         Else (not eligible): None, Reason
     """
+    requests_header = {'user-agent': config.config('user_agent')}
     filter_ext = ['.pdf']
-    requests_header = {'user-agent': "Our-Project-Page/1.0 (http://www-personal.umich.edu/~jingyz/ReorgPageFinder/) Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
     if os.path.splitext(url)[1] in filter_ext: 
         return None, 'Filtered ext'
     count = 0
@@ -290,7 +296,7 @@ def get_sitemaps(hostname):
     Trying to find the sitemap of a site
     TODO Iterate over sitemap trees to find all the urls
     """
-    requests_header = {'user-agent': "Our-Project-Page/1.0 (http://www-personal.umich.edu/~jingyz/ReorgPageFinder/) Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}
+    requests_header = {'user-agent': config.config('user_agent')}
     try:
         r = requests.get('http://{}/'.format(hostname), headers=requests_header, timeout=10)
     except: return None
