@@ -59,10 +59,10 @@ class RobotParser:
         - Get robots.txt and cache it.
         - Properly delay for specified crawl_delay 
     """
-    def __init__(self, useragent='*'):
+    def __init__(self, useragent=requests_header['user-agent']):
         policy = HeaderWithDefaultPolicy(default=3600, minimum=600)
-        self.rp = RobotsCache(capacity=1000, ttl_policy=policy)
-        self.useragent = '*'
+        self.useragent = useragent
+        self.rp = RobotsCache(capacity=1000, ttl_policy=policy, headers=requests_header)
         self.last_request = defaultdict(int) # {hostname: last request ts}
         self.req_status = {} # Robot url: status_code/'error'
 
@@ -76,7 +76,7 @@ class RobotParser:
                 self.req_status[robot_url] = r.status_code
             except:
                 self.req_status[robot_url] = 'error'
-        if self.req_status[robot_url] >= 400 or self.req_status[robot_url] == 'error':
+        if self.req_status[robot_url] == 'error' or self.req_status[robot_url] >= 400 :
             return True
         allow = self.rp.allowed(url, useragent)
         if allow:

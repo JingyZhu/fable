@@ -158,7 +158,7 @@ class Discoverer:
                 logger.info(f'Discover backlinks broken: {reason}')
                 return "notfound", None
             src_html, src = self.memo.crawl(src, final_url=True, max_retry=5)
-            top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)
+            top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html, cut=10)
             if top_similar is not None: 
                 return "found", top_similar[0]
             else:

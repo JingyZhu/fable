@@ -25,6 +25,7 @@ for site in sites:
 	]})
 	urls = [url['url'] for url in urls]
 	rpf.init_site(site, urls)
+	rpf.infer()
 	rpf.first_search()
 	rpf.second_search()
 	rpf.discover()

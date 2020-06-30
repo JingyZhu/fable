@@ -12,3 +12,7 @@ dateparser
 python-nmap
 Unidecode
 reppy
+sklearn
+boilerpipe
+url_normalize
+cchardet
