@@ -29,7 +29,7 @@ import logging
 logger = logging.getLogger('logger')
 
 requests_header = {'user-agent': config.config('user_agent')}
-
+CRAWL_DELAY = 3
 
 class ProxySelector:
     """
@@ -65,7 +65,7 @@ class RobotParser:
     def __init__(self, useragent=requests_header['user-agent']):
         policy = HeaderWithDefaultPolicy(default=3600, minimum=600)
         self.useragent = useragent
-        self.rp = RobotsCache(capacity=1000, ttl_policy=policy, headers=requests_header)
+        self.rp = RobotsCache(capacity=1000, ttl_policy=policy, headers=requests_header, timeout=10)
         self.last_request = defaultdict(int) # {hostname: last request ts}
         self.req_status = {} # Robot url: status_code/'error'
 
@@ -91,6 +91,7 @@ class RobotParser:
         if allow:
             delay = self.rp.get(url).agent(useragent).delay
             if delay is None: return allow
+            delay = min(CRAWL_DELAY, delay)
             diff = time.time() - self.last_request[netloc]
             if delay > diff: time.sleep(delay - diff)
             self.last_request[netloc] = time.time()
@@ -283,6 +284,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
     headers = {k.lower(): v.lower() for k, v in r.headers.items()}
     content_type = headers['content-type'] if 'content-type' in headers else ''
     if html and 'html' not in content_type:
+        logger.info('requests_crawl: No html in content-type')
         return
     r.encoding = r.apparent_encoding
     if raw:

@@ -11,11 +11,15 @@ import config
 from utils import text_utils, url_utils
 
 db_wd = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
-sites = json.load(open('reorg_benchmark.json', 'r'))
-sites.sort()
-sites = sites[4:8]
+# sites = json.load(open('reorg_benchmark.json', 'r'))
+# sites.sort()
+sites =  [
+	"apple.com",
+    "approvedindex.co.uk",
+    "aqmd.gov"
+]
 
-rpf = ReorgPageFinder.ReorgPageFinder()
+rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder.log')
 
 for site in sites:
 	urls = db_wd.url_status_implicit_broken.find({

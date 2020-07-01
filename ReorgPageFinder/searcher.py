@@ -58,11 +58,14 @@ class Searcher:
             searched.update(search_results)
             for searched_url in search_cand:
                 searched_html = self.memo.crawl(searched_url, proxies=self.PS.select())
+                logger.debug(f'Crawl: {searched_url}')
                 if searched_html is None: continue
                 searched_contents[searched_url] = self.memo.extract_content(searched_html)
+                logger.debug(f'Extract Content: {searched_url}')
                 if he.extract(url) == he.extract(searched_url):
                     searched_titles[searched_url] = self.memo.extract_title(searched_html)
-        
+                    logger.debug(f'Extract Title: {searched_url}')
+            logger.debug(f'Finished crawling')
             # TODO: May move all comparison techniques to similar class
             similars = self.similar.similar(url, title, content, searched_titles, searched_contents)
             if len(similars) > 0: 

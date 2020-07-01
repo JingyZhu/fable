@@ -87,7 +87,7 @@ class TFidfDynamic:
             need_reinit = True
         if need_reinit: self.re_init()
         idx1, idx2 = self.idx[text1], self.idx[text2]
-        return cosine_similarity(self.tfidf[idx1].toarray(), self.tfidf[idx2].toarray())[0,0]
+        return cosine_similarity(self.tfidf[idx1], self.tfidf[idx2])[0,0]
     
     def topN(self, text, N=10):
         """
@@ -172,7 +172,7 @@ class TFidfStatic:
             except: return 0
             self._init_workingset([text1, text2])
         idx1, idx2 = self.idx[text1], self.idx[text2]
-        return cosine_similarity(self.workingset_tfidf[idx1].toarray(), self.workingset_tfidf[idx2].toarray())[0,0]
+        return cosine_similarity(self.workingset_tfidf[idx1], self.workingset_tfidf[idx2])[0,0]
     
     def topN(self, text, N=10):
         if self.workingset_vec is None:

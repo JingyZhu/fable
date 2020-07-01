@@ -27,3 +27,4 @@ alexa_top1k.txt
 
 jupyter.log
 ReorgPageFinder.log
+*.log

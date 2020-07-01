@@ -51,7 +51,7 @@ Set of URLs for trying to find copies on
 ```json
 {
     "url": "url",
-    "hhostname": "hostname",
+    "hostname": "hostname",
     "title": "title",
     "by": "string (Found by which technique)",
     "reorg_url": "str (Reorganized URL)"
@@ -212,7 +212,7 @@ Record whether a url has high link density / update frequently on wayback
     "updating": "boolean, false means no / unknown (1 snapshot, similar, etc... )" ,
     "tss": [],
     "detail": "updating True: HLD, not similar, no contents. False: 1 snapshot, no content, similar, no html",
-    "(simiarity)": "float (only if similar/not similar)",
+    "(similarity)": "float (only if similar/not similar)",
     "(recordts)": []
 }
 ```

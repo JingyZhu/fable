@@ -74,23 +74,24 @@ def path_edit_distance(url1, url2):
     return dis
 
 class ReorgPageFinder:
-    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, logger=None):
+    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, logger=None, logname=None):
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
-        self.logger = logger if logger is not None else self._init_logger()
         self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar, proxies=proxies)
         self.discoverer = discoverer.Discoverer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.db = db
         self.site = None
         self.pattern_dict = None
-    
+        self.logname = './ReorgPageFinder.log' if logname is None else logname
+        self.logger = logger if logger is not None else self._init_logger()
+
     def _init_logger(self):
         logger = logging.getLogger('logger')
         logger.setLevel(logging.INFO)
         formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
-        file_handler = logging.FileHandler('./ReorgPageFinder.log')
+        file_handler = logging.FileHandler(self.logname)
         file_handler.setFormatter(formatter)
         std_handler = logging.StreamHandler()
         std_handler.setFormatter(formatter)
@@ -239,7 +240,7 @@ class ReorgPageFinder:
                 example = ((url, title), searched)
                 added = self._add_url_to_patterns(*unpack_ex(example))
                 if not added: 
-                    return
+                    continue
                 success = self.query_inferer([example])
                 while len(success) > 0:
                     added = False
@@ -303,7 +304,7 @@ class ReorgPageFinder:
                 example = ((url, title), searched)
                 added = self._add_url_to_patterns(*unpack_ex(example))
                 if not added: 
-                    return
+                    continue
                 success = self.query_inferer([example])
                 while len(success) > 0:
                     added = False
@@ -365,7 +366,7 @@ class ReorgPageFinder:
                 example = ((url, title), discovered)
                 added = self._add_url_to_patterns(*unpack_ex(example))
                 if not added:
-                    return
+                    continue
                 success = self.query_inferer([example])
                 while len(success) > 0:
                     added = False

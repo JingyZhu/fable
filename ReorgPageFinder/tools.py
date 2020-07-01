@@ -1,5 +1,5 @@
 """
-Functions for determines whether two pages are simiar/same
+Functions for determines whether two pages are similar/same
 Methodologies: Content Match / Parital Match
 """
 import pymongo
@@ -211,6 +211,7 @@ class Similar:
             self.db =  db
             corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
             corpus = [c['content'] for c in list(corpus)] # TODO: Temp
+            corpus = random.sample(corpus, 100000)
             self.tfidf = text_utils.TFidfStatic(corpus)
         else:
             self.tfidf = text_utils.TFidfStatic(corpus)
@@ -243,7 +244,7 @@ class Similar:
                 simi = 0
                 for ws in wayback_sig[2]:
                     for ls in sig:
-                        simi = max(simi, self.tfidf.simiar(ws, ls))
+                        simi = max(simi, self.tfidf.similar(ws, ls))
                 if simi >= self.short_threshold:
                     return lws
         return None
@@ -260,6 +261,7 @@ class Similar:
         simi_cand = []
         for url, c in candidates_contents.items():
             simi = self.tfidf.similar(target_content, c)
+            logger.debug(f'simi: {simi}')
             if simi >= self.threshold:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
