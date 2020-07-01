@@ -206,6 +206,7 @@ class ReorgPageFinder:
         broken_urls = set([u['url'] for u in urls])
         self.logger.info(f'Search1 SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
+        self.similar.clear_titles()
         while len(broken_urls) > 0:
             url = broken_urls.pop()
             i += 1

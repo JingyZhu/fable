@@ -15,7 +15,7 @@ from utils import search, crawl, text_utils, url_utils
 
 import logging
 logger = logging.getLogger('logger')
-
+he = url_utils.HostExtractor()
 class Searcher:
     def __init__(self, use_db=True, proxies={}, memo=None, similar=None):
         """
@@ -28,9 +28,9 @@ class Searcher:
         self.similar = similar if similar is not None else tools.Similar() 
 
     def search(self, url, search_engine='bing'):
+        global he
         if search_engine not in ['google', 'bing']:
             raise Exception("Search engine could support for google and bing")
-        he = url_utils.HostExtractor()
         site = he.extract(url)
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
@@ -49,8 +49,8 @@ class Searcher:
 
         def search_once(search_results):
             """Incremental Search"""
+            global he
             nonlocal url, title, content, html, searched
-            he = url_utils.HostExtractor()
             searched_contents = {}
             searched_titles = {}
             search_cand = [s for s in search_results if s not in searched]

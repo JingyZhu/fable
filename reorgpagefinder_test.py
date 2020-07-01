@@ -13,13 +13,21 @@ from utils import text_utils, url_utils
 db_wd = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 # sites = json.load(open('reorg_benchmark.json', 'r'))
 # sites.sort()
-sites =  [
-	"apple.com",
-    "approvedindex.co.uk",
-    "aqmd.gov"
+# sites =  [
+#     "attractionsbrisbane.com.au",
+# 	"bottrop.de",
+#     "bowdoin.edu",
+#     "bto.org",
+# ]
+
+sites = [
+	"autocasion.com",
+    "baltimoresun.com",
+    "bargainbriana.com",
+    "blooloop.com",
 ]
 
-rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder.log')
+rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder2.log')
 
 for site in sites:
 	urls = db_wd.url_status_implicit_broken.find({

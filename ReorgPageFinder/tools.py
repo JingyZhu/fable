@@ -23,10 +23,11 @@ logger = logging.getLogger('logger')
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 DEFAULT_CACHE = 3600*24
+he = url_utils.HostExtractor()
 
 def update_sites(collection):
+    global he
     no_sites = list(collection.find({'site': {'$exists': False}}))
-    he = url_utils.HostExtractor()
     for no_site in no_sites:
         site = he.extract(no_site['url'], wayback='web.archive.org' in no_site['url'])
         try:
@@ -321,7 +322,7 @@ class Similar:
 
         Return a list with all candidate higher than threshold
         """
-        he = url_utils.HostExtractor()
+        global he
         site = he.extract(target_url)
         if site != self.site:
             self._init_titles(site)

@@ -17,6 +17,8 @@ from utils import search, crawl, text_utils, url_utils, sic_transit
 import logging
 logger = logging.getLogger('logger')
 
+he = url_utils.HostExtractor()
+
 BUDGET = 11
 GUESS = 3
 OUTGOING = 4
@@ -81,7 +83,7 @@ class Discoverer:
             return similars[0]
 
         # outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
-        he = url_utils.HostExtractor()
+        global he
         outgoing_sigs = crawl.outgoing_links_sig(backlinked_url, backlinked_html, wayback=False)
         outgoing_sigs = [osig for osig in outgoing_sigs if he.extract(osig[0]) == he.extract(dst)]
         if cut <= 0:
@@ -132,7 +134,7 @@ class Discoverer:
         See whether outgoing_url is worth looping through
         Creteria: 1. Same domain 2. No deeper than url
         """
-        he = url_utils.HostExtractor()
+        global he
         if 'web.archive.org' in outgoing_url:
             outgoing_url = url_utils.filter_wayback(outgoing_url)
         if he.extract(url) != he.extract(outgoing_url):
