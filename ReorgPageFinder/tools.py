@@ -101,8 +101,11 @@ class Memoizer:
             maxage_in = 'max-age' in v
             v = v.split(',')
             if maxage_in:
-                age = [int(vv.split('=')[1]) for vv in v if 'max-age' in vv][0]
-                cache_age = max(cache_age, age)
+                try:
+                    age = [int(vv.split('=')[1]) for vv in v if 'max-age' in vv][0]
+                    cache_age = max(cache_age, age)
+                except:
+                    cache_age = DEFAULT_CACHE
             elif pp_in:
                 cache_age = DEFAULT_CACHE*30
         ttl = time.time() + cache_age

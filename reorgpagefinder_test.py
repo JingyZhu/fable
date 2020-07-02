@@ -14,20 +14,32 @@ db_wd = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=
 # sites = json.load(open('reorg_benchmark.json', 'r'))
 # sites.sort()
 # sites =  [
-#     "attractionsbrisbane.com.au",
 # 	"bottrop.de",
 #     "bowdoin.edu",
 #     "bto.org",
 # ]
 
+# sites = [
+# 	"autocasion.com",
+#     "baltimoresun.com",
+#     "bargainbriana.com",
+#     "blooloop.com",
+# ]
+
 sites = [
-	"autocasion.com",
-    "baltimoresun.com",
-    "bargainbriana.com",
-    "blooloop.com",
+	"cactus-mall.com",
+    "cdharrison.com",
+    "cityofmesquite.com"
 ]
 
-rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder2.log')
+sites = [
+	"climbtothestars.org",
+    "comptia.org",
+    "csu.edu",
+    "drive.com.au"
+]
+
+rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder3.log')
 
 for site in sites:
 	urls = db_wd.url_status_implicit_broken.find({

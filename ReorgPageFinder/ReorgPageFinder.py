@@ -109,6 +109,13 @@ class ReorgPageFinder:
         reorg_urls = self.db.reorg.find({'hostname': site, 'reorg_url': {"$exists": True}})
         self.pattern_dict = defaultdict(list)
         for reorg_url in list(reorg_urls):
+            # Patch the no title urls
+            if 'title' not in reorg_url:
+                wayback_reorg_url = self.memo.wayback_index(reorg_url['url'])
+                reorg_html, wayback_reorg_url = self.memo.crawl(wayback_reorg_url, final_url=True)
+                reorg_title = self.memo.extract_title(reorg_html, version='domdistiller')
+                reorg_url['title'] = reorg_title
+                self.db.reorg.update_one({'url': reorg_url['url']}, {'$set': {'title': reorg_title}})
             self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url['reorg_url'])
         if len(self.logger.handlers) > 2:
             self.logger.handlers.pop()

@@ -89,7 +89,7 @@ class TFidfDynamic:
         idx1, idx2 = self.idx[text1], self.idx[text2]
         return cosine_similarity(self.tfidf[idx1], self.tfidf[idx2])[0,0]
     
-    def topN(self, text, N=10):
+    def topN(self, text, N=7):
         """
         Get the highest weighted N words in a text
         If text is not in the corpus, it'll be added, and tfidf'll be recalculated
@@ -174,7 +174,7 @@ class TFidfStatic:
         idx1, idx2 = self.idx[text1], self.idx[text2]
         return cosine_similarity(self.workingset_tfidf[idx1], self.workingset_tfidf[idx2])[0,0]
     
-    def topN(self, text, N=10):
+    def topN(self, text, N=7):
         if self.workingset_vec is None:
             inputs_tfidf = TfidfVectorizer()
             try:
