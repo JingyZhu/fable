@@ -13,10 +13,10 @@ import config
 from utils import text_utils, url_utils
 
 
-rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder_CSE.log')
+rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder_usenix.log')
 
-site = 'umich.edu'
-urls = json.load(open('Broken_CSE.json', 'r'))
+site = 'usenix.org'
+urls = json.load(open('Broken_usenix.json', 'r'))
 rpf.init_site(site, urls)
 rpf.infer()
 rpf.first_search()

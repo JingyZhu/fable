@@ -30,10 +30,10 @@ try:
 except:
     print("No config.py, Specify you own port")
 
+sys.setrecursionlimit(1500)
 # Need to be modified
 tmp_path = config.TMP_PATH
 PORT = config.LOCALSERVER_PORT # If no config.py, modify to self chosen port
-# Need to be modified
 
 NULL = open('/dev/null', 'w')
 def localserver(PORT):
@@ -353,12 +353,14 @@ def domdistiller_extract(html, lang=None):
         soup.head.append(new_script)
     else:
         soup.insert(1, new_script)
-    
     html_id = "{}_{}.html".format(time.time(), os.getpid())
     html_file = join(tmp_path, html_id)
     file = open(html_file, 'w+')
-    file.write(str(soup))
-    file.close()
+    try:
+        file.write(str(soup))
+        file.close()
+    except:
+        return ''
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
         call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=20)
@@ -375,7 +377,10 @@ def domdistiller_extract(html, lang=None):
         for element in soup.findAll(tag):
             element.decompose()
 
-    content = soup.get_text(separator=' ')
+    try:
+        content = soup.get_text(separator=' ')
+    except:
+        return ''
     filter_str = ['\n', ' ']
     for s in filter_str:
         string_list = content.split(s)
@@ -467,8 +472,11 @@ def domdistiller_title_extract(html, lang=None):
     html_id = "{}_{}.html".format(time.time(), os.getpid())
     html_file = join(tmp_path, html_id)
     file = open(html_file, 'w+')
-    file.write(str(soup))
-    file.close()
+    try:
+        file.write(str(soup))
+        file.close()
+    except:
+        return ''
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
         call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)])
