@@ -7,16 +7,16 @@ from collections import defaultdict
 import time
 
 import sys
-sys.path.append('../')
+sys.path.append('../../')
 from ReorgPageFinder import discoverer, searcher, inferer, tools, ReorgPageFinder
 import config
 from utils import text_utils, url_utils
 
 
-rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder_usenix.log')
+rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder_CSE.log')
 
-site = 'usenix.org'
-urls = json.load(open('Broken_usenix.json', 'r'))
+site = 'umich.edu'
+urls = json.load(open('Broken_CSE.json', 'r'))
 rpf.init_site(site, urls)
 rpf.infer()
 rpf.first_search()

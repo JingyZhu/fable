@@ -23,6 +23,7 @@ search/schedule.py
 *.mongo
 backlinks.csv
 sample.csv
+seed_outgoing.csv
 alexa_top1k.txt
 
 jupyter.log

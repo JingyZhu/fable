@@ -227,6 +227,8 @@ class ReorgPageFinder:
                 title = self.memo.extract_title(html, version='domdistiller')
             except:
                 self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                try: self.db.wb_error.insert_one({'_id': url, 'url': url, 'hostname': self.site})
+                except: pass
                 continue
             update_dict = {'title': title}
             if searched is not None:
@@ -281,13 +283,17 @@ class ReorgPageFinder:
                 searched = self.searcher.search(url, search_engine='google')
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
-            if 'title' not in has_title:
+            if has_title is None: # No longer in reorg (already deleted)
+                continue
+            elif 'title' not in has_title:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
                     title = self.memo.extract_title(html, version='domdistiller')
                 except:
                     self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                    try: self.db.wb_error.insert_one({'_id': url, 'url': url, 'hostname': self.site})
+                    except: pass
                     continue
                 update_dict = {'title': title}
             else:
@@ -343,13 +349,17 @@ class ReorgPageFinder:
             discovered = self.discoverer.discover(url)
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
-            if 'title' not in has_title:
+            if has_title is None: # No longer in reorg (already deleted)
+                continue
+            elif 'title' not in has_title:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
                     title = self.memo.extract_title(html, version='domdistiller')
                 except:
                     self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                    try: self.db.wb_error.insert_one({'_id': url, 'url': url, 'hostname': self.site})
+                    except: pass
                     continue
                 update_dict = {'title': title}
             else:

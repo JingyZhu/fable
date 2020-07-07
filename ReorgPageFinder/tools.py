@@ -248,6 +248,7 @@ class Similar:
                 simi = 0
                 for ws in wayback_sig[2]:
                     for ls in sig:
+                        if ls == '': continue
                         simi = max(simi, self.tfidf.similar(ws, ls))
                 if simi >= self.short_threshold:
                     return lws
