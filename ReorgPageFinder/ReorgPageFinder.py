@@ -225,9 +225,13 @@ class ReorgPageFinder:
                 wayback_url = self.memo.wayback_index(url)
                 html = self.memo.crawl(wayback_url)
                 title = self.memo.extract_title(html, version='domdistiller')
-            except:
+            except: # No snapthost on wayback
                 self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
-                try: self.db.wb_error.insert_one({'_id': url, 'url': url, 'hostname': self.site})
+                try: self.db.na_urls.update_one({'_id': url}, {"$set": {
+                    'url': url,
+                    'hostname': self.site,
+                    'no_snapshot': True
+                }}, upsert=True)
                 except: pass
                 continue
             update_dict = {'title': title}
@@ -290,9 +294,13 @@ class ReorgPageFinder:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
                     title = self.memo.extract_title(html, version='domdistiller')
-                except:
+                except: # No snapthost on wayback
                     self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
-                    try: self.db.wb_error.insert_one({'_id': url, 'url': url, 'hostname': self.site})
+                    try: self.db.na_urls.update_one({'_id': url}, {"$set": {
+                        'url': url,
+                        'hostname': self.site,
+                        'no_snapshot': True
+                    }}, upsert=True)
                     except: pass
                     continue
                 update_dict = {'title': title}
@@ -356,9 +364,13 @@ class ReorgPageFinder:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
                     title = self.memo.extract_title(html, version='domdistiller')
-                except:
+                except: # No snapthost on wayback
                     self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
-                    try: self.db.wb_error.insert_one({'_id': url, 'url': url, 'hostname': self.site})
+                    try: self.db.na_urls.update_one({'_id': url}, {"$set": {
+                        'url': url,
+                        'hostname': self.site,
+                        'no_snapshot': True
+                    }}, upsert=True)
                     except: pass
                     continue
                 update_dict = {'title': title}
@@ -396,41 +408,3 @@ class ReorgPageFinder:
                         break
                     examples = success
                     success = self.query_inferer(examples)
-
-# for site in sites:
-#     reorg_urls = db.reorg.find({'hostname': site, 'reorg_url': {'$exists': True}})
-#     reorg_urls = list(reorg_urls)
-#     reorg_dirs = defaultdict(list)
-#     for reorg_url in reorg_urls:
-#         dirr = get_dirr(reorg_url['url'])
-#         reorg_dirs[dirr].append(((reorg_url['url'], (reorg_url['title'])), reorg_url['reorg_url']))
-#     similar._init_titles(site=site)
-#     broken_urls = list(db.reorg.find({'hostname': site, 'reorg_url': {'$exists': False}}))
-#     logger.info(f'SITE: {site}#URLS: {len(broken_urls)}')
-#     broken_urls = set([bu['url'] for bu in broken_urls])
-#     for reorg_dirr, examples in reorg_dirs.items():
-#         success = query_inferer(examples, site)
-#         while len(success) > 0:
-#             logger.info(f'Success {success}')
-#             for s in success: broken_urls.discard(s)
-#             success = query_inferer(examples, site)
-
-#     while len(broken_urls) > 0:
-#         url = broken_urls.pop()
-#         logger.info(f'URL: {url}')
-#         reorg_url = dis.discover(url)
-#         if reorg_url is not None:
-#             logger.info(f'Found reorg: {reorg_url}')
-#             wayback_url = memo.wayback_index(url)
-#             html = memo.crawl(wayback_url)
-#             title = memo.extract_title(html, version='domdistiller')
-#             db.reorg.update_one({'url': url}, {'$set': {'reorg_url': reorg_url, 'by': 'discover', 'title': title}})
-#             dirr = get_dirr(url)
-#             reorg_dirs[dirr].append(((url, (title)), reorg_url))
-#             examples = reorg_dirs[dirr]
-#             success = query_inferer(examples, site)
-#             while len(success) > 0:
-#                 logger.info(f'Success {success}')
-#                 for s in success: broken_urls.discard(s)
-#                 success = query_inferer(examples, site)
-            

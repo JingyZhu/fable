@@ -2,12 +2,13 @@
 Discover backlinks to today's page
 """
 import os
-from urllib.parse import urlsplit, urlparse, parse_qsl, urlunsplit
+from urllib.parse import urlsplit, urlparse, parse_qsl, parse_qs, urlunsplit
 from itertools import chain, combinations
 from bs4 import BeautifulSoup
 from queue import Queue
 from . import tools
 from collections import defaultdict
+import re
 
 import sys
 sys.path.append('../')
@@ -143,19 +144,21 @@ class Discoverer:
             return False
         return True
 
-    def discover_backlinks(self, src, dst, dst_title, dst_content, dst_html):
+    def discover_backlinks(self, src, dst, dst_title, dst_content, dst_html, dst_snapshot):
         """
         For src and dst, see:
             1. If src is archived on wayback
             2. If src is linking to dst on wayback
             3. If src is still working today
         
-        returns: (status, url(s)), status includes: found/loop/reorg/notfound
+        returns: (status, url(s)/reason), status includes: found/loop/reorg/notfound
         """
         logger.info(f'Backlinks: {src} {dst}')
         wayback_src = self.memo.wayback_index(src)
         broken, reason = sic_transit.broken(src, html=True)
         if wayback_src is None: # No archive in wayback for guessed_url
+            if not dst_snapshot:
+                return "notfound", "Parent no snapshots"
             if broken:
                 logger.info(f'Discover backlinks broken: {reason}')
                 return "notfound", None
@@ -179,18 +182,24 @@ class Discoverer:
                 src_html, src = self.memo.crawl(src, final_url=True)
                 matched_url = self.find_same_link(wayback_linked[1], src, src_html)
                 if matched_url:
-                    return "found", matched_url[0]
-                else:
+                    if not sic_transit.broken(matched_url[0]):
+                        return "found", matched_url[0]
+                    else:
+                        return "notfound", "Linked, matched url broken"
+                elif dst_snapshot: # Only consider the case for dst with snapshots
                     top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)
                     if top_similar is not None: 
                         return "found", top_similar[0]
                     else: 
-                        return "notfound", None
+                        return "notfound", "Linked, no matched url"
             elif not wayback_linked[0]: # Not linked to dst, need to look futher
                 return "loop", wayback_outgoing_sigs
             else: # Linked to dst, but broken today
-                return "reorg", wayback_outgoing_sigs 
-    
+                if dst_snapshot:
+                    return "reorg", wayback_outgoing_sigs 
+                else:
+                    return "notfound", "Parent broken today"
+
     def discover(self, url, depth=None, seen=None, trim_size=10):
         """
         Discover the potential reorganized site
@@ -198,15 +207,25 @@ class Discoverer:
         # TODO: 1. similar implementation
         """
         if depth is None: depth = self.depth
+        has_snapshot = False
+        suffice = False # Only used for has_snapshot=False. See whehter url sufice restrictions. (Parent sp&linked&not broken today)
         try:
             wayback_url = self.memo.wayback_index(url)
             html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
             content = self.memo.extract_content(html, version='domdistiller')
             title = self.memo.extract_title(html, version='domdistiller')
+            has_snapshot = True
         except Exception as e:
             logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
-            return
-        repr_text = content if content != '' else title
+            html, title, content = '', '', ''
+        if has_snapshot:
+            repr_text = content if content != '' else title
+        else:
+            us = urlsplit(url)
+            repr_text = re.sub('[^0-9a-zA-Z]+', ' ', us.path)
+            if us.query:
+                values = [u[1] for u in parse_qsl(us.query)]
+                repr_text += f' {' '.join(values)}'
         guessed_urls = self.guess_backlinks(url)
         guess_queue = [(g, depth - GUESS) for g in guessed_urls]
         guess_total = defaultdict(int, {g: depth-GUESS for g in guessed_urls})
@@ -223,23 +242,24 @@ class Discoverer:
                     # seen.add(guessed_url)
         guess_total = list(guess_total.items())
 
-        outgoing_queue = []
-        outgoing_sigs = crawl.outgoing_links_sig(wayback_url, html, wayback=True)
-        self.similar.tfidf._clear_workingset()
-        scoreboard = defaultdict(lambda: (0, 0))
-        c = [s[1] for s in outgoing_sigs] + [' '.join(s[2]) for s in outgoing_sigs] + [repr_text]
-        self.similar.tfidf.add_corpus(c)
-        for outlink, anchor, sig in outgoing_sigs:
-            outlink = url_utils.filter_wayback(outlink)
-            # For each link, find highest link score
-            if outlink not in seen and self.loop_cand(url, outlink):
-                simis = (self.similar.tfidf.similar(anchor, repr_text), self.similar.tfidf.similar(' '.join(sig), repr_text))
-                scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
-        for outlink, simis in scoreboard.items():
-            outgoing_queue.append((outlink, depth-OUTGOING, simis))
+        if has_snapshot: # Only loop to find backlinks when snapshot is available
+            outgoing_queue = []
+            outgoing_sigs = crawl.outgoing_links_sig(wayback_url, html, wayback=True)
+            self.similar.tfidf._clear_workingset()
+            scoreboard = defaultdict(lambda: (0, 0))
+            c = [s[1] for s in outgoing_sigs] + [' '.join(s[2]) for s in outgoing_sigs] + [repr_text]
+            self.similar.tfidf.add_corpus(c)
+            for outlink, anchor, sig in outgoing_sigs:
+                outlink = url_utils.filter_wayback(outlink)
+                # For each link, find highest link score
+                if outlink not in seen and self.loop_cand(url, outlink):
+                    simis = (self.similar.tfidf.similar(anchor, repr_text), self.similar.tfidf.similar(' '.join(sig), repr_text))
+                    scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
+            for outlink, simis in scoreboard.items():
+                outgoing_queue.append((outlink, depth-OUTGOING, simis))
 
-        outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
-        outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
+            outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
+            outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
         
         while len(guess_total) + len(outgoing_queue) > 0:
             # Ops for guessed links
@@ -252,7 +272,7 @@ class Discoverer:
                 src, link_depth = item
                 logger.info(f"Got: {src} depth:{link_depth} guess_total:{len(guess_total)} outgoing_queue:{len(outgoing_queue)}")
                 seen.add(src)
-                status, msg_urls = self.discover_backlinks(src, url, title, content, html)
+                status, msg_urls = self.discover_backlinks(src, url, title, content, html, has_snapshot)
                 logger.info(status)
                 if status == 'found':
                     return msg_urls
@@ -269,6 +289,8 @@ class Discoverer:
                                 scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
                         for outlink, simis in scoreboard.items():
                             outgoing_queue.append((outlink, link_depth-OUTGOING, simis))
+                elif status == 'notfound' and not has_snapshot:
+                    suffice = suffice or 'Linked' in msg_urls
             
             outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
             outgoing_queue = outgoing_queue[:trim_size+1] if len(outgoing_queue) > trim_size else outgoing_queue

@@ -210,7 +210,7 @@ class Similar:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
         self.threshold = 0.8
-        self.short_threshold = self.threshold - 0.1
+        self.short_threshold = self.threshold
         if use_db:
             self.db =  db
             corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
@@ -332,8 +332,10 @@ class Similar:
             self._init_titles(site)
         if target_title in self.wb_titles:
             if len(self.wb_titles[target_title]) > 1:
+                logger.debug(f'wayback title of url: {target_url} none UNIQUE')
                 return []
             elif target_url not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
+                logger.debug(f'wayback title of url: {target_url} none UNIQUE')
                 return []
         self.tfidf._clear_workingset()
         self.tfidf.add_corpus([target_title] + list(candidates_titles.values()))
@@ -344,8 +346,10 @@ class Similar:
                 self._init_titles(site)
             if c in self.lw_titles:
                 if len(self.lw_titles[c]) > 1:
+                    logger.debug(f'title of url: {url} none UNIQUE')
                     continue
                 elif url not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
+                    logger.debug(f'title of url: {url} none UNIQUE')
                     continue
             simi = self.tfidf.similar(target_title, c)
             if simi >= (self.short_threshold + self.threshold) / 2:

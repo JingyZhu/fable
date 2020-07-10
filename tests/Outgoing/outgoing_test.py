@@ -15,22 +15,23 @@ from utils import text_utils, url_utils
 
 all_urls = json.load(open('Broken_urls.json', 'r'))
 
-# sites = [
-# 	"uwindsor.ca",
-#     "sina.com.cn",
-#     "wprost.pl",
-#     "culture.fr",
-# ]
-
-# sites = [
-#     "xhby.net",
-# ]
-
 sites = [
-    "zhuzhouwang.com",
+	"books.com.tw",
+    "wmu.com",
+    "cio.com",
 ]
 
-rpf = ReorgPageFinder.ReorgPageFinder(logname='./Outgoing3.log')
+# sites = [
+#     "mondayeveningconcerts.org",
+#     "scoop.co.nz",
+#     "tradepub.com",
+# ]
+
+# sites = [
+#     "zhuzhouwang.com",
+# ]
+
+rpf = ReorgPageFinder.ReorgPageFinder(logname='./Outgoing1.log')
 
 for site in sites:
 	urls = all_urls[site]

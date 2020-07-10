@@ -58,6 +58,18 @@ Set of URLs for trying to find copies on
 }
 ```
 
+### na_urls
+URLs that are not applicable for finding alternate links
+```json
+{
+    "url": "url",
+    "hostname": "hostname",
+    "no_snapshot": "Bool (This URL has no snapshots in the wayback)",
+    "no_working_parent": "Bool (This url's parent doesn't have snapshot/doesn't link to this url/ doesn't work today)",
+    "false_positive": "Bool (If broken detection is false positive)"
+}
+```
+
 ### checked
 Set of already tried URLs with certain techniques
 ```json

@@ -19,6 +19,7 @@ broken_testcase =     testcase = [
     ('http://findavideo.com/findavideo/reviews.tam?cart=99C02nex.ftq&lpg=/findavideo/stars.tam&lpt=936225424&xax=5998&TITLE.ctx=Twice+Upon+a+Time', True),
     ('http://blog.imageworksllc.com/blog/bid/341454/js.hubspot.com/analytics/', False),
     ('http://knect365.com/clinical-trials-innovation/content/1?topics=big+data', False),
+    ('http://hbfp.hebei.com.cn/', False)
 ]
 
 def test_sic_transit_broken():
