@@ -21,6 +21,10 @@ class Searcher:
         """
         At lease one of db or corpus should be provided
         # TODO: Corpus could not be necessary
+
+        Return: 
+            If found: URL, Trace (how copy is found, etc)
+            else: None
         """
         self.PS = crawl.ProxySelector(proxies)
         self.use_db = use_db
@@ -67,9 +71,10 @@ class Searcher:
                     logger.debug(f'Extract Title: {searched_url}')
             logger.debug(f'Finished crawling')
             # TODO: May move all comparison techniques to similar class
-            similars = self.similar.similar(url, title, content, searched_titles, searched_contents)
-            if len(similars) > 0: 
-                return similars[0][0]
+            similars, fromm = self.similar.similar(url, title, content, searched_titles, searched_contents)
+            if len(similars) > 0:
+                top_similar = similars[0]
+                return top_similar[0], {'type': fromm, 'value': top_similar[1]}
             return
 
         if title != '':

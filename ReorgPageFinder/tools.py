@@ -226,6 +226,8 @@ class Similar:
         """
         See whether there is a url signature on liveweb that can match wayback sig
         Based on 2 methods: UNIQUE Similar anchor text, Non-UNIQUE same anchor text & similar sig
+        
+        Return: link_sig, similarity, by(anchor, sig)
         """
         self.tfidf._clear_workingset()
         anchor_count = defaultdict(int)
@@ -241,7 +243,7 @@ class Similar:
             if anchor_count[(link, anchor)] < 2: # UNIQUE anchor
                 simi = self.tfidf.similar(wayback_sig[1], anchor)
                 if simi >= self.short_threshold:
-                    return lws
+                    return lws, simi, 'anchor'
             else:
                 if wayback_sig[1] != anchor:
                     continue
@@ -251,7 +253,7 @@ class Similar:
                         if ls == '': continue
                         simi = max(simi, self.tfidf.similar(ws, ls))
                 if simi >= self.short_threshold:
-                    return lws
+                    return lws, simi, 'sig'
         return None
     
     def content_similar(self, target_content, candidates_contents, candidates_html=None):
@@ -365,10 +367,12 @@ class Similar:
         """
         All text-based similar tech is included
         Fixed: Whether title similarity is allowed across different sites
+
+        Return: [(similar urls, similarity)], from which comparison
         """
         if self.site is not None:
             similars = self.title_similar(tg_url, tg_title, cand_titles, fixed=fixed)
             if len(similars) > 0:
-                return similars
+                return similars, "title"
         similars = self.content_similar(tg_content, cand_contents, cand_htmls)
-        return similars
+        return similars, "content"

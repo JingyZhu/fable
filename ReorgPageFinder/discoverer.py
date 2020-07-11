@@ -75,13 +75,13 @@ class Discoverer:
         backlinked_html: html which could be linking to the html
         cut: Max number of outlinks to test on. If set to <=0, there is no limit
 
-        Returns: (link, link's html) which is a copy of html if exists. None otherwise
+        Returns: (link, similarity), from_where which is a copy of html if exists. None otherwise
         """
         backlinked_content = self.memo.extract_content(backlinked_html, version='domdistiller')
         backlinked_title = self.memo.extract_title(backlinked_html, version='domdistiller')
-        similars = self.similar.similar(dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})
+        similars, fromm = self.similar.similar(dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})
         if len(similars) > 0:
-            return similars[0]
+            return similars[0], fromm
 
         # outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
         global he
@@ -112,10 +112,10 @@ class Discoverer:
             logger.info(f'Test if outgoing link same: {outgoing_link}')
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
             outgoing_title = self.memo.extract_title(html, version='domdistiller')
-            similars = self.similar.similar(dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
+            similars, fromm = self.similar.similar(dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
             if len(similars) > 0:
-                return similars[0]
-        return
+                return similars[0], fromm
+        return None, None
     
     def find_same_link(self, wayback_sigs, liveweb_url, liveweb_html):
         """
@@ -125,9 +125,9 @@ class Discoverer:
         """
         live_outgoing_sigs = crawl.outgoing_links_sig(liveweb_url, liveweb_html)
         for wayback_sig in wayback_sigs:
-            matched_url = self.similar.match_url_sig(wayback_sig, live_outgoing_sigs)
-            if matched_url is not None:
-                return matched_url
+            matched_vals = self.similar.match_url_sig(wayback_sig, live_outgoing_sigs)
+            if matched_vals is not None:
+                return matched_vals
         return
     
     def loop_cand(self, url, outgoing_url):
@@ -151,23 +151,26 @@ class Discoverer:
             2. If src is linking to dst on wayback
             3. If src is still working today
         
-        returns: (status, url(s)/reason), status includes: found/loop/reorg/notfound
+        returns: (status, url(s), reason), 
+                    status includes: found/loop/reorg/notfound
+                    url(s) are the urls of corresponding status. (found url, outgoing loop urls, etc)
+                    reasons are how urls are found (from, similarity) or notfound (for no dst snapshots)
         """
         logger.info(f'Backlinks: {src} {dst}')
         wayback_src = self.memo.wayback_index(src)
         broken, reason = sic_transit.broken(src, html=True)
         if wayback_src is None: # No archive in wayback for guessed_url
             if not dst_snapshot:
-                return "notfound", "Parent no snapshots"
+                return "notfound", None, "Parent no snapshots"
             if broken:
                 logger.info(f'Discover backlinks broken: {reason}')
-                return "notfound", None
+                return "notfound", None, None
             src_html, src = self.memo.crawl(src, final_url=True, max_retry=5)
-            top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html, cut=10)
-            if top_similar is not None: 
-                return "found", top_similar[0]
+            top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html, cut=10)
+            if top_similar is not None:
+                return "found", top_similar[0], (fromm, top_similar[1])
             else:
-                return "notfound", None
+                return "notfound", None, None
         else:
             wayback_src_html = self.memo.crawl(wayback_src)
             wayback_outgoing_sigs = crawl.outgoing_links_sig(wayback_src, wayback_src_html, wayback=True)
@@ -180,31 +183,35 @@ class Discoverer:
             logger.info(f'Wayback linked: {wayback_linked[1]}')
             if wayback_linked[0] and not broken: # src linking to dst and is working today
                 src_html, src = self.memo.crawl(src, final_url=True)
-                matched_url = self.find_same_link(wayback_linked[1], src, src_html)
-                if matched_url:
-                    if not sic_transit.broken(matched_url[0]):
-                        return "found", matched_url[0]
+                rval = self.find_same_link(wayback_linked[1], src, src_html)
+                if rval:
+                    matched_sig, simi, by = rval
+                    if not sic_transit.broken(matched_sig[0]):
+                        return "found", matched_sig[0], (f'link_{by}', simi)
                     else:
-                        return "notfound", "Linked, matched url broken"
+                        return "notfound", None. "Linked, matched url broken"
                 elif dst_snapshot: # Only consider the case for dst with snapshots
-                    top_similar = self.link_same_page(dst, dst_title, dst_content, src, src_html)
+                    top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html)
                     if top_similar is not None: 
-                        return "found", top_similar[0]
+                        return "found", top_similar[0], (fromm, top_similar[1])
                     else: 
-                        return "notfound", "Linked, no matched url"
+                        return "notfound", None, "Linked, no matched url"
             elif not wayback_linked[0]: # Not linked to dst, need to look futher
-                return "loop", wayback_outgoing_sigs
+                return "loop", wayback_outgoing_sigs, None
             else: # Linked to dst, but broken today
                 if dst_snapshot:
-                    return "reorg", wayback_outgoing_sigs 
+                    return "reorg", wayback_outgoing_sigs, None
                 else:
-                    return "notfound", "Parent broken today"
+                    return "notfound", None, "Parent broken today"
 
     def discover(self, url, depth=None, seen=None, trim_size=10):
         """
         Discover the potential reorganized site
         Trim size: The largest size of outgoing queue
         # TODO: 1. similar implementation
+
+        Return: If Found: URL, Trace (whether it information got suffice, how copy is found, etc)
+                else: None, {'suffice': Bool}
         """
         if depth is None: depth = self.depth
         has_snapshot = False
@@ -218,6 +225,7 @@ class Discoverer:
         except Exception as e:
             logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             html, title, content = '', '', ''
+        suffice = has_snapshot or suffice
         if has_snapshot:
             repr_text = content if content != '' else title
         else:
@@ -272,10 +280,10 @@ class Discoverer:
                 src, link_depth = item
                 logger.info(f"Got: {src} depth:{link_depth} guess_total:{len(guess_total)} outgoing_queue:{len(outgoing_queue)}")
                 seen.add(src)
-                status, msg_urls = self.discover_backlinks(src, url, title, content, html, has_snapshot)
+                status, msg_urls, reason = self.discover_backlinks(src, url, title, content, html, has_snapshot)
                 logger.info(status)
                 if status == 'found':
-                    return msg_urls
+                    return msg_urls, {'suffice': True, 'type': reason[0], 'value': reason[1]}
                 elif status == 'loop':
                     if link_depth >= OUTGOING:
                         c = [s[1] for s in msg_urls] + [' '.join(s[2]) for s in msg_urls] + [repr_text]
@@ -290,7 +298,7 @@ class Discoverer:
                         for outlink, simis in scoreboard.items():
                             outgoing_queue.append((outlink, link_depth-OUTGOING, simis))
                 elif status == 'notfound' and not has_snapshot:
-                    suffice = suffice or 'Linked' in msg_urls
+                    suffice = suffice or 'Linked' in reason
             
             outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
             outgoing_queue = outgoing_queue[:trim_size+1] if len(outgoing_queue) > trim_size else outgoing_queue
@@ -299,5 +307,5 @@ class Discoverer:
             #     if reorg_src is not None and reorg_src not in seen:
             #         search_queue.put((reorg_src, depth))
             #         seen.add(reorg_src)
-        return
+        return None, {'suffice': suffice}
 
