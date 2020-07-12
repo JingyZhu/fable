@@ -210,7 +210,7 @@ class Similar:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
         self.threshold = 0.8
-        self.short_threshold = self.threshold
+        self.short_threshold = self.threshold - 0.1
         if use_db:
             self.db =  db
             corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
@@ -227,7 +227,7 @@ class Similar:
         See whether there is a url signature on liveweb that can match wayback sig
         Based on 2 methods: UNIQUE Similar anchor text, Non-UNIQUE same anchor text & similar sig
         
-        Return: link_sig, similarity, by(anchor, sig)
+        Return: link_sig, similarity, by{anchor, sig}
         """
         self.tfidf._clear_workingset()
         anchor_count = defaultdict(int)

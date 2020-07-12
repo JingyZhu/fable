@@ -121,7 +121,8 @@ class Discoverer:
         """
         For same page from wayback and liveweb (still working). Find the same url from liveweb which matches to wayback
         
-        Returns: If there is a match on the url, return url, Else: return None
+        Returns: If there is a match on the url, return sig, similarity, by
+                 Else: return None
         """
         live_outgoing_sigs = crawl.outgoing_links_sig(liveweb_url, liveweb_html)
         for wayback_sig in wayback_sigs:
@@ -186,10 +187,10 @@ class Discoverer:
                 rval = self.find_same_link(wayback_linked[1], src, src_html)
                 if rval:
                     matched_sig, simi, by = rval
-                    if not sic_transit.broken(matched_sig[0]):
+                    if not sic_transit.broken(matched_sig[0])[0]:
                         return "found", matched_sig[0], (f'link_{by}', simi)
                     else:
-                        return "notfound", None. "Linked, matched url broken"
+                        return "notfound", None, "Linked, matched url broken"
                 elif dst_snapshot: # Only consider the case for dst with snapshots
                     top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html)
                     if top_similar is not None: 
@@ -233,7 +234,7 @@ class Discoverer:
             repr_text = re.sub('[^0-9a-zA-Z]+', ' ', us.path)
             if us.query:
                 values = [u[1] for u in parse_qsl(us.query)]
-                repr_text += f' {' '.join(values)}'
+                repr_text += f" {' '.join(values)}"
         guessed_urls = self.guess_backlinks(url)
         guess_queue = [(g, depth - GUESS) for g in guessed_urls]
         guess_total = defaultdict(int, {g: depth-GUESS for g in guessed_urls})
@@ -250,8 +251,8 @@ class Discoverer:
                     # seen.add(guessed_url)
         guess_total = list(guess_total.items())
 
+        outgoing_queue = []
         if has_snapshot: # Only loop to find backlinks when snapshot is available
-            outgoing_queue = []
             outgoing_sigs = crawl.outgoing_links_sig(wayback_url, html, wayback=True)
             self.similar.tfidf._clear_workingset()
             scoreboard = defaultdict(lambda: (0, 0))
@@ -281,7 +282,7 @@ class Discoverer:
                 logger.info(f"Got: {src} depth:{link_depth} guess_total:{len(guess_total)} outgoing_queue:{len(outgoing_queue)}")
                 seen.add(src)
                 status, msg_urls, reason = self.discover_backlinks(src, url, title, content, html, has_snapshot)
-                logger.info(status)
+                logger.info(f'{status}, {reason}')
                 if status == 'found':
                     return msg_urls, {'suffice': True, 'type': reason[0], 'value': reason[1]}
                 elif status == 'loop':

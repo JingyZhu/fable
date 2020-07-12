@@ -234,10 +234,23 @@ class ReorgPageFinder:
                 }}, upsert=True)
                 except: pass
                 continue
+
+
             update_dict = {'title': title}
             if searched is not None:
-                self.logger.info(f"HIT: {searched}")
-                update_dict.update({'reorg_url': searched, 'by': 'search'})
+                searched, trace = searched
+                self.logger.info(f"HIT_1: {searched}")
+                if not url_utils.url_match(url, searched): # False positive test
+                    update_dict.update({'reorg_url': searched, 'by':{
+                        "method": "search"
+                    }})
+                    update_dict['by'].update(trace)
+                else:
+                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {'false_positive': True}}, upsert=True)
+                    except: pass
+                    searched = None
+
+
             try:
                 self.db.reorg.update_one({'url': url}, {"$set": update_dict}) 
             except Exception as e:
@@ -306,9 +319,22 @@ class ReorgPageFinder:
                 update_dict = {'title': title}
             else:
                 title = has_title['title']
+
+
             if searched is not None:
-                self.logger.info(f"HIT: {searched}")
-                update_dict.update({'reorg_url': searched, 'by': 'search'})
+                searched, trace = searched
+                self.logger.info(f"HIT_2: {searched}")
+                if not url_utils.url_match(url, searched): # False positive test
+                    update_dict.update({'reorg_url': searched, 'by':{
+                        "method": "search"
+                    }})
+                    update_dict['by'].update(trace)
+                else:
+                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {'false_positive': True}}, upsert=True)
+                    except: pass
+                    searched = None
+
+
             if len(update_dict) > 0:
                 try:
                     self.db.reorg.update_one({'url': url}, {"$set": update_dict}) 
@@ -354,7 +380,7 @@ class ReorgPageFinder:
             url = broken_urls.pop()
             i += 1
             self.logger.info(f'URL: {i} {url}')
-            discovered = self.discoverer.discover(url)
+            discovered, trace = self.discoverer.discover(url)
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
             if has_title is None: # No longer in reorg (already deleted)
@@ -376,9 +402,26 @@ class ReorgPageFinder:
                 update_dict = {'title': title}
             else:
                 title = has_title['title']
+
+
             if discovered is not None:
+                discovered, trace = discovered
                 self.logger.info(f'Found reorg: {discovered}')
-                update_dict.update({'reorg_url': discovered, 'by': 'discover'})
+                if not url_utils.url_match(url, discovered): # False positive test
+                    update_dict.update({'reorg_url': discovered, 'by':{
+                        "method": "discover"
+                    }})
+                    update_dict['by'].update(trace)
+                else:
+                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {'false_positive': True}}, upsert=True)
+                    except: pass
+                    discovered = None
+            elif not trace['suffice']:
+                try:
+                    self.db.na_urls.update_one({'_id': url}, {'$set': {'no_working_parent': True}}, upsert=True)
+                except:pass
+
+
             if len(update_dict) > 0:
                 try:
                     self.db.reorg.update_one({'url': url}, {'$set': update_dict})
