@@ -24,6 +24,7 @@ search/schedule.py
 backlinks.csv
 sample.csv
 seed_outgoing.csv
+*.tsv
 alexa_top1k.txt
 
 jupyter.log
