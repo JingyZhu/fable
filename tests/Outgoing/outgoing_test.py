@@ -16,15 +16,17 @@ from utils import text_utils, url_utils
 all_urls = json.load(open('Broken_urls.json', 'r'))
 
 sites = [
-	"books.com.tw",
-    "wmu.com",
-    "cio.com",
+	"tradepub.com", # Not good
+    "turismo.gal",
+    "utoronto.ca", # no snapshots
+    "scoop.co.nz",
 ]
 
 # sites = [
-#     "mondayeveningconcerts.org",
-#     "scoop.co.nz",
-#     "tradepub.com",
+#     "araport.org", # Not good
+#     "ptb.de", # no snapshot
+#     "wlu.edu",
+#     "acer.com",
 # ]
 
 # sites = [
