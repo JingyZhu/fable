@@ -177,6 +177,8 @@ class Inferer:
     def if_reorg(self, url, reorg_urls):
         """
         reorg_urls: all urls infered by inferer
+
+        return: Matched URLS, trace(dict)
         """
         reorg_content = {}
         reorg_title = {}
@@ -187,14 +189,15 @@ class Inferer:
             reorg_content[reorg_url] = self.memo.extract_content(reorg_html)
             reorg_title[reorg_url] = self.memo.extract_title(reorg_html)
         if len(reorg_content) + len(reorg_title) == 0:
-            return None, "reorg pages not exists"
+            return None, {"reason": "reorg pages not exists"}
         wayback_url = self.memo.wayback_index(url)
         html = self.memo.crawl(wayback_url)
-        if html is None: return None, "url fail to load on wayback"
+        if html is None: return None, {"reason": "url fail to load on wayback"}
         content = self.memo.extract_content(html)
         title = self.memo.extract_title(html)
-        similars = self.similar.similar(url, title, content, reorg_title, reorg_content)
+        similars, fromm = self.similar.similar(url, title, content, reorg_title, reorg_content)
         if len(similars) > 0:
-            return similars[0]
+            top_similar = similars[0]
+            return top_similar[0], {'type': fromm, 'value': top_similar[1]}
         else:
-            return None, "no similar pages"
+            return None, {'reason': "no similar pages"}

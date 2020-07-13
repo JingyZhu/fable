@@ -1,7 +1,7 @@
 
 from publicsuffix import fetch, PublicSuffixList
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, parse_qsl
+from urllib.parse import urlparse, parse_qsl, urlsplit, urlunsplit
 import re
 import os, time
 from os.path import realpath, join, dirname
@@ -193,4 +193,21 @@ def url_match(url1, url2, wayback=True):
         return True
     qsl1, qsl2 = sorted(parse_qsl(query1), key=lambda kv: (kv[0], kv[1])), sorted(parse_qsl(query2), key=lambda kv: (kv[0], kv[1]))
     return len(qsl1) > 0 and qsl1 == qsl2
-        
+
+
+def url_norm(url, wayback=False):
+    """
+    Perform URL normalization
+    Namely, sort query by keys, and eliminate port number
+    """
+    if wayback:
+        url = filter_wayback(url)
+    us = urlsplit(url)
+    path, query = us.path, us.query
+    us = us._replace(netloc=us.netloc.split(':')[0])
+    if path == '': 
+        us = us._replace(path='/')
+    if query:
+        qsl = sorted(parse_qsl(query), key=lambda kv: (kv[0], kv[1]))
+        us = us._replace(query='&'.join([f'{kv[0]}={kv[1]}' for kv in qsl]))
+    return urlunsplit(us)

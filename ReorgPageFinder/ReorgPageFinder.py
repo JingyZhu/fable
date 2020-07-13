@@ -181,13 +181,25 @@ class ReorgPageFinder:
             pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]}
             for infer_url, cand in infered_dict.items():
                 # logger.info(f'Infer url: {infer_url} {cand}')
-                reorg_url, reason = self.inferer.if_reorg(infer_url, cand)
+                reorg_url, trace = self.inferer.if_reorg(infer_url, cand)
                 if reorg_url is not None:
-                    self.db.reorg.update_one({'url': infer_url}, {'$set': {'reorg_url': reorg_url, 'by': 'infer'}})
                     self.logger.info(f'Found by infer: {infer_url} --> {reorg_url}')
-                    suc = ((pat_infer_urls[infer_url]), reorg_url)
-                    self._add_url_to_patterns(*unpack_ex(suc))
-                    success.append(suc)
+                    if not url_utils.url_match(infer_url, reorg_url):
+                        by_dict = {'method': 'infer'}
+                        by_dict.update(trace)
+                        self.db.reorg.update_one({'url': infer_url}, {'$set': {
+                            'reorg_url': reorg_url, 
+                            'by': by_dict
+                        }})
+                        suc = ((pat_infer_urls[infer_url]), reorg_url)
+                        self._add_url_to_patterns(*unpack_ex(suc))
+                        success.append(suc)
+                    else: # False positive
+                        try: self.db.na_urls.update_one({'_id': infer_url}, {'$set': {
+                                'false_positive': True,
+                                'hostname': self.site
+                            }}, upsert=True)
+                        except: pass
         return success
 
     def infer(self):
@@ -246,7 +258,10 @@ class ReorgPageFinder:
                     }})
                     update_dict['by'].update(trace)
                 else:
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {'false_positive': True}}, upsert=True)
+                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
+                            'false_positive': True, 
+                            'hostname': self.site
+                        }}, upsert=True)
                     except: pass
                     searched = None
 
@@ -330,7 +345,10 @@ class ReorgPageFinder:
                     }})
                     update_dict['by'].update(trace)
                 else:
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {'false_positive': True}}, upsert=True)
+                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
+                            'false_positive': True, 
+                            'hostname': self.site
+                        }}, upsert=True)
                     except: pass
                     searched = None
 
@@ -413,12 +431,18 @@ class ReorgPageFinder:
                     }})
                     update_dict['by'].update(trace)
                 else:
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {'false_positive': True}}, upsert=True)
+                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
+                            'false_positive': True, 
+                            'hostname': self.site
+                        }}, upsert=True)
                     except: pass
                     discovered = None
             elif not trace['suffice']:
                 try:
-                    self.db.na_urls.update_one({'_id': url}, {'$set': {'no_working_parent': True}}, upsert=True)
+                    self.db.na_urls.update_one({'_id': url}, {'$set': {
+                        'no_working_parent': True, 
+                        'hostname': self.site
+                    }}, upsert=True)
                 except:pass
 
 
