@@ -15,12 +15,13 @@ from utils import text_utils, url_utils
 
 all_urls = json.load(open('Broken_urls.json', 'r'))
 
-sites = [
-	"tradepub.com", # Not good
-    "turismo.gal",
-    "utoronto.ca", # no snapshots
-    "scoop.co.nz",
-]
+sites = sorted(all_urls.keys())
+# sites = [
+# 	# "tradepub.com", # Not good
+#     "turismo.gal",
+#     "utoronto.ca", # no snapshots
+#     "scoop.co.nz",
+# ]
 
 # sites = [
 #     "araport.org", # Not good
@@ -33,13 +34,27 @@ sites = [
 #     "zhuzhouwang.com",
 # ]
 
-rpf = ReorgPageFinder.ReorgPageFinder(logname='./Outgoing1.log')
+# rpf = ReorgPageFinder.ReorgPageFinder(logname='./Outgoing2.log')
 
-for site in sites:
-	urls = all_urls[site]
-	rpf.init_site(site, urls)
-	rpf.infer()
-	rpf.first_search()
-	rpf.second_search()
-	rpf.discover()
-	rpf.infer()
+def search():
+	global sites
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./search.log')
+	sites = sites[:int(len(sites)/2)]
+	for i, site in enumerate(sites):
+		print(f'SiTENO.{i}: {site}')
+		urls = all_urls[site]
+		rpf.init_site(site, urls)
+		rpf.first_search()
+		rpf.second_search()
+
+def discover():
+	global sites
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover.log')
+	sites = sites[int(len(sites)/2):]
+	for i, site in enumerate(sites):
+		print(f'SiTENO.{i}: {site}')
+		urls = all_urls[site]
+		rpf.init_site(site, urls)
+		rpf.discover()
+
+discover()
