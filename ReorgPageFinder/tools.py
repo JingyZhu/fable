@@ -288,6 +288,7 @@ class Similar:
         lw_path, wb_path = defaultdict(int), defaultdict(int)
         for lw in lw_crawl:
             loc_dir = (urlsplit(lw['url']).netloc.split(':')[0], os.path.dirname(urlsplit(lw['url']).path))
+            # Guarantee every path has at lease one title
             if 'title' not in lw and lw_path[loc_dir] < 2:
                 html = brotli.decompress(lw['html']).decode()
                 title = text_utils.extract_title(html, version=version)

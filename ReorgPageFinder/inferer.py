@@ -190,11 +190,14 @@ class Inferer:
             reorg_title[reorg_url] = self.memo.extract_title(reorg_html)
         if len(reorg_content) + len(reorg_title) == 0:
             return None, {"reason": "reorg pages not exists"}
-        wayback_url = self.memo.wayback_index(url)
-        html = self.memo.crawl(wayback_url)
-        if html is None: return None, {"reason": "url fail to load on wayback"}
-        content = self.memo.extract_content(html)
-        title = self.memo.extract_title(html)
+        try:
+            wayback_url = self.memo.wayback_index(url)
+            html = self.memo.crawl(wayback_url)
+            if html is None: return None, {"reason": "url fail to load on wayback"}
+            content = self.memo.extract_content(html)
+            title = self.memo.extract_title(html)
+        except:
+            return None, {"reason": "Fail to get wayback url, html or content/title"}
         similars, fromm = self.similar.similar(url, title, content, reorg_title, reorg_content)
         if len(similars) > 0:
             top_similar = similars[0]

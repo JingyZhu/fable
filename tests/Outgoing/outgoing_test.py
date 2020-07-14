@@ -39,7 +39,7 @@ sites = sorted(all_urls.keys())
 def search():
 	global sites
 	rpf = ReorgPageFinder.ReorgPageFinder(logname='./search.log')
-	sites = sites[:int(len(sites)/2)]
+	sites = sites[int(len(sites)/2):]
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
 		urls = all_urls[site]
@@ -49,8 +49,8 @@ def search():
 
 def discover():
 	global sites
-	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover.log')
-	sites = sites[int(len(sites)/2):]
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover1.log')
+	sites = sites[:int(len(sites)/4)]
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
 		urls = all_urls[site]

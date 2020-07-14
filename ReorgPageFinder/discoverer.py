@@ -196,7 +196,9 @@ class Discoverer:
                     if top_similar is not None: 
                         return "found", top_similar[0], (fromm, top_similar[1])
                     else: 
-                        return "notfound", None, "Linked, no matched url"
+                        return "notfound", None, "Linked, no matched link"
+                else: # For dst without snapshots
+                    return "notfound", None, "Linked, no matched link"
             elif not wayback_linked[0]: # Not linked to dst, need to look futher
                 return "loop", wayback_outgoing_sigs, None
             else: # Linked to dst, but broken today

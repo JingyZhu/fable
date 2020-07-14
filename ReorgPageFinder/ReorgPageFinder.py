@@ -9,7 +9,7 @@ import json
 import logging
 
 import config
-from utils import text_utils, url_utils, crawl
+from utils import text_utils, url_utils, crawl, sic_transit
 
 db_broken = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
@@ -102,7 +102,18 @@ class ReorgPageFinder:
     
     def init_site(self, site, urls):
         self.site = site
-        objs = [{'url': url, 'hostname': site} for url in urls]
+        objs = []
+        already_in = list(self.db.reorg.find({'hostname': site}))
+        already_in = set([u['url'] for u in already_in])
+        for url in urls:
+            if url in already_in:
+                continue
+            objs.append({'url': url, 'hostname': site})
+            # TODO May need avoid insert false positive 
+            if not sic_transit.broken(url):
+                try:
+                    self.db.na_urls.insert_one({'_id': url, 'url': url, 'hostname': site, 'false_positive': True})
+                except: pass
         try:
             self.db.reorg.insert_many(objs, ordered=False)
         except: pass
@@ -169,7 +180,7 @@ class ReorgPageFinder:
                         self.db.reorg.update_one({'_id': infer_url['_id']}, {'$set': {'title': title}})
                     except Exception as e:
                         self.logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
-                        return []
+                        title = ""
                 else: title = infer_url['title'] 
                 infer_urls[pat].append((infer_url['url'], (title)))
         if len(infer_urls) <=0:
@@ -201,6 +212,24 @@ class ReorgPageFinder:
                             }}, upsert=True)
                         except: pass
         return success
+
+    def fp_check(self, url, reorg_url):
+        """
+        Determine False Positive
+
+        returns: Boolean on if false positive
+        """
+        if url_utils.url_match(url, reorg_url):
+            return True
+        html = self.memo.crawl(url)
+        reorg_html = self.memo.crawl(reorg_url)
+        if html is None or reorg_html is None:
+            return False
+        content = self.memo.extract_content(html)
+        reorg_content = self.memo.extract_content(reorg_html)
+        self.similar.tfidf._clear_workingset()
+        simi = self.similar.tfidf.similar(content, reorg_content)
+        return simi >= 0.8
 
     def infer(self):
         urls = {}
@@ -277,7 +306,8 @@ class ReorgPageFinder:
                     "hostname": self.site,
                     "search_1": True
                 }}, upsert=True)
-            except: pass
+            except Exception as e:
+                self.logger.warn(f'Discover update checked: {str(e)}')
             if searched is not None:
                 example = ((url, title), searched)
                 added = self._add_url_to_patterns(*unpack_ex(example))
@@ -315,9 +345,9 @@ class ReorgPageFinder:
                 searched = self.searcher.search(url, search_engine='google')
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
-            if has_title is None: # No longer in reorg (already deleted)
-                continue
-            elif 'title' not in has_title:
+            # if has_title is None: # No longer in reorg (already deleted)
+            #     continue
+            if 'title' not in has_title:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
@@ -401,9 +431,9 @@ class ReorgPageFinder:
             discovered, trace = self.discoverer.discover(url)
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
-            if has_title is None: # No longer in reorg (already deleted)
-                continue
-            elif 'title' not in has_title:
+            # if has_title is None: # No longer in reorg (already deleted)
+            #     continue
+            if 'title' not in has_title:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
@@ -416,14 +446,13 @@ class ReorgPageFinder:
                         'no_snapshot': True
                     }}, upsert=True)
                     except: pass
-                    continue
+                    title = 'N/A'
                 update_dict = {'title': title}
             else:
                 title = has_title['title']
 
 
             if discovered is not None:
-                discovered, trace = discovered
                 self.logger.info(f'Found reorg: {discovered}')
                 if not url_utils.url_match(url, discovered): # False positive test
                     update_dict.update({'reorg_url': discovered, 'by':{
@@ -458,7 +487,8 @@ class ReorgPageFinder:
                     "hostname": self.site,
                     "discover": True
                 }}, upsert=True)
-            except: pass
+            except Exception as e:
+                self.logger.warn(f'Discover update checked: {str(e)}')
             if discovered is not None:
                 example = ((url, title), discovered)
                 added = self._add_url_to_patterns(*unpack_ex(example))
