@@ -112,7 +112,8 @@ class ReorgPageFinder:
             # TODO May need avoid insert false positive 
             if not sic_transit.broken(url):
                 try:
-                    self.db.na_urls.insert_one({'_id': url, 'url': url, 'hostname': site, 'false_positive': True})
+                    self.db.na_urls.update_one({'_id': url}, {'$set': 
+                        {'url': url, 'hostname': site, 'false_positive': True}}, upsert=True)
                 except: pass
         try:
             self.db.reorg.insert_many(objs, ordered=False)
@@ -489,19 +490,21 @@ class ReorgPageFinder:
                 }}, upsert=True)
             except Exception as e:
                 self.logger.warn(f'Discover update checked: {str(e)}')
-            if discovered is not None:
-                example = ((url, title), discovered)
-                added = self._add_url_to_patterns(*unpack_ex(example))
-                if not added:
-                    continue
-                success = self.query_inferer([example])
-                while len(success) > 0:
-                    added = False
-                    for suc in success:
-                        broken_urls.discard(unpack_ex(suc)[0])
-                        a = self._add_url_to_patterns(*unpack_ex(suc))
-                        added = added or a
-                    if not added:
-                        break
-                    examples = success
-                    success = self.query_inferer(examples)
+            
+            # TEMP
+            # if discovered is not None:
+            #     example = ((url, title), discovered)
+            #     added = self._add_url_to_patterns(*unpack_ex(example))
+            #     if not added:
+            #         continue
+            #     success = self.query_inferer([example])
+            #     while len(success) > 0:
+            #         added = False
+            #         for suc in success:
+            #             broken_urls.discard(unpack_ex(suc)[0])
+            #             a = self._add_url_to_patterns(*unpack_ex(suc))
+            #             added = added or a
+            #         if not added:
+            #             break
+            #         examples = success
+            #         success = self.query_inferer(examples)

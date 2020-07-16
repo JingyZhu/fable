@@ -230,17 +230,17 @@ class Similar:
         Return: link_sig, similarity, by{anchor, sig}
         """
         self.tfidf._clear_workingset()
-        anchor_count = defaultdict(int)
-        corpus = []
-        for link, anchor, sig in [wayback_sig] + liveweb_sigs:
-            anchor_count[(link, anchor)] += 1
+        anchor_count = defaultdict(set)
+        corpus = [wayback_sig[1]] + [s for s in wayback_sig[2] if s != '']
+        for link, anchor, sig in liveweb_sigs:
+            anchor_count[anchor].add(link)
             corpus.append(anchor)
             for s in sig:
                 if s != '': corpus.append(s)
         self.tfidf.add_corpus(corpus)
         for lws in liveweb_sigs:
             link, anchor, sig = lws
-            if anchor_count[(link, anchor)] < 2: # UNIQUE anchor
+            if len(anchor_count[anchor]) < 2: # UNIQUE anchor
                 simi = self.tfidf.similar(wayback_sig[1], anchor)
                 if simi >= self.short_threshold:
                     return lws, simi, 'anchor'
@@ -249,6 +249,7 @@ class Similar:
                     continue
                 simi = 0
                 for ws in wayback_sig[2]:
+                    if ws == '': continue
                     for ls in sig:
                         if ls == '': continue
                         simi = max(simi, self.tfidf.similar(ws, ls))

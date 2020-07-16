@@ -450,8 +450,8 @@ def outgoing_links_sig(url, html, wayback=False):
             link = urljoin(url, link)
         # Get parent 
         par, child = a_tag, a_tag
-        count = 0 # Prevent dead loop
-        while par.text.strip() == a_tag.text.strip() and count < 100:
+        count = 0# Prevent dead loop
+        while par and par.text.strip() == a_tag.text.strip() and count < 100:
             child = par
             par = par.parent
             count += 1
