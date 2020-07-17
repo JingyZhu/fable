@@ -412,8 +412,8 @@ def plot_Scatter(df, xtitle="", ytitle="", title=""):
         ),
     )
     for name, col in df.iteritems():
-        x = [c[0] for c in col]
-        y = [c[1] for c in col]
+        x = [c[0] for c in col if isinstance(c, list) or isinstance(c, tuple)]
+        y = [c[1] for c in col if isinstance(c, list) or isinstance(c, tuple)]
         fig.add_trace(go.Scatter(x=x, y=y,  \
-                                 name=name, mode='lines+markers', marker={'size': 10}))
+                                 name=name, mode='markers', marker={'size': 10}))
     fig.show()

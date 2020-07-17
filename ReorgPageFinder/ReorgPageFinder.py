@@ -228,8 +228,10 @@ class ReorgPageFinder:
             return False
         content = self.memo.extract_content(html)
         reorg_content = self.memo.extract_content(reorg_html)
+        print(content, reorg_content)
         self.similar.tfidf._clear_workingset()
         simi = self.similar.tfidf.similar(content, reorg_content)
+        print(simi)
         return simi >= 0.8
 
     def infer(self):
