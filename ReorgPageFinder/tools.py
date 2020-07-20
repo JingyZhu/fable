@@ -16,13 +16,16 @@ from urllib.parse import urlsplit, urlparse
 import sys
 sys.path.append('../')
 import config
-from utils import text_utils, crawl, url_utils
+from utils import text_utils, crawl, url_utils, search
 
 import logging
 logger = logging.getLogger('logger')
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 DEFAULT_CACHE = 3600*24
+LEAST_SITE_URLS = 50
+COMMON_TITLE_SIZE = 5
+
 he = url_utils.HostExtractor()
 
 def update_sites(collection):
@@ -33,6 +36,26 @@ def update_sites(collection):
         try:
             collection.update_one({'_id': no_site['_id']}, {'$set': {'site': site}})
         except: pass
+
+
+def title_common(titles):
+    """Extract common parts of titles. Returns: set of common token"""
+    if len(titles) == 0:
+        return []
+    common = set(re.split('_| \| |\|| - |-', titles[0]))
+    for t in titles[1:]:
+        common = common.intersection(re.split('_| \| |\|| - |-', t))
+    return common
+
+
+def unique_title(title, common):
+    """Eliminate common suffix/prefix of certain site"""
+    title_tokens = re.split('_| \| |\|| - |-', title)
+    unique = []
+    for token in title_tokens:
+        if token not in common:
+            unique.append(token)
+    return ' '.join(unique)
 
 
 class Memoizer:
@@ -279,6 +302,7 @@ class Similar:
         if site == self.site:
             return
         logger.info(f'_init_titles {site}')
+        memo = Memoizer()
         self.site = site
         self.lw_titles = defaultdict(set)
         self.wb_titles = defaultdict(set)
@@ -287,6 +311,22 @@ class Similar:
         lw_crawl = [lw for lw in lw_crawl if 'title' in lw] + [lw for lw in lw_crawl if 'title' not in lw]
         wb_crawl = [wb for wb in wb_crawl if 'title' in wb] + [wb for wb in wb_crawl if 'title' not in wb]
         lw_path, wb_path = defaultdict(int), defaultdict(int)
+        if len(lw_crawl) < LEAST_SITE_URLS:
+            # Get more urls from search engine
+            new_urls = search.bing_search(f"site:{site}", param_dict={'count': 50})
+            iterr = 0
+            in_lw = set([lw['url'] for lw in lw_crawl])
+            while len(lw_crawl) < LEAST_SITE_URLS and iterr < len(new_urls):
+                new_url = new_urls[iterr]
+                iterr += 1
+                if new_url in in_lw:
+                    continue
+                html = memo.crawl(new_url)
+                if html is None:
+                    continue
+                in_lw.add(new_url)
+                lw_crawl.append({'site': site, '_id': new_url, 'url': new_url, 'html': brotli.compress(html.encode())})
+
         for lw in lw_crawl:
             loc_dir = (urlsplit(lw['url']).netloc.split(':')[0], os.path.dirname(urlsplit(lw['url']).path))
             # Guarantee every path has at lease one title
@@ -302,8 +342,32 @@ class Similar:
             else: continue
             lw_path[loc_dir] += 1
             self.lw_titles[title].add(lw['url'])
-        logger.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])}')
+        self.lw_common = title_common(random.sample(self.lw_titles.keys(), min(COMMON_TITLE_SIZE, len(self.lw_titles.keys())) ))
+        logger.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])} \n common: {self.lw_common}')
         seen = set()
+        if len(wb_crawl) < LEAST_SITE_URLS:
+            # Get more urls from wayback
+            param_dict = {
+                "filter": ['statuscode:200', 'mimetype:text/html'],
+                "collapse": "urlkey",
+                "limit": 300
+            }
+            new_urls = crawl.wayback_index(f"*.{site}/*", param_dict=param_dict)
+            iterr = 0
+            in_wb = set([url_utils.filter_wayback(wb['url']) for wb in wb_crawl])
+            new_urls = [n for n in new_urls if n[1] not in in_wb]
+            new_urls = [url_utils.constr_wayback(n[1], n[0]) for n in random.sample(new_urls, min(LEAST_SITE_URLS, len(new_urls)))]
+            while len(wb_crawl) < LEAST_SITE_URLS and iterr < len(new_urls):
+                new_url = new_urls[iterr]
+                iterr += 1
+                if url_utils.filter_wayback(new_url) in in_wb:
+                    continue
+                html = memo.crawl(new_url)
+                if html is None:
+                    continue
+                in_lw.add(new_url)
+                wb_crawl.append({'site': site, '_id': new_url, 'url': new_url, 'html': brotli.compress(html.encode())})
+        
         for wb in wb_crawl:
             wb_url = url_utils.filter_wayback(wb['url'])
             if wb_url in seen: continue
@@ -321,7 +385,8 @@ class Similar:
             else: continue
             wb_path[loc_dir] += 1
             self.wb_titles[title].add(wb_url)
-        logger.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])}')
+        self.wb_common = title_common(random.sample(self.wb_titles.keys(), min(COMMON_TITLE_SIZE, len(self.wb_titles.keys())) ))
+        logger.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n common: {self.wb_common}')
 
     def title_similar(self, target_url, target_title, candidates_titles, fixed=True):
         """
@@ -355,7 +420,7 @@ class Similar:
                 elif url not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
                     logger.debug(f'title of url: {url} none UNIQUE')
                     continue
-            simi = self.tfidf.similar(target_title, c)
+            simi = self.tfidf.similar(unique_title(target_title, self.wb_common), unique_title(c, self.lw_common))
             if simi >= (self.short_threshold + self.threshold) / 2:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
@@ -364,6 +429,8 @@ class Similar:
         self.site = None
         self.lw_titles = None
         self.wb_titles = None
+        self.lw_common = None
+        self.wb_common = None
     
     def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, cand_htmls=None, fixed=True):
         """

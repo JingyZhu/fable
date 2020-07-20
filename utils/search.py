@@ -70,7 +70,6 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
     site_spec_url: If set, will only search within the site
     use_db: If set, will query db before calling API, and update results to db
     """
-    begin = time.time()
     google_query_dict['q'] = query
     if site_spec_url:
         try:

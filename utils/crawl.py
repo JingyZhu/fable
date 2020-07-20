@@ -257,7 +257,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
     Return:
         If good crawl: str/response
         Elif bad crawl: None
-        Else (not eligible): None, Reason
+        Else (not applicable): (None, Reason)
     """
     requests_header = {'user-agent': config.config('user_agent')}
     filter_ext = ['.pdf']

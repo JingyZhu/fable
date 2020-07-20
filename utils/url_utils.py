@@ -22,6 +22,11 @@ def filter_wayback(url):
     url = url[slash + 1:]
     return url
 
+def constr_wayback(url, ts):
+    if 'web.archive.org/web' in url:
+        return url
+    return f"http://web.archive.org/web/{ts}/{url}"
+
 class urlset:
     def __init__(self, forms):
         """forms: form tag text on the html"""
