@@ -15,7 +15,7 @@ from utils import text_utils, url_utils
 
 all_urls = json.load(open('Broken_urls.json', 'r'))
 
-# sites = sorted(all_urls.keys())
+sites = sorted(all_urls.keys(), reverse=True)
 # sites = [
 # 	# "tradepub.com", # Not good
 #     "turismo.gal",
@@ -38,13 +38,11 @@ all_urls = json.load(open('Broken_urls.json', 'r'))
 
 def search():
 	global sites
-	rpf = ReorgPageFinder.ReorgPageFinder(logname='./search.log')
-	# sites = list(all_urls['search'].keys())
-	sites = ['wikileaks.org']
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./search2.log')
+	sites = sites[int(len(sites)/2):]
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
-		# urls = all_urls['search'][site]
-		urls = []
+		urls = all_urls[site]
 		rpf.init_site(site, urls)
 		rpf.first_search()
 		rpf.second_search()
@@ -53,12 +51,12 @@ def discover():
 	global sites
 	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover1.log')
 	# sites = sorted(list(all_urls['discover'].keys()))
-	# sites = sites[int(len(sites)/2):]
-	sites = ['wikileaks.org']
+	sites = sites[:int(len(sites)/2)]
+	# sites = ['wikileaks.org']
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
-		# urls = all_urls['discover'][site]
-		urls = []
+		urls = all_urls[site]
+		# urls = []
 		rpf.init_site(site, urls)
 		rpf.discover()
 

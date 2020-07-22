@@ -395,6 +395,10 @@ def outgoing_links(url, html, wayback=False):
         if len(wm_ipp) > 0: wm_ipp[0].decompose()
         donato = soup.find_all('div', id='donato')
         if len(donato) > 0: donato[0].decompose()
+    
+    base = soup.find('base')
+    base_url = url if base is None else urljoin(url, base['href'])
+
     for a_tag in soup.find_all('a'):
         if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
             continue
@@ -402,9 +406,9 @@ def outgoing_links(url, html, wayback=False):
         if len(link) == 0 or link[0] == '#': #Anchor ignore
             continue
         if wayback:
-            link = wayback_join(url, link)
+            link = wayback_join(base_url, link)
         else:
-            link = urljoin(url, link)
+            link = urljoin(base_url, link)
         outlinks.add(link)
     outlinks = list(outlinks)
     # TODO: Add form outgoing tags
@@ -437,6 +441,10 @@ def outgoing_links_sig(url, html, wayback=False):
         if len(wm_ipp) > 0: wm_ipp[0].decompose()
         donato = soup.find_all('div', id='donato')
         if len(donato) > 0: donato[0].decompose()
+
+    base = soup.find('base')
+    base_url = url if base is None else urljoin(url, base['href'])
+
     for a_tag in soup.find_all('a'):
         if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
             continue
@@ -445,9 +453,9 @@ def outgoing_links_sig(url, html, wayback=False):
         if len(link) == 0 or link[0] == '#': #Anchor ignore
             continue
         if wayback:
-            link = wayback_join(url, link)
+            link = wayback_join(base_url, link)
         else:
-            link = urljoin(url, link)
+            link = urljoin(base_url, link)
         # Get parent 
         par, child = a_tag, a_tag
         count = 0# Prevent dead loop

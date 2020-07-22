@@ -250,7 +250,7 @@ class ReorgPageFinder:
             examples = success
 
     def first_search(self):
-        noreorg_urls = db.reorg.find({"hostname": self.site, 'reorg_url': {"$exists": False}})
+        noreorg_urls = db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}})
         searched_checked = db.checked.find({"hostname": self.site, "search_1": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
         urls = [u for u in noreorg_urls if u['url'] not in searched_checked ]
@@ -285,10 +285,10 @@ class ReorgPageFinder:
                 searched, trace = searched
                 self.logger.info(f"HIT_1: {searched}")
                 if not url_utils.url_match(url, searched): # False positive test
-                    update_dict.update({'reorg_url': searched, 'by':{
+                    update_dict.update({'reorg_url_search': searched, 'by_search':{
                         "method": "search"
                     }})
-                    update_dict['by'].update(trace)
+                    update_dict['by_search'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'false_positive': True, 
@@ -332,7 +332,7 @@ class ReorgPageFinder:
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url': {"$exists": False}})
+        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}})
         searched_checked = self.db.checked.find({"hostname": self.site, "search_2": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
         urls = [u for u in noreorg_urls if u['url'] not in searched_checked ]
@@ -373,10 +373,10 @@ class ReorgPageFinder:
                 searched, trace = searched
                 self.logger.info(f"HIT_2: {searched}")
                 if not url_utils.url_match(url, searched): # False positive test
-                    update_dict.update({'reorg_url': searched, 'by':{
+                    update_dict.update({'reorg_url_search': searched, 'by_search':{
                         "method": "search"
                     }})
-                    update_dict['by'].update(trace)
+                    update_dict['by_search'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'false_positive': True, 
@@ -420,7 +420,7 @@ class ReorgPageFinder:
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url': {"$exists": False}})
+        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_discover': {"$exists": False}})
         searched_checked = self.db.checked.find({"hostname": self.site, "discover": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
         urls = [u for u in noreorg_urls if u['url'] not in searched_checked ]
@@ -458,10 +458,10 @@ class ReorgPageFinder:
             if discovered is not None:
                 self.logger.info(f'Found reorg: {discovered}')
                 if not url_utils.url_match(url, discovered): # False positive test
-                    update_dict.update({'reorg_url': discovered, 'by':{
+                    update_dict.update({'reorg_url_discover': discovered, 'by_discover':{
                         "method": "discover"
                     }})
-                    update_dict['by'].update(trace)
+                    update_dict['by_discover'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'false_positive': True, 

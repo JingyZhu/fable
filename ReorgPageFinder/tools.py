@@ -57,6 +57,12 @@ def unique_title(title, common):
             unique.append(token)
     return ' '.join(unique)
 
+def norm(url):
+    us = urlsplit(url)
+    if not us.query:
+        return us.path
+    else:
+        return f"{us.path}?{us.query}"
 
 class Memoizer:
     """
@@ -341,7 +347,7 @@ class Similar:
                 title = lw['title']
             else: continue
             lw_path[loc_dir] += 1
-            self.lw_titles[title].add(lw['url'])
+            self.lw_titles[title].add(norm(lw['url'])) 
         self.lw_common = title_common(random.sample(self.lw_titles.keys(), min(COMMON_TITLE_SIZE, len(self.lw_titles.keys())) ))
         logger.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])} \n common: {self.lw_common}')
         seen = set()
@@ -352,7 +358,7 @@ class Similar:
                 "collapse": "urlkey",
                 "limit": 300
             }
-            new_urls = crawl.wayback_index(f"*.{site}/*", param_dict=param_dict)
+            new_urls, _ = crawl.wayback_index(f"*.{site}/*", param_dict=param_dict)
             iterr = 0
             in_wb = set([url_utils.filter_wayback(wb['url']) for wb in wb_crawl])
             new_urls = [n for n in new_urls if n[1] not in in_wb]
@@ -365,7 +371,7 @@ class Similar:
                 html = memo.crawl(new_url)
                 if html is None:
                     continue
-                in_lw.add(new_url)
+                in_wb.add(new_url)
                 wb_crawl.append({'site': site, '_id': new_url, 'url': new_url, 'html': brotli.compress(html.encode())})
         
         for wb in wb_crawl:
@@ -384,7 +390,7 @@ class Similar:
                 title = wb['title']
             else: continue
             wb_path[loc_dir] += 1
-            self.wb_titles[title].add(wb_url)
+            self.wb_titles[title].add(norm(wb_url))
         self.wb_common = title_common(random.sample(self.wb_titles.keys(), min(COMMON_TITLE_SIZE, len(self.wb_titles.keys())) ))
         logger.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n common: {self.wb_common}')
 
@@ -403,11 +409,11 @@ class Similar:
             if len(self.wb_titles[target_title]) > 1:
                 logger.debug(f'wayback title of url: {target_url} none UNIQUE')
                 return []
-            elif target_url not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
+            elif norm(target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
                 logger.debug(f'wayback title of url: {target_url} none UNIQUE')
                 return []
         self.tfidf._clear_workingset()
-        self.tfidf.add_corpus([target_title] + list(candidates_titles.values()))
+        self.tfidf.add_corpus([unique_title(target_title, self.wb_common)] + [unique_title(ct, self.lw_common) for ct in candidates_titles.values()])
         simi_cand = []
         for url, c in candidates_titles.items():
             site = he.extract(url)
@@ -417,7 +423,7 @@ class Similar:
                 if len(self.lw_titles[c]) > 1:
                     logger.debug(f'title of url: {url} none UNIQUE')
                     continue
-                elif url not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
+                elif norm(url) not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
                     logger.debug(f'title of url: {url} none UNIQUE')
                     continue
             simi = self.tfidf.similar(unique_title(target_title, self.wb_common), unique_title(c, self.lw_common))

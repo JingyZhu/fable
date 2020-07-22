@@ -162,19 +162,18 @@ def find_link_density(html):
     return atag_length / total_length if total_length != 0 else 0
 
 
-def status_categories(status, detail):
+def status_categories(status):
     """
-    Given a detailed status code (and possibly its detail)
+    Given a detailed status code (or possibly its detail)
     Return a better categorized status
-    no redirection/ homepage/ non-homepage/ 4/5xx / DNSError / OtherError_Type
+    Soft-404/ 4/5xx / DNSErrorOtherError
     """
-    if not re.compile("^([2345]|DNSError|OtherError)").match(status): return "Unknown"
+    # if not re.compile("^([2345]|DNSError|OtherError)").match(status): return "Unknown"
     if re.compile("^[45]").match(status): return "4/5xx"
-    elif re.compile("^[23]").match(status): return detail
-    elif re.compile("^DNSError").match(status): return status
-    elif  re.compile("^OtherError").match(status): return "OtherError_" + detail
+    elif re.compile("^(DNSError|OtherError)").match(status): return "DNSOther"
+    elif  re.compile("^(Similar|Same|no features)").match(status): return "Soft-404"
     else:
-        raise Exception("Unknown categories")
+        return status
 
 
 def url_match(url1, url2, wayback=True):
