@@ -213,7 +213,7 @@ def broken(url, html=False):
             continue
         # url_content = text_utils.extract_body(resp.text, version='domdistiller')
         # random_content = text_utils.extract_body(random_resp.text, version='domdistiller')
-        if text_utils.k_shingling(resp.text, random_resp.text) >= 0.9:
+        if text_utils.k_shingling(resp.text, random_resp.text) >= 0.95:
             broken_decision.append(True)
             reasons.append("Similar soft 404 content")
             continue

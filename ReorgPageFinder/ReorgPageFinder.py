@@ -220,10 +220,10 @@ class ReorgPageFinder:
 
         returns: Boolean on if false positive
         """
+        html, url = self.memp.crawl(url, final_url=True)
+        reorg_html, reorg_url = self.memo.crawl(reorg_url)
         if url_utils.url_match(url, reorg_url):
             return True
-        html = self.memo.crawl(url)
-        reorg_html = self.memo.crawl(reorg_url)
         if html is None or reorg_html is None:
             return False
         content = self.memo.extract_content(html)

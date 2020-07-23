@@ -397,7 +397,7 @@ def outgoing_links(url, html, wayback=False):
         if len(donato) > 0: donato[0].decompose()
     
     base = soup.find('base')
-    base_url = url if base is None else urljoin(url, base['href'])
+    base_url = url if base is None else urljoin(url, base.get('href'))
 
     for a_tag in soup.find_all('a'):
         if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
@@ -443,7 +443,7 @@ def outgoing_links_sig(url, html, wayback=False):
         if len(donato) > 0: donato[0].decompose()
 
     base = soup.find('base')
-    base_url = url if base is None else urljoin(url, base['href'])
+    base_url = url if base is None else urljoin(url, base.get('href'))
 
     for a_tag in soup.find_all('a'):
         if 'href' not in a_tag.attrs or a_tag.text.strip() == '':

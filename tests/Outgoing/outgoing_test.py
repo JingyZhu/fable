@@ -49,9 +49,9 @@ def search():
 
 def discover():
 	global sites
-	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover1.log')
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover2.log')
 	# sites = sorted(list(all_urls['discover'].keys()))
-	sites = sites[:int(len(sites)/2)]
+	sites = sites[int(len(sites)/2):]
 	# sites = ['wikileaks.org']
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')

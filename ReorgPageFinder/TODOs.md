@@ -1,6 +1,6 @@
 ## TODO
 - Implement extraction of title and content in the same function (domdistiller)
-- Match by title
-  - Remove site's common suffix/prefix
-- Outgoing lists
-  - Add base tag detectoin
+- ReorgPageFinder
+  - Add fp_check after every reorg findings
+- Sic_transit
+  - Home page with no redirections cannot broken (what about parking page?)

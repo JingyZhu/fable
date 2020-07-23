@@ -23,7 +23,7 @@ logger = logging.getLogger('logger')
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 DEFAULT_CACHE = 3600*24
-LEAST_SITE_URLS = 50
+LEAST_SITE_URLS = 30
 COMMON_TITLE_SIZE = 5
 
 he = url_utils.HostExtractor()
