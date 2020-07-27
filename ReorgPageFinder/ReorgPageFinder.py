@@ -113,7 +113,7 @@ class ReorgPageFinder:
             if not sic_transit.broken(url):
                 try:
                     self.db.na_urls.update_one({'_id': url}, {'$set': 
-                        {'url': url, 'hostname': site, 'false_positive': True}}, upsert=True)
+                        {'url': url, 'hostname': site, 'url': url, 'false_positive': True}}, upsert=True)
                 except: pass
         try:
             self.db.reorg.insert_many(objs, ordered=False)
@@ -220,18 +220,16 @@ class ReorgPageFinder:
 
         returns: Boolean on if false positive
         """
-        html, url = self.memp.crawl(url, final_url=True)
-        reorg_html, reorg_url = self.memo.crawl(reorg_url)
         if url_utils.url_match(url, reorg_url):
             return True
+        html, url = self.memo.crawl(url, final_url=True)
+        reorg_html, reorg_url = self.memo.crawl(reorg_url, final_url=True)
         if html is None or reorg_html is None:
             return False
         content = self.memo.extract_content(html)
         reorg_content = self.memo.extract_content(reorg_html)
-        print(content, reorg_content)
         self.similar.tfidf._clear_workingset()
         simi = self.similar.tfidf.similar(content, reorg_content)
-        print(simi)
         return simi >= 0.8
 
     def infer(self):
@@ -284,14 +282,15 @@ class ReorgPageFinder:
             if searched is not None:
                 searched, trace = searched
                 self.logger.info(f"HIT_1: {searched}")
-                if not url_utils.url_match(url, searched): # False positive test
+                fp = self.fp_check(url, searched)
+                if not fp: # False positive test
                     update_dict.update({'reorg_url_search': searched, 'by_search':{
                         "method": "search"
                     }})
                     update_dict['by_search'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'false_positive': True, 
+                            'false_positive_search': True, 
                             'hostname': self.site
                         }}, upsert=True)
                     except: pass
@@ -350,7 +349,7 @@ class ReorgPageFinder:
             has_title = self.db.reorg.find_one({'url': url})
             # if has_title is None: # No longer in reorg (already deleted)
             #     continue
-            if 'title' not in has_title:
+            if 'title' not in has_title or has_title['title'] == 'N/A':
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
@@ -372,14 +371,15 @@ class ReorgPageFinder:
             if searched is not None:
                 searched, trace = searched
                 self.logger.info(f"HIT_2: {searched}")
-                if not url_utils.url_match(url, searched): # False positive test
+                fp = self.fp_check(url, searched)
+                if not fp: # False positive test
                     update_dict.update({'reorg_url_search': searched, 'by_search':{
                         "method": "search"
                     }})
                     update_dict['by_search'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'false_positive': True, 
+                            'false_positive_search': True, 
                             'hostname': self.site
                         }}, upsert=True)
                     except: pass
@@ -457,14 +457,15 @@ class ReorgPageFinder:
 
             if discovered is not None:
                 self.logger.info(f'Found reorg: {discovered}')
-                if not url_utils.url_match(url, discovered): # False positive test
+                fp = self.fp_check(url, discovered)
+                if not fp: # False positive test
                     update_dict.update({'reorg_url_discover': discovered, 'by_discover':{
                         "method": "discover"
                     }})
                     update_dict['by_discover'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'false_positive': True, 
+                            'false_positive_discover': True, 
                             'hostname': self.site
                         }}, upsert=True)
                     except: pass

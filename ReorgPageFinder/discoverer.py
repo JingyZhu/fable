@@ -9,6 +9,7 @@ from queue import Queue
 from . import tools
 from collections import defaultdict
 import re
+import random
 
 import sys
 sys.path.append('../')
@@ -44,6 +45,7 @@ class Discoverer:
         Guess backlinks by returning:
             The parent url & If url with query, no query / partial query
         """
+        MAX_GUESS = 32
         def powerset(iterable):
             "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
             s = list(iterable)
@@ -66,6 +68,8 @@ class Discoverer:
             if len(sub_q) == len(qsl): continue
             us_tmp = us._replace(query='&'.join([f'{kv[0]}={kv[1]}' for kv in sub_q]))
             guessed_urls.append(urlunsplit(us_tmp))
+        if len(guessed_urls) > MAX_GUESS:
+            guessed_urls = random.sample(guessed_urls, MAX_GUESS)
         return guessed_urls
 
     def link_same_page(self, dst, title, content, backlinked_url, backlinked_html, cut=CUT):
@@ -77,6 +81,8 @@ class Discoverer:
 
         Returns: (link, similarity), from_where which is a copy of html if exists. None otherwise
         """
+        if backlinked_url is None:
+            return None, None
         backlinked_content = self.memo.extract_content(backlinked_html, version='domdistiller')
         backlinked_title = self.memo.extract_title(backlinked_html, version='domdistiller')
         similars, fromm = self.similar.similar(dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})
@@ -166,7 +172,7 @@ class Discoverer:
             if broken:
                 logger.info(f'Discover backlinks broken: {reason}')
                 return "notfound", None, None
-            src_html, src = self.memo.crawl(src, final_url=True, max_retry=5)
+            src_html, src = self.memo.crawl(src, final_url=True, max_retry=3)
             top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html, cut=10)
             if top_similar is not None:
                 return "found", top_similar[0], (fromm, top_similar[1])
@@ -183,7 +189,7 @@ class Discoverer:
                     wayback_linked[1].append((wayback_outgoing_link, anchor, sibtext))
             logger.info(f'Wayback linked: {wayback_linked[1]}')
             if wayback_linked[0] and not broken: # src linking to dst and is working today
-                src_html, src = self.memo.crawl(src, final_url=True)
+                src_html, src = self.memo.crawl(src, final_url=True, max_retry=3)
                 rval = self.find_same_link(wayback_linked[1], src, src_html)
                 if rval:
                     matched_sig, simi, by = rval
@@ -237,7 +243,9 @@ class Discoverer:
             if us.query:
                 values = [u[1] for u in parse_qsl(us.query)]
                 repr_text += f" {' '.join(values)}"
+        print("AHA2")
         guessed_urls = self.guess_backlinks(url)
+        print("AHA")
         guess_queue = [(g, depth - GUESS) for g in guessed_urls]
         guess_total = defaultdict(int, {g: depth-GUESS for g in guessed_urls})
         seen = set() if seen is None else seen

@@ -166,12 +166,13 @@ def status_categories(status):
     """
     Given a detailed status code (or possibly its detail)
     Return a better categorized status
+    Consider status = list of string as Soft-404
     Soft-404/ 4/5xx / DNSErrorOtherError
     """
     # if not re.compile("^([2345]|DNSError|OtherError)").match(status): return "Unknown"
     if re.compile("^[45]").match(status): return "4/5xx"
     elif re.compile("^(DNSError|OtherError)").match(status): return "DNSOther"
-    elif  re.compile("^(Similar|Same|no features)").match(status): return "Soft-404"
+    elif  re.compile("^(\[.*\]|Similar|Same|no features)").match(status): return "Soft-404"
     else:
         return status
 

@@ -23,8 +23,8 @@ logger = logging.getLogger('logger')
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 DEFAULT_CACHE = 3600*24
-LEAST_SITE_URLS = 30
-COMMON_TITLE_SIZE = 5
+LEAST_SITE_URLS = 20 # Least # of urls a site must try to crawl to enable title comparison
+COMMON_TITLE_SIZE = 5 # Common prefix/suffix extraction's sample number of title
 
 he = url_utils.HostExtractor()
 

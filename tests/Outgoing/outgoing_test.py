@@ -15,24 +15,9 @@ from utils import text_utils, url_utils
 
 all_urls = json.load(open('Broken_urls.json', 'r'))
 
+# sites = sorted(all_urls.keys())
 sites = sorted(all_urls.keys(), reverse=True)
-# sites = [
-# 	# "tradepub.com", # Not good
-#     "turismo.gal",
-#     "utoronto.ca", # no snapshots
-#     "scoop.co.nz",
-# ]
 
-# sites = [
-#     "araport.org", # Not good
-#     "ptb.de", # no snapshot
-#     "wlu.edu",
-#     "acer.com",
-# ]
-
-# sites = [
-#     "zhuzhouwang.com",
-# ]
 
 # rpf = ReorgPageFinder.ReorgPageFinder(logname='./Outgoing2.log')
 
