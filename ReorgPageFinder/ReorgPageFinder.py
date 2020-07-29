@@ -74,7 +74,7 @@ def path_edit_distance(url1, url2):
     return dis
 
 class ReorgPageFinder:
-    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, logger=None, logname=None):
+    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, logger=None, logname=None, trace=False):
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
@@ -86,6 +86,7 @@ class ReorgPageFinder:
         self.pattern_dict = None
         self.logname = './ReorgPageFinder.log' if logname is None else logname
         self.logger = logger if logger is not None else self._init_logger()
+        self.trace = trace
 
     def _init_logger(self):
         logger = logging.getLogger('logger')
@@ -290,6 +291,7 @@ class ReorgPageFinder:
                     update_dict['by_search'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
+                            'url': url,
                             'false_positive_search': True, 
                             'hostname': self.site
                         }}, upsert=True)
@@ -379,6 +381,7 @@ class ReorgPageFinder:
                     update_dict['by_search'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
+                            'url': url,
                             'false_positive_search': True, 
                             'hostname': self.site
                         }}, upsert=True)
@@ -421,9 +424,9 @@ class ReorgPageFinder:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_discover': {"$exists": False}})
-        searched_checked = self.db.checked.find({"hostname": self.site, "discover": True})
-        searched_checked = set([sc['url'] for sc in searched_checked])
-        urls = [u for u in noreorg_urls if u['url'] not in searched_checked ]
+        discovered_checked = self.db.checked.find({"hostname": self.site, "discover": True})
+        discovered_checked = set([sc['url'] for sc in discovered_checked])
+        urls = [u for u in noreorg_urls if u['url'] not in discovered_checked ]
         broken_urls = set([bu['url'] for bu in urls])
         self.logger.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
@@ -465,6 +468,7 @@ class ReorgPageFinder:
                     update_dict['by_discover'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
+                            'url': url,
                             'false_positive_discover': True, 
                             'hostname': self.site
                         }}, upsert=True)
@@ -484,7 +488,7 @@ class ReorgPageFinder:
                     self.db.reorg.update_one({'url': url}, {'$set': update_dict})
                 except Exception as e:
                     self.logger.warn(f'Discover update DB: {str(e)}')
-            searched_checked.add(url)
+            discovered_checked.add(url)
             try:
                 self.db.checked.update_one({'_id': url}, {"$set": {
                     "url": url,
@@ -493,6 +497,15 @@ class ReorgPageFinder:
                 }}, upsert=True)
             except Exception as e:
                 self.logger.warn(f'Discover update checked: {str(e)}')
+            if self.trace:
+                try:
+                    self.db.trace.update_one({'_id': url}, {"$set": {
+                        "url": url,
+                        "hostname": self.site,
+                        "discover": trace['trace']
+                    }}, upsert=True)
+                except Exception as e:
+                    self.logger.warn(f'Discover update trace: {str(e)}')
             
             # TEMP
             # if discovered is not None:

@@ -62,6 +62,7 @@ Set of URLs for trying to find copies on
 URLs that are not applicable for finding alternate links
 ```json
 {
+    "_id": "url",
     "url": "url",
     "hostname": "hostname",
     "no_snapshot": "Bool (This URL has no snapshots in the wayback)",
@@ -82,6 +83,20 @@ Set of already tried URLs with certain techniques
     "discover": "bool/true (discover)"
 }
 ```
+
+### trace
+Traces of detailed execution events (how each urls' alternate links are frying to be found)
+```json
+{
+    "_id": "url",
+    "url": "url",
+    "hostname": "hostname",
+    "search_1": "list of traces for first search",
+    "search_2": "list of traces for second search",
+    "discover": "list of traces for discovery"
+}
+```
+
 
 ## DB: web_decay
 

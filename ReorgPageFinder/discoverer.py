@@ -168,7 +168,7 @@ class Discoverer:
         broken, reason = sic_transit.broken(src, html=True)
         if wayback_src is None: # No archive in wayback for guessed_url
             if not dst_snapshot:
-                return "notfound", None, "Parent no snapshots"
+                return "notfound", None, "Backlink no snapshots"
             if broken:
                 logger.info(f'Discover backlinks broken: {reason}')
                 return "notfound", None, None
@@ -201,7 +201,7 @@ class Discoverer:
                     top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html)
                     if top_similar is not None: 
                         return "found", top_similar[0], (fromm, top_similar[1])
-                    else: 
+                    else:
                         return "notfound", None, "Linked, no matched link"
                 else: # For dst without snapshots
                     return "notfound", None, "Linked, no matched link"
@@ -211,20 +211,20 @@ class Discoverer:
                 if dst_snapshot:
                     return "reorg", wayback_outgoing_sigs, None
                 else:
-                    return "notfound", None, "Parent broken today"
+                    return "notfound", None, "Backlink broken today"
 
     def discover(self, url, depth=None, seen=None, trim_size=10):
         """
         Discover the potential reorganized site
         Trim size: The largest size of outgoing queue
-        # TODO: 1. similar implementation
 
         Return: If Found: URL, Trace (whether it information got suffice, how copy is found, etc)
-                else: None, {'suffice': Bool}
+                else: None, {'suffice': Bool, 'trace': traces}
         """
         if depth is None: depth = self.depth
         has_snapshot = False
         suffice = False # Only used for has_snapshot=False. See whehter url sufice restrictions. (Parent sp&linked&not broken today)
+        traces = [] # Used for tracing the discovery process
         try:
             wayback_url = self.memo.wayback_index(url)
             html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
@@ -243,9 +243,7 @@ class Discoverer:
             if us.query:
                 values = [u[1] for u in parse_qsl(us.query)]
                 repr_text += f" {' '.join(values)}"
-        print("AHA2")
         guessed_urls = self.guess_backlinks(url)
-        print("AHA")
         guess_queue = [(g, depth - GUESS) for g in guessed_urls]
         guess_total = defaultdict(int, {g: depth-GUESS for g in guessed_urls})
         seen = set() if seen is None else seen
@@ -294,8 +292,16 @@ class Discoverer:
                 status, msg_urls, reason = self.discover_backlinks(src, url, title, content, html, has_snapshot)
                 logger.info(f'{status}, {reason}')
                 if status == 'found':
-                    return msg_urls, {'suffice': True, 'type': reason[0], 'value': reason[1]}
+                    traces.append({
+                        "backlink": src,
+                        "status": "found"
+                    })
+                    return msg_urls, {'suffice': True, 'type': reason[0], 'value': reason[1], 'trace': traces}
                 elif status == 'loop':
+                    traces.append({
+                        "backlink": src,
+                        "status": "loop"
+                    })
                     if link_depth >= OUTGOING:
                         c = [s[1] for s in msg_urls] + [' '.join(s[2]) for s in msg_urls] + [repr_text]
                         self.similar.tfidf.add_corpus(c)
@@ -309,6 +315,11 @@ class Discoverer:
                         for outlink, simis in scoreboard.items():
                             outgoing_queue.append((outlink, link_depth-OUTGOING, simis))
                 elif status == 'notfound' and not has_snapshot:
+                    traces.append({
+                        "backlink": src,
+                        "status": "notfound",
+                        "reason": reason
+                    })
                     suffice = suffice or 'Linked' in reason
             
             outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
@@ -318,5 +329,5 @@ class Discoverer:
             #     if reorg_src is not None and reorg_src not in seen:
             #         search_queue.put((reorg_src, depth))
             #         seen.add(reorg_src)
-        return None, {'suffice': suffice}
+        return None, {'suffice': suffice, 'trace': traces}
 
