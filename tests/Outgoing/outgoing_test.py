@@ -36,7 +36,9 @@ def discover():
 	global sites
 	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover3.log', trace=True)
 	# sites = sorted(list(all_urls['discover'].keys()))
-	sites = sites[:int(len(sites)/4)]
+	pieces = 4
+	sites = [sites[int(i*len(sites) / pieces):int((i+1)*len(sites) / pieces)] for i in range(pieces)]
+	sites = sites[0]
 	# sites = ['wikileaks.org']
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
