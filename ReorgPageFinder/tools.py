@@ -443,7 +443,7 @@ class Similar:
         All text-based similar tech is included
         Fixed: Whether title similarity is allowed across different sites
 
-        Return: [(similar urls, similarity)], from which comparison
+        Return: [(similar urls, similarity)], from which comparison(title/content)
         """
         if self.site is not None:
             similars = self.title_similar(tg_url, tg_title, cand_titles, fixed=fixed)

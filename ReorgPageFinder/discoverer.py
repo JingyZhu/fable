@@ -57,6 +57,12 @@ class Discoverer:
         if path != path_dir: # Not root dir
             us_tmp = us._replace(path=path_dir, query='')
             guessed_urls.append(urlunsplit(us_tmp))
+        else: # Root dir, consider parent page as b.c for a.b.c
+            hostname, site = us.netloc, he.extract(url)
+            if hostname != site:
+                hostname = '.'.join(hostname.split('.')[1:])
+                us_tmp = us._replace(netloc=hostname, query='')
+                guessed_urls.append(urlunsplit(us_tmp))
         if not query:
             return guessed_urls
         qsl = parse_qsl(query)
@@ -147,7 +153,7 @@ class Discoverer:
             outgoing_url = url_utils.filter_wayback(outgoing_url)
         if he.extract(url) != he.extract(outgoing_url):
             return False
-        if urlsplit(url).path in urlsplit(outgoing_url).path:
+        if urlsplit(url).path in urlsplit(outgoing_url).path and urlsplit(url).path != urlsplit(outgoing_url).path:
             return False
         return True
 
@@ -166,6 +172,16 @@ class Discoverer:
         logger.info(f'Backlinks: {src} {dst}')
         wayback_src = self.memo.wayback_index(src)
         broken, reason = sic_transit.broken(src, html=True)
+        # Directly check this outgoing page
+        if not broken:
+            src_content = self.memo.extract_content(src, version='domdistiller')
+            src_title = self.memo.extract_title(src, version='domdistiller')
+            similars, fromm = self.similar.similar(dst, dst_title, dst_content, {src: src_title}, {src: src_content})
+            if len(similars) > 0:
+                logger.info(f'Discover: Directly found copy during looping')
+                top_similar = similars[0]
+                return "found", top_similar[0], (f'{fromm}', top_similar[1])
+
         if wayback_src is None: # No archive in wayback for guessed_url
             if not dst_snapshot:
                 return "notfound", None, "Backlink no snapshots"
@@ -209,7 +225,7 @@ class Discoverer:
                 return "loop", wayback_outgoing_sigs, None
             else: # Linked to dst, but broken today
                 if dst_snapshot:
-                    return "reorg", wayback_outgoing_sigs, None
+                    return "reorg", wayback_outgoing_sigs, "Backlink broken today"
                 else:
                     return "notfound", None, "Backlink broken today"
 
@@ -250,6 +266,7 @@ class Discoverer:
         # seen.update(guessed_urls)
 
         # Add guessed links
+        # Guess urls based on guessed url
         while len(guess_queue) > 0:
             link, link_depth = guess_queue.pop(0)
             if link_depth >= GUESS:
@@ -277,7 +294,7 @@ class Discoverer:
 
             outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
             outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
-        
+
         while len(guess_total) + len(outgoing_queue) > 0:
             # Ops for guessed links
             two_src = []
@@ -314,13 +331,14 @@ class Discoverer:
                                 scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
                         for outlink, simis in scoreboard.items():
                             outgoing_queue.append((outlink, link_depth-OUTGOING, simis))
-                elif status == 'notfound' and not has_snapshot:
+                elif status in ['notfound', 'reorg']:
                     traces.append({
                         "backlink": src,
-                        "status": "notfound",
+                        "status": status,
                         "reason": reason
                     })
-                    suffice = suffice or 'Linked' in reason
+                    if not has_snapshot:
+                        suffice = suffice or 'Linked' in reason
             
             outgoing_queue.sort(reverse=True, key=lambda x: wsum_simi(x[2]))
             outgoing_queue = outgoing_queue[:trim_size+1] if len(outgoing_queue) > trim_size else outgoing_queue

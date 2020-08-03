@@ -465,7 +465,8 @@ class ReorgPageFinder:
                     update_dict.update({'reorg_url_discover': discovered, 'by_discover':{
                         "method": "discover"
                     }})
-                    update_dict['by_discover'].update(trace)
+                    by_discover = {k: v for k, v in trace.items() if k != 'trace'}
+                    update_dict['by_discover'].update(by_discover)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'url': url,
