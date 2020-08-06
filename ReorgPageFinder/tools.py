@@ -314,6 +314,8 @@ class Similar:
         self.wb_titles = defaultdict(set)
         lw_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('^((?!web\.archive\.org).)*$')}))
         wb_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('web.archive.org')}))
+        lw_crawl = random.sample(lw_crawl, 1000) if len(lw_crawl) > 1000 else lw_crawl
+        wb_crawl = random.sample(wb_crawl, 500) if len(wb_crawl) > 500 else wb_crawl
         lw_crawl = [lw for lw in lw_crawl if 'title' in lw] + [lw for lw in lw_crawl if 'title' not in lw]
         wb_crawl = [wb for wb in wb_crawl if 'title' in wb] + [wb for wb in wb_crawl if 'title' not in wb]
         lw_path, wb_path = defaultdict(int), defaultdict(int)

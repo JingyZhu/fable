@@ -194,6 +194,7 @@ def broken(url, html=False):
     random_urls = construct_rand_urls(url)
     broken_decision, reasons = [], []
     for random_url in random_urls:
+        # print(random_url)
         random_resp, msg = send_request(random_url)
         if msg == 'Not Allowed':
             continue

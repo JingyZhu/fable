@@ -21,9 +21,10 @@ logger = logging.getLogger('logger')
 
 he = url_utils.HostExtractor()
 
-BUDGET = 11
-GUESS = 3
-OUTGOING = 4
+BUDGET = 9
+GUESS_DEPTH = 3
+OUTGOING = 3
+MIN_GUESS = 6
 CUT = 30
 
 def wsum_simi(simi):
@@ -77,6 +78,65 @@ class Discoverer:
         if len(guessed_urls) > MAX_GUESS:
             guessed_urls = random.sample(guessed_urls, MAX_GUESS)
         return guessed_urls
+    
+    def closest_neighbors(self, url, num):
+        """
+        Retrieve closest neighbors for url archived by wayback
+        num: Number of neighbors required
+
+        # TODO: Add ts and url closeness into consideration
+        """
+        def closeness(url, cand):
+            score = 0
+            us, uc = urlsplit(url), urlsplit(cand)
+            h1s, h2s = us.netloc.split(':')[0].split('.'), uc.netloc.split(':')[0].split('.')
+            for h1, h2 in zip(reversed(h1s), reversed(h2s)):
+                if h1 == h2: score += 1
+                else: return score
+            if len(h1s) != len(h2s):
+                return score
+            p1s, p2s = us.path, uc.path
+            if p1s == '': p1s == '/'
+            if p2s == '': p2s == '/'
+            p1s, p2s = p1s.split('/'), p2s.split('/')
+            for p1, p2 in zip(h1s, h2s):
+                if h1 == h2: score += 1
+                else: return score
+            if len(p1s) != len(p2s):
+                return score
+            q1s, q2s = parse_qs(us.query), parse_qs(uc.query)
+            score += len(set(q1s.keys()).intersection(set(q2s.keys())))
+            return score
+
+        param_dict = {
+            'from': 1997,
+            'to': 2020,
+            'filter': ['mimetype:text/html', 'statuscode:200'],
+            'collapse': 'urlkey'
+        }
+        cands = []
+        curr_url = url
+        while len(cands) < num + 1:
+            us = urlsplit(curr_url)
+            path, query = us.path, us.query
+            if query:
+                q_url = urlunsplit(us._replace(query='')) + '?*' 
+                wayback_urls, _ = crawl.wayback_index(q_url, param_dict=param_dict)
+                curr_url = urlunsplit(us._replace(query=''))
+            elif path not in ['', '/']:
+                if path[-1] == '/': path = path[:-1]
+                path_dir = os.path.dirname(path)
+                q_url = os.path.join(urlunsplit(us._replace(path=path_dir)), '*')
+                wayback_urls, _ = crawl.wayback_index(q_url, param_dict=param_dict)
+                curr_url = urlunsplit(us._replace(path=path_dir))
+            else: break
+            closest_urls = [w[1] for w in wayback_urls if w[1] != url]
+            closest_urls.sort(key=lambda x: closeness(url, x), reverse=True)
+            cands += closest_urls[:num] if len(closest_urls) > num else closest_urls
+        
+        return list(set(cands))
+
+            
 
     def link_same_page(self, dst, title, content, backlinked_url, backlinked_html, cut=CUT):
         """
@@ -174,8 +234,9 @@ class Discoverer:
         broken, reason = sic_transit.broken(src, html=True)
         # Directly check this outgoing page
         if not broken:
-            src_content = self.memo.extract_content(src, version='domdistiller')
-            src_title = self.memo.extract_title(src, version='domdistiller')
+            src_html = self.memo.crawl(src)
+            src_content = self.memo.extract_content(src_html, version='domdistiller')
+            src_title = self.memo.extract_title(src_html, version='domdistiller')
             similars, fromm = self.similar.similar(dst, dst_title, dst_content, {src: src_title}, {src: src_content})
             if len(similars) > 0:
                 logger.info(f'Discover: Directly found copy during looping')
@@ -260,20 +321,26 @@ class Discoverer:
                 values = [u[1] for u in parse_qsl(us.query)]
                 repr_text += f" {' '.join(values)}"
         guessed_urls = self.guess_backlinks(url)
-        guess_queue = [(g, depth - GUESS) for g in guessed_urls]
-        guess_total = defaultdict(int, {g: depth-GUESS for g in guessed_urls})
+        guess_queue = [(g, GUESS_DEPTH) for g in guessed_urls]
+        guess_total = defaultdict(int, {g: depth for g in guessed_urls})
         seen = set() if seen is None else seen
         # seen.update(guessed_urls)
 
         # Add guessed links
         # Guess urls based on guessed url
         while len(guess_queue) > 0:
-            link, link_depth = guess_queue.pop(0)
-            if link_depth >= GUESS:
+            link, guess_depth = guess_queue.pop(0)
+            if guess_depth > 0:
                 for guessed_url in self.guess_backlinks(link):
-                    guess_queue.append((guessed_url, link_depth-GUESS))
-                    guess_total[guessed_url] = max(guess_total[guessed_url], link_depth-GUESS)
+                    guess_queue.append((guessed_url, guess_depth-1))
+                    guess_total[guessed_url] = depth
                     # seen.add(guessed_url)
+
+        # Add more seeds into guess links by inspecting closest url in the wayback
+        if len(guess_total) < MIN_GUESS:
+            cand_guess = self.closest_neighbors(url, MIN_GUESS - len(guess_total))
+            guess_total.update({c: depth for c in cand_guess})
+
         guess_total = list(guess_total.items())
 
         outgoing_queue = []

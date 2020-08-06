@@ -209,7 +209,7 @@ def url_norm(url, wayback=False):
         url = filter_wayback(url)
     us = urlsplit(url)
     path, query = us.path, us.query
-    us = us._replace(netloc=us.netloc.split(':')[0])
+    us = us._replace(netloc=us.netloc.split(':')[0], fragment='')
     if path == '': 
         us = us._replace(path='/')
     if query:
