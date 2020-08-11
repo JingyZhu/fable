@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from queue import Queue
 from . import tools
 from collections import defaultdict
-import re
+import re, json
 import random
 
 import sys
@@ -29,6 +29,135 @@ CUT = 30
 
 def wsum_simi(simi):
     return 2/3*simi[0] + 1/3*simi[1]
+
+class Path:
+    def __init__(self, url, link_sig=('', ('', '')), ss=None):
+        self.url = url
+        self.path = ss.path + [url] if ss else [url]
+        self.sigs = ss.sigs + [link_sig] if ss else [link_sig]
+        self.length = ss.length + 1 if ss else 0
+    
+    def calc_priority(self, dst, dst_rep, similar=None):
+        """
+        similar must be initialized to contain dst_rep and sigs
+        """
+        def tree_diff(dest, src):
+            seq1, seq2 = [], []
+            us1, us2 = urlsplit(dest), urlsplit(src)
+            h1s, h2s = us1.netloc.split(':')[0], us2.netloc.split(':')[0]
+            seq1.append(h1s)
+            seq2.append(h2s)
+            p1s, p2s = us1.path, us2.path
+            if p1s == '': p1s == '/'
+            if p2s == '': p2s == '/'
+            p1s, p2s = p1s.split('/'), p2s.split('/')
+            seq1 += p1s[1:]
+            seq2 += p2s[1:]
+            diff = 0
+            for i, (s1, s2) in enumerate(zip(seq1, seq2)):
+                if s1 != s2: 
+                    diff += 1
+                    break
+            diff += len(seq1) + len(seq2) - 2*(i+1)
+            q1s, q2s = parse_qsl(us1.query), parse_qsl(us2.query)
+            if diff == 0:
+                diff += len(set(q1s).union(q2s)) - len(set(q1s).intersection(q2s))
+            else:
+                diff += min(len(q1s), len(set(q1s).union(q2s)) - len(set(q1s).intersection(q2s)))
+            return diff
+        c1 = tree_diff(dst, self.url)
+        c2 = len(self.path)
+        if similar:
+            anchor, sig = self.sigs[-1]
+            simis = (similar.tfidf.similar(anchor, dst_rep), similar.tfidf.similar(' '.join(sig), dst_rep))
+            simi = wsum_simi(simis)
+            self.priority = c1 + c2 - simi
+        else:
+            self.priority = c1 + c2
+        return self
+    
+    def __str__(self):
+        d = {
+            'url': self.url,
+            'path': self.path
+        }
+        return json.dumps(d, indent=2)
+
+
+class Backpath_Finder:
+    def __init__(self, policy='earliest', memo=None, similar=None):
+        """
+        Policy: earliest/latest
+        """
+        self.policy = policy
+        self.memo = memo if memo is not None else tools.Memoizer()
+        self.similar = similar if similar is not None else tools.Similar()
+        policy_map = {
+            'earliest': 'closest-later',
+            'latest': 'closest-earlier'
+        }
+        self.memo_policy = policy_map[self.policy]
+
+    def find_path(self, url, homepage=None):
+        policy = self.policy
+        try:
+            wayback_url = self.memo.wayback_index(url, policy=policy)
+            html = self.memo.crawl(wayback_url)
+            content = self.memo.extract_content(html, version='domdistiller')
+            title = self.memo.extract_title(html, version='domdistiller')
+            url_rep = content if content != '' else title
+        except Exception as e:
+            logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+            html, title, content = '', '', ''
+            us = urlsplit(url)
+            url_rep = re.sub('[^0-9a-zA-Z]+', ' ', us.path)
+            if us.query:
+                values = [u[1] for u in parse_qsl(us.query)]
+                url_rep += f" {' '.join(values)}"
+        # TODO Consider cases where there is no snapshot
+        ts = url_utils.get_ts(wayback_url) if wayback_url else 20200101
+        print('ts:', ts)
+        us = urlsplit(url)
+        homepage = urlunsplit(us._replace(path='', query='', fragment='')) if not homepage else homepage
+        MAX_DEPTH = len(us.path.split('/')) + len(parse_qs(us.query))
+        search_queue = [Path(homepage)]
+        seen = set()
+        param_dict = {
+            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
+            "collapse": "timestamp:8"
+        }
+        while len(search_queue) > 0:
+            path = search_queue.pop(0)
+            print(f'{path} {len(search_queue)}')
+            if len(path.path) > MAX_DEPTH:
+                continue
+            seen.add(url_utils.url_norm(path.url))
+            if url_utils.url_match(url, path.url):
+                return path
+            wayback_url = self.memo.wayback_index(path.url, policy=self.memo_policy, ts=ts, param_dict=param_dict)
+            print(wayback_url)
+            if wayback_url is None:
+                continue
+            wayback_html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
+            if wayback_html is None:
+                continue
+            outgoing_sigs = crawl.outgoing_links_sig(wayback_url, wayback_html, wayback=True)
+            self.similar.tfidf._clear_workingset()
+            corpus = [s[1] for s in outgoing_sigs] + [' '.join(s[2]) for s in outgoing_sigs] + [url_rep]
+            self.similar.tfidf.add_corpus(corpus)
+            for wayback_outgoing_link, anchor, sib_text in outgoing_sigs:
+                outgoing_link = url_utils.filter_wayback(wayback_outgoing_link)
+                new_path = Path(outgoing_link, link_sig=(anchor, sib_text), ss=path)
+                if url_utils.url_match(wayback_outgoing_link, url, wayback=True):
+                    return new_path
+                if outgoing_link not in seen:
+                    new_path.calc_priority(url, url_rep, self.similar)
+                    seen.add(url_utils.url_norm(outgoing_link))
+                    search_queue.append(new_path)
+            search_queue.sort(key=lambda x: x.priority)
+            search_queue = search_queue[:20] if len(search_queue) > 20 else search_queue
+
+
 
 class Discoverer:
     def __init__(self, depth=BUDGET, corpus=[], proxies={}, memo=None, similar=None):
@@ -217,12 +346,15 @@ class Discoverer:
             return False
         return True
 
-    def discover_backlinks(self, src, dst, dst_title, dst_content, dst_html, dst_snapshot):
+    def discover_backlinks(self, src, dst, dst_title, dst_content, dst_html, dst_snapshot, dst_ts=None):
         """
         For src and dst, see:
             1. If src is archived on wayback
             2. If src is linking to dst on wayback
             3. If src is still working today
+        
+        dst_ts: timestamp for dst on wayback to reference on policy
+                If there is no snapshot, use closest-latest
         
         returns: (status, url(s), reason), 
                     status includes: found/loop/reorg/notfound
@@ -230,7 +362,12 @@ class Discoverer:
                     reasons are how urls are found (from, similarity) or notfound (for no dst snapshots)
         """
         logger.info(f'Backlinks: {src} {dst}')
-        wayback_src = self.memo.wayback_index(src)
+        policy = 'closest' if dst_ts else 'latest-rep'
+        param_dict = {
+            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
+            "collapse": "timestamp:8"
+        }
+        wayback_src = self.memo.wayback_index(src, policy=policy, ts=dst_ts, param_dict=param_dict)
         broken, reason = sic_transit.broken(src, html=True)
         # Directly check this outgoing page
         if not broken:
@@ -256,7 +393,7 @@ class Discoverer:
             else:
                 return "notfound", None, None
         else:
-            wayback_src_html = self.memo.crawl(wayback_src)
+            wayback_src_html, wayback_src = self.memo.crawl(wayback_src, final_url=True)
             wayback_outgoing_sigs = crawl.outgoing_links_sig(wayback_src, wayback_src_html, wayback=True)
             wayback_linked = [False, []]
             for wayback_outgoing_link, anchor, sibtext in wayback_outgoing_sigs:
@@ -300,13 +437,15 @@ class Discoverer:
         """
         if depth is None: depth = self.depth
         has_snapshot = False
+        url_ts = None
         suffice = False # Only used for has_snapshot=False. See whehter url sufice restrictions. (Parent sp&linked&not broken today)
         traces = [] # Used for tracing the discovery process
         try:
-            wayback_url = self.memo.wayback_index(url)
+            wayback_url = self.memo.wayback_index(url, policy='earliest')
             html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
             content = self.memo.extract_content(html, version='domdistiller')
             title = self.memo.extract_title(html, version='domdistiller')
+            url_ts = url_utils.get_ts(wayback_url)
             has_snapshot = True
         except Exception as e:
             logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
@@ -373,7 +512,7 @@ class Discoverer:
                 src, link_depth = item
                 logger.info(f"Got: {src} depth:{link_depth} guess_total:{len(guess_total)} outgoing_queue:{len(outgoing_queue)}")
                 seen.add(src)
-                status, msg_urls, reason = self.discover_backlinks(src, url, title, content, html, has_snapshot)
+                status, msg_urls, reason = self.discover_backlinks(src, url, title, content, html, has_snapshot, url_ts)
                 logger.info(f'{status}, {reason}')
                 if status == 'found':
                     traces.append({

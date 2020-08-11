@@ -428,7 +428,7 @@ class ReorgPageFinder:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # _discover
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url': {"$exists": False}})
+        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_discover': {"$exists": False}})
         discovered_checked = self.db.checked.find({"hostname": self.site, "discover": True})
         discovered_checked = set([sc['url'] for sc in discovered_checked])
         urls = [u for u in noreorg_urls if u['url'] not in discovered_checked ]
@@ -468,11 +468,12 @@ class ReorgPageFinder:
                 fp = self.fp_check(url, discovered)
                 if not fp: # False positive test
                     # _discover
-                    update_dict.update({'reorg_url': discovered, 'by':{
+                    update_dict.update({'reorg_url_discover': discovered, 'by_discover':{
                         "method": "discover"
                     }})
                     by_discover = {k: v for k, v in trace.items() if k != 'trace'}
-                    update_dict['by'].update(by_discover)
+                    # discover
+                    update_dict['by_discover'].update(by_discover)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'url': url,
@@ -515,19 +516,19 @@ class ReorgPageFinder:
                     self.logger.warn(f'Discover update trace: {str(e)}')
             
             # TEMP
-            if discovered is not None:
-                example = ((url, title), discovered)
-                added = self._add_url_to_patterns(*unpack_ex(example))
-                if not added:
-                    continue
-                success = self.query_inferer([example])
-                while len(success) > 0:
-                    added = False
-                    for suc in success:
-                        broken_urls.discard(unpack_ex(suc)[0])
-                        a = self._add_url_to_patterns(*unpack_ex(suc))
-                        added = added or a
-                    if not added:
-                        break
-                    examples = success
-                    success = self.query_inferer(examples)
+            # if discovered is not None:
+            #     example = ((url, title), discovered)
+            #     added = self._add_url_to_patterns(*unpack_ex(example))
+            #     if not added:
+            #         continue
+            #     success = self.query_inferer([example])
+            #     while len(success) > 0:
+            #         added = False
+            #         for suc in success:
+            #             broken_urls.discard(unpack_ex(suc)[0])
+            #             a = self._add_url_to_patterns(*unpack_ex(suc))
+            #             added = added or a
+            #         if not added:
+            #             break
+            #         examples = success
+            #         success = self.query_inferer(examples)

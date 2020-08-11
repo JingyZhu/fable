@@ -31,7 +31,8 @@ Wayback indexed timestamps
 {
     "_id": "url",
     "url": "string",
-    "ts": "[int]"
+    "ts": "[int]",
+    "ts_nb": "[int] (not broken, including 3xx)"
 }
 ```
 
@@ -39,10 +40,11 @@ Wayback indexed timestamps
 Wayback most representative ts for a url
 ```json
 {
-    "_id": "url",
     "url": "string",
     "ts": "int",
-    "wayback_url": "string"
+    "wayback_url": "string",
+    "policy": "string",
+    "(policy_ts)": "int"
 }
 ```
 

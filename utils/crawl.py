@@ -24,6 +24,7 @@ from reppy.ttl import HeaderWithDefaultPolicy
 import sys
 sys.path.append('../')
 import config
+from utils.url_utils import filter_wayback
 
 import logging
 logger = logging.getLogger('logger')
@@ -405,6 +406,8 @@ def outgoing_links(url, html, wayback=False):
         link = a_tag.attrs['href']
         if len(link) == 0 or link[0] == '#': #Anchor ignore
             continue
+        if urlparse(filter_wayback(link)).scheme not in {'http', 'https'}:
+            continue
         if wayback:
             link = wayback_join(base_url, link)
         else:
@@ -449,6 +452,8 @@ def outgoing_links_sig(url, html, wayback=False):
         if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
             continue
         link = a_tag.attrs['href']
+        if urlparse(filter_wayback(link)).scheme not in {'http', 'https'}:
+            continue
         anchor_text = a_tag.text.strip()
         if len(link) == 0 or link[0] == '#': #Anchor ignore
             continue

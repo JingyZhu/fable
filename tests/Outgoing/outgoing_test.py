@@ -14,6 +14,7 @@ from utils import text_utils, url_utils
 
 
 all_urls = json.load(open('Broken_urls.json', 'r'))
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 
 # sites = sorted(all_urls.keys())
 sites = sorted(all_urls.keys(), reverse=True)

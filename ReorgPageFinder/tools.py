@@ -154,54 +154,91 @@ class Memoizer:
         else:
             return html, fu
     
-    def wayback_index(self, url, **kwargs):
+    def wayback_index(self, url, policy='latest-rep', ts=None, **kwargs):
         """
-        Get most representative and lastest snapshot for a certain url
+        Get most representative snapshot for a certain url
+        policy: policy for getting which wayback snapshot
+          - latest-rep: Lastest representitive
+          - closest: Closest to ts (ts required)
+          - closest-later: closest to ts but later (ts required)
+          - cloest-earlier: closest to ts but earlier (ts required)
+          - earliest: earliest snapshot
+          - latest: latest snapshot
         TODO: Non-db version
         """
-        wayback_url = self.db.wayback_rep.find_one({"_id": url})
-        if wayback_url:
-            return wayback_url['wayback_url']
-        param_dict = {
-            "filter": ['statuscode:200', 'mimetype:text/html'],
-            "collapse": "timestamp:8"
-        }
-        cps, status = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
-        if len(cps) == 0: # No snapshots
-            logger.info(f"Wayback Index: No snapshots {status}")
-            return
-        cps.sort(key=lambda x: x[0])
-        try:
-            self.db.wayback_index.insert_one({
-                "_id": url,
-                'url': url,
-                'ts': [c[0] for c in cps]
-            })
-        except: pass
-        # Get latest 6 snapshots, and random sample 3 for finding representative results
-        cps_sample = cps[-3:] if len(cps) >= 3 else cps
-        cps_sample = [cp for cp in cps_sample if (dparser.parse(cps_sample[-1][0]) - dparser.parse(cp[0])).days <= 180]
-        cps_dict = {}
-        for ts, wayback_url, _ in cps_sample:
-            html = self.crawl(wayback_url, proxies=self.PS.select())
-            if html is None: continue
-            # TODO: Domditiller vs Boilerpipe --> Acc vs Speed?
-            content = text_utils.extract_body(html, version='boilerpipe')
-            # title = text_utils.extract_title(html, version='newspaper')
-            cps_dict[ts] = (ts, wayback_url, content)
-        if len(cps_dict) > 0:
-            rep = sorted(cps_dict.values(), key=lambda x: len(x[2].split()))[int((len(cps_dict)-1)/2)]
+        assert(policy in {'latest-rep', 'closest-later', 'closest-earlier', 'earliest', 'latest', 'closest'})
+        wayback_q = {"url": url, "policy": policy}
+        if policy == 'latest-rep':
+            wayback_url = self.db.wayback_rep.find_one(wayback_q)
+            if wayback_url:
+                return wayback_url['wayback_url']
+        default_param = True
+        default_key = {True: 'ts', False: 'ts_nb'}
+        if 'param_dict' not in kwargs:
+            param_dict = {
+                "filter": ['statuscode:200', 'mimetype:text/html'],
+                "collapse": "timestamp:8"
+            }
         else:
-            rep = cps_sample[-1]
-        try:
-            self.db.wayback_rep.insert_one({
-                "_id": url,
-                "url": url,
-                "ts": rep[0],
-                "wayback_url": rep[1]
-            })
-        except Exception as e: pass
-        return rep[1]
+            param_dict = kwargs['param_dict']
+            del(kwargs['param_dict'])
+            default_param = False
+        cps = self.db.wayback_index.find_one({'url': url})
+        if not cps or default_key[default_param] not in cps:
+            cps, status = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
+            if len(cps) == 0: # No snapshots
+                logger.info(f"Wayback Index: No snapshots {status}")
+                return
+            cps.sort(key=lambda x: x[0])
+            try:
+                self.db.wayback_index.update_one({"_id": url}, {'$set': {
+                    'url': url,
+                    default_key[default_param]: [c[0] for c in cps]
+                }}, upsert=True)
+            except: pass
+        else:
+            key = default_key[default_param]
+            cps = [(c, url_utils.constr_wayback(url, c)) for c in cps[key]]
+
+        if policy == 'closest':
+            sec_diff = lambda x: (dparser.parse(str(x)) - dparser.parse(str(ts))).total_seconds()
+            cps_close = [(cp, abs(sec_diff(cp[0]))) for cp in cps]
+            return sorted(cps_close, key=lambda x: x[1])[0][0][1]
+        elif policy == 'closest-later':
+            cps_later = [cp for cp in cps if int(cp[0]) >= int(ts)]
+            return cps_later[0][1] if len(cps_later) > 0 else cps[-1][1]
+        elif policy == 'closest-earlier':
+            cps_earlier = [cp for cp in cps if int(cp[0]) <= int(ts)]
+            return cps_earlier[-1][1] if len(cps_earlier) > 0 else cps[0][1]
+        elif policy == 'earliest':
+            return cps[0][1]
+        elif policy == 'latest':
+            return cps[-1][1]
+        elif policy == 'latest_rep':
+            # Get latest 6 snapshots, and random sample 3 for finding representative results
+            cps_sample = cps[-3:] if len(cps) >= 3 else cps
+            cps_sample = [cp[0] for cp in cps_sample if (dparser.parse(cps_sample[-1][0]) - dparser.parse(cp[0])).days <= 180]
+            cps_dict = {}
+            for ts, wayback_url, _ in cps_sample:
+                html = self.crawl(wayback_url, proxies=self.PS.select())
+                if html is None: continue
+                # TODO: Domditiller vs Boilerpipe --> Acc vs Speed?
+                content = text_utils.extract_body(html, version='boilerpipe')
+                # title = text_utils.extract_title(html, version='newspaper')
+                cps_dict[ts] = (ts, wayback_url, content)
+            if len(cps_dict) > 0:
+                rep = sorted(cps_dict.values(), key=lambda x: len(x[2].split()))[int((len(cps_dict)-1)/2)]
+            else:
+                rep = cps_sample[-1]
+            try:
+                self.db.wayback_rep.insert_one({
+                    "url": url,
+                    "ts": rep[0],
+                    "wayback_url": rep[1],
+                    'policy': 'latest-rep'
+                })
+            except Exception as e: pass
+            return rep[1]
     
     def extract_content(self, html, **kwargs):
         if html is None:

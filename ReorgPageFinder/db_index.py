@@ -13,3 +13,5 @@ db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=con
 db.crawl.create_index([('html', pymongo.ASCENDING)])
 
 db.searched.create_index([('query', pymongo.ASCENDING), ('engine', pymongo.ASCENDING)])
+
+db.wayback_rep.create_index([('url', pymongo.ASCENDING), ('policy', pymongo.ASCENDING)], unique=True)

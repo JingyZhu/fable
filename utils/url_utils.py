@@ -27,6 +27,13 @@ def constr_wayback(url, ts):
         return url
     return f"http://web.archive.org/web/{ts}/{url}"
 
+def get_ts(wayback_url):
+    wayback_url = wayback_url.replace('http://web.archive.org/web/', '')
+    url = wayback_url.replace('https://web.archive.org/web/', '')
+    slash = url.find('/')
+    ts = url[:slash]
+    return ts
+
 class urlset:
     def __init__(self, forms):
         """forms: form tag text on the html"""
@@ -177,10 +184,12 @@ def status_categories(status):
         return status
 
 
-def url_match(url1, url2, wayback=True):
+def url_match(url1, url2, wayback=True, case=False):
     """
     Compare whether two urls are identical on filepath and query
     If wayback is set to True, will first try to filter out wayback's prefix
+
+    case: whether token comparison is token sensitive
     """
     if wayback:
         url1 = filter_wayback(url1)
@@ -188,10 +197,15 @@ def url_match(url1, url2, wayback=True):
     up1, up2 = urlparse(url1), urlparse(url2)
     netloc1, path1, query1 = up1.netloc.split(':')[0], up1.path, up1.query
     netloc2, path2, query2 = up2.netloc.split(':')[0], up2.path, up2.query
+    if not case:
+        netloc1, path1, query1 = netloc1.lower(), path1.lower(), query1.lower()
+        netloc2, path2, query2 = netloc2.lower(), path2.lower(), query2.lower()
     if netloc1 != netloc2:
         return False
     if path1 == '': path1 = '/'
     if path2 == '': path2 = '/'
+    if path1 != '/' and path1[-1] == '/': path1 = path1[:-1]
+    if path2 != '/' and path2[-1] == '/': path2 = path2[:-1]
     if path1 != path2:
         return False
     if query1 == query2:
@@ -200,7 +214,7 @@ def url_match(url1, url2, wayback=True):
     return len(qsl1) > 0 and qsl1 == qsl2
 
 
-def url_norm(url, wayback=False):
+def url_norm(url, wayback=False, case=False):
     """
     Perform URL normalization
     Namely, sort query by keys, and eliminate port number
@@ -209,6 +223,8 @@ def url_norm(url, wayback=False):
         url = filter_wayback(url)
     us = urlsplit(url)
     path, query = us.path, us.query
+    if not case:
+        path, query = path.lower(), query.lower()
     us = us._replace(netloc=us.netloc.split(':')[0], fragment='')
     if path == '': 
         us = us._replace(path='/')

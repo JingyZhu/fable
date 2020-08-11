@@ -260,8 +260,8 @@ def mine_date(html):
             dt = dparser.parse(dt, fuzzy=True).strftime("%Y %m %d")
             dates.add((dt, 0))
     dates = sorted([o for o in dates], key=lambda x: x[1])
-    print(dates)
-    return dates[0][0] if len(dates) > 0 else ""
+    # print(dates)
+    return dates[0][0] if len(dates) > 0 else None
 
 
 def extract_date(html, version="article"):
