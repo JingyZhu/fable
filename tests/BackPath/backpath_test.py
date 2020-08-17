@@ -19,7 +19,10 @@ memo = tools.Memoizer()
 similar = tools.Similar()
 policy = 'latest'
 bf = discoverer.Backpath_Finder(policy=policy, memo=memo, similar=similar)
-results = json.load(open(f'{policy}_result.json', 'r'))
+try:
+    results = json.load(open(f'{policy}_result.json', 'r'))
+except:
+    json.dump([], open(f'{policy}_result.json', 'w+'))
 got = {r['url'] for r in results}
 for i, url in enumerate(all_urls):
     print(f"URLNO {i}: ", url)

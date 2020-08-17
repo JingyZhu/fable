@@ -428,7 +428,7 @@ class ReorgPageFinder:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # _discover
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_discover': {"$exists": False}})
+        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_discover_test': {"$exists": False}})
         discovered_checked = self.db.checked.find({"hostname": self.site, "discover": True})
         discovered_checked = set([sc['url'] for sc in discovered_checked])
         urls = [u for u in noreorg_urls if u['url'] not in discovered_checked ]
@@ -439,7 +439,9 @@ class ReorgPageFinder:
             url = broken_urls.pop()
             i += 1
             self.logger.info(f'URL: {i} {url}')
-            discovered, trace = self.discoverer.discover(url)
+            discovered, trace = self.discoverer.wayback_alias(url)
+            if not discovered:
+                discovered, trace = self.discoverer.discover(url)
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
             # if has_title is None: # No longer in reorg (already deleted)
@@ -468,12 +470,12 @@ class ReorgPageFinder:
                 fp = self.fp_check(url, discovered)
                 if not fp: # False positive test
                     # _discover
-                    update_dict.update({'reorg_url_discover': discovered, 'by_discover':{
+                    update_dict.update({'reorg_url_discover_test': discovered, 'by_discover_test':{
                         "method": "discover"
                     }})
                     by_discover = {k: v for k, v in trace.items() if k != 'trace'}
                     # discover
-                    update_dict['by_discover'].update(by_discover)
+                    update_dict['by_discover_test'].update(by_discover)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'url': url,

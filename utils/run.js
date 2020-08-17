@@ -14,6 +14,9 @@ const assert = require('assert');
 const argv = require('yargs').argv;
 
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function writeHTML(Runtime, filename) {
     const result = await Runtime.evaluate({
@@ -65,6 +68,8 @@ async function startChrome(){
         await Page.navigate({ url: process.argv[2] });
 
         await Page.loadEventFired();
+        
+        // await sleep(5000);
 
         await writeHTML(Runtime, htmlname);
 

@@ -323,6 +323,24 @@ class Similar:
                     return lws, simi, 'sig'
         return None
     
+    def max_similar(self, target_content, candidates_contents):
+        """
+        Return the max similarity between target_content and candidates_contents
+        candidates_contents: List of strings
+
+        Return: (similarity, content)
+        """
+        max_simi, max_content = 0, None
+        self.tfidf._clear_workingset()
+        self.tfidf.add_corpus([target_content] + list(candidates_contents))
+        simi_cand = []
+        for c in candidates_contents:
+            simi = self.tfidf.similar(target_content, c)
+            if simi > max_simi:
+                max_simi = simi
+                max_content = c
+        return max_simi, max_content
+
     def content_similar(self, target_content, candidates_contents, candidates_html=None):
         """
         See whether there are content from candidates that is similar target

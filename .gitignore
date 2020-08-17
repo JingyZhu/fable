@@ -19,6 +19,7 @@ ReorgPageFinder.ipynb
 test.ipynb
 query.ipynb
 outgoing.ipynb
+module_test.ipynb
 broken_pages/*.yaml
 search/schedule.py
 *.mongo

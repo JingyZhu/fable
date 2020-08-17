@@ -172,7 +172,7 @@ def filter_redir(r):
     return new_his
 
 
-def broken(url, html=False):
+def broken(url, html=False, ignore_soft_404=False):
     """
     Entry func: detect whether this url is broken
     html: Require the url to be html.
@@ -190,6 +190,8 @@ def broken(url, html=False):
     if html and 'html' not in content_type:
         logger.info('sic transit broken: Not HTML')
         return True, "Not html"
+    if ignore_soft_404:
+        return False, "No hard broken"
     # Construct new url with random filename
     random_urls = construct_rand_urls(url)
     broken_decision, reasons = [], []
