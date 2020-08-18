@@ -323,17 +323,19 @@ class Similar:
                     return lws, simi, 'sig'
         return None
     
-    def max_similar(self, target_content, candidates_contents):
+    def max_similar(self, target_content, candidates_contents, init=True):
         """
         Return the max similarity between target_content and candidates_contents
         candidates_contents: List of strings
+        init: Whether clear workingset and adding corpus is required. If not, must be pre-init
 
         Return: (similarity, content)
         """
+        assert(isinstance(candidates_contents, list))
         max_simi, max_content = 0, None
-        self.tfidf._clear_workingset()
-        self.tfidf.add_corpus([target_content] + list(candidates_contents))
-        simi_cand = []
+        if init:
+            self.tfidf._clear_workingset()
+            self.tfidf.add_corpus([target_content] + candidates_contents)
         for c in candidates_contents:
             simi = self.tfidf.similar(target_content, c)
             if simi > max_simi:

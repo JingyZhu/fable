@@ -74,7 +74,7 @@ def path_edit_distance(url1, url2):
     return dis
 
 class ReorgPageFinder:
-    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, logger=None, logname=None, trace=False):
+    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, logger=None, logname=None):
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
@@ -86,7 +86,6 @@ class ReorgPageFinder:
         self.pattern_dict = None
         self.logname = './ReorgPageFinder.log' if logname is None else logname
         self.logger = logger if logger is not None else self._init_logger()
-        self.trace = trace
 
     def _init_logger(self):
         logger = logging.getLogger('logger')
@@ -439,9 +438,55 @@ class ReorgPageFinder:
             url = broken_urls.pop()
             i += 1
             self.logger.info(f'URL: {i} {url}')
-            discovered, trace = self.discoverer.wayback_alias(url)
-            if not discovered:
+            method, suffice = 'discover', False
+            while True: # Dummy while served as goto
+                discovered = self.discoverer.wayback_alias(url)
+                if discovered:
+                    trace = {'suffice': True, 'type': 'wayback_alias', 'value': None, 'trace': traces}
+                    break
+
+                discovered, trace = self.discoverer.bf_find(url, policy='latest')
+                if trace.get('backpath'):
+                    try:
+                        self.db.trace.update_one({'_id': url}, {"$set": {
+                            "url": url,
+                            "hostname": self.site,
+                            "backpath_latest": trace['backpath']
+                        }}, upsert=True)
+                    except Exception as e:
+                        self.logger.warn(f'Discover update trace backpath: {str(e)}')
+                if discovered:
+                    method = 'backpath'
+                    break
+
                 discovered, trace = self.discoverer.discover(url)
+                try:
+                    self.db.trace.update_one({'_id': url}, {"$set": {
+                        "url": url,
+                        "hostname": self.site,
+                        "discover": trace['trace']
+                    }}, upsert=True)
+                except Exception as e:
+                    self.logger.warn(f'Discover update trace discover: {str(e)}')
+                if discovered:
+                    break
+                suffice = trace['suffice']
+
+                discovered, trace = self.discoverer.bf_find(url, policy='earliest')
+                if trace.get('backpath'):
+                    try:
+                        self.db.trace.update_one({'_id': url}, {"$set": {
+                            "url": url,
+                            "hostname": self.site,
+                            "backpath_earliest": trace['backpath']
+                        }}, upsert=True)
+                    except Exception as e:
+                        self.logger.warn(f'Discover update trace backpath: {str(e)}')
+                if discovered:
+                    method = 'backpath'
+                    break
+                break
+
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
             # if has_title is None: # No longer in reorg (already deleted)
@@ -471,20 +516,21 @@ class ReorgPageFinder:
                 if not fp: # False positive test
                     # _discover
                     update_dict.update({'reorg_url_discover_test': discovered, 'by_discover_test':{
-                        "method": "discover"
+                        "method": method
                     }})
-                    by_discover = {k: v for k, v in trace.items() if k != 'trace'}
+                    by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath']}
                     # discover
                     update_dict['by_discover_test'].update(by_discover)
                 else:
+                    # discover
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'url': url,
-                            'false_positive_discover': True, 
+                            'false_positive_discover_test': True, 
                             'hostname': self.site
                         }}, upsert=True)
                     except: pass
                     discovered = None
-            elif not trace['suffice']:
+            elif not suffice:
                 try:
                     self.db.na_urls.update_one({'_id': url}, {'$set': {
                         'no_working_parent': True, 
@@ -507,15 +553,6 @@ class ReorgPageFinder:
                 }}, upsert=True)
             except Exception as e:
                 self.logger.warn(f'Discover update checked: {str(e)}')
-            if self.trace:
-                try:
-                    self.db.trace.update_one({'_id': url}, {"$set": {
-                        "url": url,
-                        "hostname": self.site,
-                        "discover": trace['trace']
-                    }}, upsert=True)
-                except Exception as e:
-                    self.logger.warn(f'Discover update trace: {str(e)}')
             
             # TEMP
             # if discovered is not None:

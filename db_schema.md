@@ -95,7 +95,9 @@ Traces of detailed execution events (how each urls' alternate links are frying t
     "hostname": "hostname",
     "search_1": "list of traces for first search",
     "search_2": "list of traces for second search",
-    "discover": "list of traces for discovery"
+    "discover": "list of traces for discovery",
+    "backpath_earliest": "Path structure on earliest searched backpath",
+    "backpath_latest": "Path structure on latest searched backpath"
 }
 ```
 
