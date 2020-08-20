@@ -161,7 +161,7 @@ class Memoizer:
           - latest-rep: Lastest representitive
           - closest: Closest to ts (ts required)
           - closest-later: closest to ts but later (ts required)
-          - cloest-earlier: closest to ts but earlier (ts required)
+          - closest-earlier: closest to ts but earlier (ts required)
           - earliest: earliest snapshot
           - latest: latest snapshot
         TODO: Non-db version
@@ -214,12 +214,12 @@ class Memoizer:
             return cps[0][1]
         elif policy == 'latest':
             return cps[-1][1]
-        elif policy == 'latest_rep':
+        elif policy == 'latest-rep':
             # Get latest 6 snapshots, and random sample 3 for finding representative results
             cps_sample = cps[-3:] if len(cps) >= 3 else cps
-            cps_sample = [cp[0] for cp in cps_sample if (dparser.parse(cps_sample[-1][0]) - dparser.parse(cp[0])).days <= 180]
+            cps_sample = [(cp[0], cp[1]) for cp in cps_sample if (dparser.parse(cps_sample[-1][0]) - dparser.parse(cp[0])).days <= 180]
             cps_dict = {}
-            for ts, wayback_url, _ in cps_sample:
+            for ts, wayback_url in cps_sample:
                 html = self.crawl(wayback_url, proxies=self.PS.select())
                 if html is None: continue
                 # TODO: Domditiller vs Boilerpipe --> Acc vs Speed?
@@ -239,6 +239,9 @@ class Memoizer:
                 })
             except Exception as e: pass
             return rep[1]
+        else:
+            logger.error(f'Wayback Index: Reach non existed policy')
+            raise
     
     def extract_content(self, html, **kwargs):
         if html is None:
@@ -271,12 +274,12 @@ class Memoizer:
 
 
 class Similar:
-    def __init__(self, use_db=True, db=db, corpus=[]):
+    def __init__(self, use_db=True, db=db, corpus=[], short_threshold=None):
         if not use_db and len(corpus) == 0:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
         self.threshold = 0.8
-        self.short_threshold = self.threshold - 0.1
+        self.short_threshold = short_threshold if short_threshold else self.threshold - 0.1
         if use_db:
             self.db =  db
             corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})

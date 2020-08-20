@@ -253,7 +253,7 @@ def url_parent(url):
         hs = us.netloc.split(':')[0].split('.')
         return urlunsplit(us._replace(netloc='.'.join(hs[1:])))
     path = us.path
-    if path [-1] == '/' and not us.query: path = path[:-1]
+    if path and path [-1] == '/' and not us.query: path = path[:-1]
     path = os.path.dirname(path)
     return urlunsplit(us._replace(path=path, query=''))
     
@@ -292,3 +292,14 @@ def is_parent(parent, url):
     for q2 in q2s:
         if q2 not in q1s: return False
     return True
+
+
+def path_edit_distance(url1, url2):
+    us1, us2 = urlsplit(url1), urlsplit(url2)
+    dis = 0
+    if us1.netloc != us2.netloc:
+        dis += 1
+    for part1, part2 in zip(list(filter(lambda x: x!= '', us1.path.split('/'))), \
+                            list(filter(lambda x: x!= '', us2.path.split('/')))):
+        if part1 != part2: dis += 1
+    return dis

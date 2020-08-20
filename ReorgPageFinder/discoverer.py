@@ -125,7 +125,7 @@ class Backpath_Finder:
 
     def find_path(self, url, homepage=None):
         policy = self.policy
-        trim_size = 15
+        trim_size = 20
         try:
             wayback_url = self.memo.wayback_index(url, policy=policy)
             html = self.memo.crawl(wayback_url)
@@ -155,7 +155,7 @@ class Backpath_Finder:
         }
         while len(search_queue) > 0:
             path = search_queue.pop(0)
-            logger.info(f'{path} {len(search_queue)}')
+            logger.info(f'BackPath: {path.url} outgoing_queue:{len(search_queue)}')
             if len(path.path) > MAX_DEPTH or url_utils.url_norm(path.url) in seen:
                 continue
             seen.add(url_utils.url_norm(path.url))
@@ -248,7 +248,7 @@ class Backpath_Finder:
                 curr_url = new_url
             html = self.memo.crawl(curr_url)
             for compare in range(i_pointer+1, len(path.path)):
-                link_match = self.find_same_link([[path.path[compare]] + path.sigs[compare]], curr_url, html) # TODO, explicit list of wayback_sig mayn
+                link_match = self.find_same_link([(path.path[compare], path.sigs[compare][0], path.sigs[compare][1])], curr_url, html) # TODO, explicit list of wayback_sig mayn
                 if link_match:
                     matched = True
                     matched_sig, simi, by = link_match
@@ -363,7 +363,7 @@ class Discoverer:
         if self.memo.wayback_index(explicit_parent, policy='earliest'):
             cands.append(explicit_parent)
         if path not in ['', '/'] or query:
-            if path[-1] == '/': path = path[:-1]
+            if path and path[-1] == '/': path = path[:-1]
             path_dir = os.path.dirname(path)
             q_url = urlunsplit(us._replace(path=path_dir + '*', query=''))
             wayback_urls, _ = crawl.wayback_index(q_url, param_dict=param_dict)
@@ -710,6 +710,8 @@ class Discoverer:
                 Else: None, {'suffice': False, 'backpath': depends} 
         """
         self.bf.policy = policy
+        if urlsplit(url).path in {'', '/'}:
+            return None, {'suffice': False}
         path = self.bf.find_path(url)
         if not path:
             return None, {'suffice': False}
