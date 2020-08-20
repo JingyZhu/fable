@@ -2,7 +2,7 @@
 Utilities for crawling a page
 """
 from subprocess import call, check_output
-import requests 
+import requests
 import os
 import time
 from os.path import abspath, dirname, join
@@ -50,7 +50,7 @@ class ProxySelector:
         """ Currently RR """
         self.idx = self.idx + 1 if self.idx < self.len -1 else 0
         return self.proxies[self.idx]
-    
+
     def select_url(self, scheme='http'):
         """ Directly return url instead of dict """
         proxy = self.select()
@@ -61,7 +61,7 @@ class RobotParser:
     """
     Logic related to Robot
         - Get robots.txt and cache it.
-        - Properly delay for specified crawl_delay 
+        - Properly delay for specified crawl_delay
     """
     def __init__(self, useragent=requests_header['user-agent']):
         policy = HeaderWithDefaultPolicy(default=3600, minimum=600)
@@ -134,6 +134,8 @@ def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     f.close()
     return html, url_file + 'jpg'
 
+WAYBACK_INDEX_SUCCESS = 'Success'
+WAYBACK_INDEX_EMPTY = 'Empty'
 
 def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     """
@@ -164,7 +166,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
                 count += 1
                 if count < 3:
                     time.sleep(20)
-                    continue 
+                    continue
                 return [], str(e)
             if not wait or r.status_code not in [429, 445, 503]:
                 return [], str(e)
@@ -174,9 +176,9 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     else:
         r = [(i[1], i[2], i[4]) for i in r[1:]]
     if len(r) != 0:
-        return r, "Success",
+        return r, WAYBACK_INDEX_SUCCESS,
     else:
-        return [], "Empty"
+        return [], WAYBACK_INDEX_EMPTY
 
 
 def wayback_year_links(prefix, years, NUM_THREADS=3, max_limit=0, param_dict={}, proxies={}):
@@ -211,7 +213,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=3, max_limit=0, param_dict={},
                 "to": "{}1231".format(year)
                 # 'collapse': 'timestamp:4',
             })
-            
+
             while True:
                 try:
                     r = requests.get('http://web.archive.org/cdx/search/cdx', params=params, proxies=proxies)
@@ -242,7 +244,7 @@ def wayback_year_links(prefix, years, NUM_THREADS=3, max_limit=0, param_dict={},
         t.append(threading.Thread(target=get_year_links, args=(q_in,)))
         t[-1].start()
     for tt in t:
-        tt.join() 
+        tt.join()
 
     return {k: list(v) for k, v in total_r.items()}
 
@@ -262,7 +264,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
     """
     requests_header = {'user-agent': config.config('user_agent')}
     filter_ext = ['.pdf']
-    if os.path.splitext(url)[1] in filter_ext: 
+    if os.path.splitext(url)[1] in filter_ext:
         return None, 'Filtered ext'
     count = 0
     if not rp.allowed(url, requests_header['user-agent']):
@@ -325,12 +327,12 @@ def wappalyzer_analyze(url, proxy=None, timeout=None):
     """
     agent_string = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
     focus_categories = {
-        "1": "CMS", 
+        "1": "CMS",
         "18": "Web frameworks",
-        "22": "Web servers", 
-        "27": "Programming Languages", 
+        "22": "Web servers",
+        "27": "Programming Languages",
         # "28": "Operating Systems",
-        "34": "Databases", 
+        "34": "Databases",
         "62": "Paas",
         "64": "Reverse proxies"
     }
@@ -396,7 +398,7 @@ def outgoing_links(url, html, wayback=False):
         if len(wm_ipp) > 0: wm_ipp[0].decompose()
         donato = soup.find_all('div', id='donato')
         if len(donato) > 0: donato[0].decompose()
-    
+
     base = soup.find('base')
     base_url = url if base is None else urljoin(url, base.get('href'))
 
@@ -461,7 +463,7 @@ def outgoing_links_sig(url, html, wayback=False):
             link = urljoin(base_url, link)
         if urlparse(filter_wayback(link)).scheme not in {'http', 'https'}:
             continue
-        # Get parent 
+        # Get parent
         par, child = a_tag, a_tag
         count = 0# Prevent dead loop
         while par and par.text.strip() == a_tag.text.strip() and count < 100:
@@ -483,11 +485,11 @@ def outgoing_links_sig(url, html, wayback=False):
                 sig.append(prev_tag)
             else:
                 sig.append(prev_str)
-        elif prev_tag is not None : 
+        elif prev_tag is not None :
             sig.append(prev_tag)
         elif prev_str is not None:
             sig.append(prev_str)
-        
+
         next_tag = child.find_next_sibling()
         next_str = child.next_sibling
         next_tag = next_tag.get_text(separator=' ').strip() if next_tag is not None else None
@@ -501,7 +503,7 @@ def outgoing_links_sig(url, html, wayback=False):
                 sig.append(next_tag)
             else:
                 sig.append(next_str)
-        elif next_tag is not None : 
+        elif next_tag is not None :
             sig.append(next_tag)
         elif next_str is not None:
             sig.append(next_str)
