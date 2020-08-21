@@ -1,6 +1,7 @@
 """
 Utilities for crawling a page
 """
+import datetime
 from subprocess import call, check_output
 import requests
 import os
@@ -31,6 +32,9 @@ logger = logging.getLogger('logger')
 
 requests_header = {'user-agent': config.config('user_agent')}
 CRAWL_DELAY = 3
+
+# Back off for X seconds when there is a failed request.
+RETRY_BACKOFF_SECONDS = 2
 
 class ProxySelector:
     """
@@ -146,15 +150,21 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     return: ( [(timestamp, url, stauts_code)], SUCCESS/EMPTY/ERROR_MSG)
     """
     wayback_home = 'http://web.archive.org/web/'
-    params = {
-        'output': 'json',
-        'url': url,
-        'from': 19700101,
-        'to': 20201231,
-    }
-    params.update(param_dict)
+    params = [
+        ('output', 'json'),
+        ('url', url),
+        ('from', 19700101),
+        ('to', 20201231),
+        ('filter', 'mimetype:text/html'),
+    ]
+
+    # add additional filters.
+    for k, v in param_dict.items():
+        params.append((k, v))
+
     count = 0
     while True:
+        start = datetime.datetime.now()
         try:
             r = requests.get('http://web.archive.org/cdx/search/cdx', headers=requests_header, params=params, proxies=proxies)
             r = r.json()
@@ -163,6 +173,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             try:
                 logger.warn(f"Wayback index: {str(e)}" + '\n'  + r.text.split('\n')[0])
             except Exception as e:
+                # r is null.
                 count += 1
                 if count < 3:
                     time.sleep(20)
@@ -170,7 +181,16 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
                 return [], str(e)
             if not wait or r.status_code not in [429, 445, 503]:
                 return [], str(e)
-            time.sleep(10)
+
+            # Compute the appropriate time for backing off, so that we can
+            # perform the crawl in a tighter loop.
+            end = datetime.datetime.now()
+            time_diff = end - start
+            retry_sleep_time_s = max(0.1, RETRY_BACKOFF_SECONDS - time_diff.total_seconds())
+            if r.status_code == requests.codes.too_many_requests and 'retry-after' in r.headers:
+                retry_sleep_time_s = r.headers['retry-after']
+            logging.info('Got an error with status {0} retrying in {1}s'.format(r.status_code, retry_sleep_time_s))
+            time.sleep(retry_sleep_time_s)
     if total_link:
         r = [(i[1], f"{wayback_home}{i[1]}/{i[2]}", i[4]) for i in r[1:]]
     else:
