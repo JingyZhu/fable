@@ -20,7 +20,7 @@ sites = sorted(all_urls.keys())
 
 def search_discover():
     global sites
-    rpf = ReorgPageFinder.ReorgPageFinder(logname='./sd1.log')
+    rpf = ReorgPageFinder.ReorgPageFinder(logname='./sd4.log')
     pieces = 4
     sites = [sites[int(i*len(sites) / pieces):int((i+1)*len(sites) / pieces)] for i in range(pieces)]
     sites = sites[3]

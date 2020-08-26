@@ -57,7 +57,7 @@ class StrawmanSearcher:
         def search_once(search_results):
             """Incremental Search"""
             global he
-            nonlocal url, title, html, searched
+            nonlocal url, title, html, searched, site
             searched_titles = {}
             search_cand = [s for s in search_results if s not in searched]
             logger.info(f'#Search cands: {search_cand}')
@@ -66,9 +66,8 @@ class StrawmanSearcher:
                 searched_html = self.memo.crawl(searched_url, proxies=self.PS.select())
                 logger.debug(f'Crawl: {searched_url}')
                 if searched_html is None: continue
-                logger.debug(f'Extract Content: {searched_url}')
-                if he.extract(url) != he.extract(searched_url):
-                    return
+                if he.extract(url) != he.extract(searched_url) and site != he.extract(searched_url):
+                    continue
                 searched_titles[searched_url] = self.memo.extract_title(searched_html)
                 logger.debug(f'Extract Title: {searched_url}')
             similars = self.similar.title_similar(url, title, searched_titles)
@@ -185,7 +184,7 @@ class StrawmanFinder:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # _search
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_strawman': {"$exists": False}})
+        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_strawman_new': {"$exists": False}})
         searched_checked = self.db.checked.find({"hostname": self.site, "strawman": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
         urls_years = [u for u in noreorg_urls if u['url'] not in searched_checked ]
@@ -229,10 +228,10 @@ class StrawmanFinder:
                 fp = self.fp_check(url, searched)
                 if not fp: # False positive test
                     # _search
-                    update_dict.update({'reorg_url_strawman': searched, 'by_strawman':{
+                    update_dict.update({'reorg_url_strawman_new': searched, 'by_strawman_new':{
                         "method": "search"
                     }})
-                    update_dict['by_strawman'].update(trace)
+                    update_dict['by_strawman_new'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'url': url,

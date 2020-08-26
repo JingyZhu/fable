@@ -4,17 +4,21 @@ Implementation of detection of broken pages from sic transit
 import requests
 import re
 import os
-from urllib.parse import urlparse, parse_qsl
+from urllib.parse import urlparse, parse_qsl, urlsplit, urlunsplit
 import random, string
 import sys
 from math import ceil
+from bs4 import BeautifulSoup
 
 sys.path.append('../')
 import config
-from utils import text_utils
+from utils import text_utils, url_utils
 from utils.crawl import rp 
 import logging
 logger = logging.getLogger('logger')
+
+sys.setrecursionlimit(1500)
+he = url_utils.HostExtractor()
 
 def send_request(url):
     resp = None
@@ -161,6 +165,25 @@ def construct_rand_urls(url):
             random_urls.append(random_url)
     return random_urls
 
+def change_url_digit(url):
+    """
+    Detect any parts of path in the middle, if all digits, change with others
+    Returns: Applicable urls
+    """
+    import math
+    us = urlsplit(url)
+    path = us.path
+    if path == '': path = '/'
+    parts = path.split('/')
+    pos_rpr = []
+    for i in range(len(parts)):
+        if not parts[i].isnumeric(): continue
+        part_d = int(parts[i])
+        another_d = random.randrange(10 ** int(math.log10(part_d)), part_d)
+        new_parts = parts.copy()
+        new_parts[i] = str(another_d)
+        pos_rpr.append(new_parts)
+    return [urlunsplit(us._replace(path='/'.join(pr))) for pr in pos_rpr]
 
 def filter_redir(r):
     """Filter out simple redirections from http --> https"""
@@ -170,6 +193,11 @@ def filter_redir(r):
         if not h_bef.split('://')[-1] == h_aft.split('://')[-1]:
             new_his.append(r.history[idx])
     return new_his
+
+def text_norm(text):
+    filter_char = ' \n\t'
+    text = re.sub(f'[{filter_char}]+', ' ', text)
+    return text
 
 
 def broken(url, html=False, ignore_soft_404=False):
@@ -192,11 +220,21 @@ def broken(url, html=False, ignore_soft_404=False):
         return True, "Not html"
     if ignore_soft_404:
         return False, "No hard broken"
+    try:
+        soup = BeautifulSoup(resp.text, 'lxml')
+        if len(soup.find_all('link', {'rel': 'canonical'})) > 0:
+            if urlsplit(resp.url).path in ['', '/']: raise
+            site = he.extract(url)
+            hp, _ = send_request(f'http://{site}')
+            if not url_utils.url_match(hp.url, resp.url):
+                return False, "With Canonical"
+    except: pass
     # Construct new url with random filename
     random_urls = construct_rand_urls(url)
+    random_urls += change_url_digit(url)
     broken_decision, reasons = [], []
     for random_url in random_urls:
-        # print(random_url)
+        print(random_url)
         random_resp, msg = send_request(random_url)
         if msg == 'Not Allowed':
             continue
@@ -204,24 +242,31 @@ def broken(url, html=False, ignore_soft_404=False):
         if re.compile('^([45]|DNSError|OtherError)').match(random_status):
             broken_decision.append(False)
             reasons.append("random url hard broken")
-            continue
+            break
         # Filter out http --> https redirection
         if len(filter_redir(resp)) != len(filter_redir(random_resp)):
             broken_decision.append(False)
             reasons.append("#redirection doesn't match")
-            continue
+            break
         if resp.url == random_resp.url:
             broken_decision.append(True)
             reasons.append("Same final url")
             continue
         # url_content = text_utils.extract_body(resp.text, version='domdistiller')
         # random_content = text_utils.extract_body(random_resp.text, version='domdistiller')
-        if text_utils.k_shingling(resp.text, random_resp.text) >= 0.95:
+        try:
+            url_content = BeautifulSoup(resp.text, 'lxml').get_text(separator=' ')
+        except: url_content = resp.text
+        try:
+            random_content = BeautifulSoup(random_resp.text, 'lxml').get_text(separator=' ')
+        except: random_content = random_resp.text
+        if text_utils.k_shingling(text_norm(url_content), text_norm(random_content)) >= 0.95:
             broken_decision.append(True)
             reasons.append("Similar soft 404 content")
             continue
         broken_decision.append(False)
         reasons.append("no features match")
+        break
     if len(reasons) == 0:
         return 'N/A', 'Guess URLs not allowed'
     else:

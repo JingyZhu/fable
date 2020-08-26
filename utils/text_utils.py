@@ -517,14 +517,14 @@ def extract_title(html, version='mine'):
 def k_shingling(text1, text2, k=5):
     text1 = text1.split()
     text2 = text2.split()
-    if len(text1) < 5:
+    if len(text1) < k:
         shingle1 = [tuple(text1)]
     else:
-        shingle1 = [tuple(text1[i: i+5]) for i in range(len(text1)-4)]
-    if len(text2) < 5:
+        shingle1 = [tuple(text1[i: i+k]) for i in range(len(text1)-(k-1))]
+    if len(text2) < k:
         shingle2 = [tuple(text2)]
     else:
-        shingle2 = [tuple(text2[i: i+5]) for i in range(len(text2)-4)]
+        shingle2 = [tuple(text2[i: i+k]) for i in range(len(text2)-(k-1))]
     if len(shingle1) + len(shingle2) <= 0: return 1
     return len(set(shingle1).intersection(set(shingle2))) / len(set(shingle1).union(set(shingle2)))
 

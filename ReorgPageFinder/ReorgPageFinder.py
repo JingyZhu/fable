@@ -1,7 +1,7 @@
 from ReorgPageFinder import discoverer, searcher, inferer, tools
 import pymongo
 from pymongo import MongoClient
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qsl
 import os
 from collections import defaultdict
 import time
@@ -66,11 +66,18 @@ def pattern_match(pattern, url, dis=1):
 def path_edit_distance(url1, url2):
     us1, us2 = urlsplit(url1), urlsplit(url2)
     dis = 0
-    if us1.netloc != us2.netloc:
+    h1s, h2s = us1.netloc.split(':')[0].split('.'), us2.netloc.split(':')[0].split('.')
+    if h1s[0] == 'www': h1s = h1s[1:]
+    if h2s[0] == 'www': h2s = h2s[1:]
+    if h1s != h2s:
         dis += 1
-    for part1, part2 in zip(list(filter(lambda x: x!= '', us1.path.split('/'))), \
-                            list(filter(lambda x: x!= '', us2.path.split('/')))):
+    path1 = list(filter(lambda x: x!= '', us1.path.split('/')))
+    path2 = list(filter(lambda x: x!= '', us2.path.split('/')))
+    for part1, part2 in zip(path1, path2):
         if part1 != part2: dis += 1
+    dis += abs(len(path1) - len(path2))
+    query1, query2 = sorted(parse_qsl(us1.query)), sorted(parse_qsl(us2.query))
+    dis += (query1 != query2)
     return dis
 
 class ReorgPageFinder:
@@ -118,7 +125,9 @@ class ReorgPageFinder:
         try:
             self.db.reorg.insert_many(objs, ordered=False)
         except: pass
-        reorg_urls = self.db.reorg.find({'hostname': site, 'reorg_url': {"$exists": True}})
+        reorg_keys = {'reorg_url', 'reorg_url_search', 'reorg_url_discover_test', 'reorg_url_discover', 'reorg_url_infer'}
+        reorg_urls = self.db.reorg.find({'hostname': site})
+        reorg_urls = [reorg for reorg in reorg_urls if len(set(reorg.keys()).intersection(reorg_keys)) > 0]
         self.pattern_dict = defaultdict(list)
         for reorg_url in list(reorg_urls):
             # Patch the no title urls
@@ -128,7 +137,8 @@ class ReorgPageFinder:
                 reorg_title = self.memo.extract_title(reorg_html, version='domdistiller')
                 reorg_url['title'] = reorg_title
                 self.db.reorg.update_one({'url': reorg_url['url']}, {'$set': {'title': reorg_title}})
-            self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url['reorg_url'])
+            for k in set(reorg_url.keys()).intersection(reorg_keys):
+                self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url[k])
         if len(self.logger.handlers) > 2:
             self.logger.handlers.pop()
         formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
@@ -166,7 +176,10 @@ class ReorgPageFinder:
             pats = gen_path_pattern(url)
             patterns.update(pats)
         patterns = list(patterns)
-        broken_urls = self.db.reorg.find({'hostname': self.site, 'reorg_url': {'$exists': False}})
+        broken_urls = self.db.reorg.find({'hostname': self.site})
+        # infer
+        reorg_keys = {'by', 'by_infer'}
+        broken_urls = [reorg for reorg in broken_urls if len(set(reorg.keys()).intersection(reorg_keys)) == 0]
         self.db.reorg.update_many({'hostname': self.site, "title": ""}, {"$unset": {"title": ""}})
         infer_urls = defaultdict(list) # Pattern: urls
         for infer_url in list(broken_urls):
@@ -188,6 +201,7 @@ class ReorgPageFinder:
             return []
         success = []
         for pat, pat_urls in infer_urls.items():
+            self.logger.info(f'Pattern: {pat}')
             infered_dict = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site)
             self.logger.info(f'infered_dict: {json.dumps(infered_dict, indent=4)}')
             pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]}
@@ -196,22 +210,24 @@ class ReorgPageFinder:
                 reorg_url, trace = self.inferer.if_reorg(infer_url, cand)
                 if reorg_url is not None:
                     self.logger.info(f'Found by infer: {infer_url} --> {reorg_url}')
-                    if not url_utils.url_match(infer_url, reorg_url):
+                    if not self.fp_check(infer_url, reorg_url):
                         by_dict = {'method': 'infer'}
                         by_dict.update(trace)
+                        # Infer
                         self.db.reorg.update_one({'url': infer_url}, {'$set': {
-                            'reorg_url': reorg_url, 
-                            'by': by_dict
+                            'reorg_url_infer': reorg_url, 
+                            'by_infer': by_dict
                         }})
                         suc = ((pat_infer_urls[infer_url]), reorg_url)
                         self._add_url_to_patterns(*unpack_ex(suc))
                         success.append(suc)
                     else: # False positive
                         try: self.db.na_urls.update_one({'_id': infer_url}, {'$set': {
-                                'false_positive': True,
+                                'false_positive_infer': True,
                                 'hostname': self.site
                             }}, upsert=True)
                         except: pass
+                self.db.checked.update_one({'_id': infer_url}, {'$set': {'infer': True}})
         return success
 
     def fp_check(self, url, reorg_url):
@@ -247,7 +263,7 @@ class ReorgPageFinder:
                 self._add_url_to_patterns(*unpack_ex(suc))
             examples = success
 
-    def first_search(self):
+    def first_search(self, infer=False):
         # _search
         noreorg_urls = db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}})
         searched_checked = db.checked.find({"hostname": self.site, "search_1": True})
@@ -312,7 +328,11 @@ class ReorgPageFinder:
                     "search_1": True
                 }}, upsert=True)
             except Exception as e:
-                self.logger.warn(f'Discover update checked: {str(e)}')
+                self.logger.warn(f'Search_1 update checked: {str(e)}')
+            
+            if not infer:
+                continue
+            
             if searched is not None:
                 example = ((url, title), searched)
                 added = self._add_url_to_patterns(*unpack_ex(example))
@@ -330,7 +350,7 @@ class ReorgPageFinder:
                     examples = success
                     success = self.query_inferer(examples)
 
-    def second_search(self):
+    def second_search(self, infer=False):
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
@@ -405,6 +425,10 @@ class ReorgPageFinder:
                     "search_2": True
                 }}, upsert=True)
             except: pass
+
+            if not infer:
+                continue
+
             if searched is not None:
                 example = ((url, title), searched)
                 added = self._add_url_to_patterns(*unpack_ex(example))
@@ -422,7 +446,7 @@ class ReorgPageFinder:
                     examples = success
                     success = self.query_inferer(examples)
     
-    def discover(self):
+    def discover(self, infer=False):
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
@@ -442,8 +466,12 @@ class ReorgPageFinder:
             while True: # Dummy while lloop served as goto
                 discovered = self.discoverer.wayback_alias(url)
                 if discovered:
-                    trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
-                    break
+                    fp = self.fp_check(url, discovered)
+                    if fp:
+                        discovered = None
+                    else:
+                        trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
+                        break
 
                 discovered, trace = self.discoverer.bf_find(url, policy='latest')
                 if trace.get('backpath'):
@@ -554,20 +582,22 @@ class ReorgPageFinder:
             except Exception as e:
                 self.logger.warn(f'Discover update checked: {str(e)}')
             
+            if not infer:
+                continue
             # TEMP
-            # if discovered is not None:
-            #     example = ((url, title), discovered)
-            #     added = self._add_url_to_patterns(*unpack_ex(example))
-            #     if not added:
-            #         continue
-            #     success = self.query_inferer([example])
-            #     while len(success) > 0:
-            #         added = False
-            #         for suc in success:
-            #             broken_urls.discard(unpack_ex(suc)[0])
-            #             a = self._add_url_to_patterns(*unpack_ex(suc))
-            #             added = added or a
-            #         if not added:
-            #             break
-            #         examples = success
-            #         success = self.query_inferer(examples)
+            if discovered is not None:
+                example = ((url, title), discovered)
+                added = self._add_url_to_patterns(*unpack_ex(example))
+                if not added:
+                    continue
+                success = self.query_inferer([example])
+                while len(success) > 0:
+                    added = False
+                    for suc in success:
+                        broken_urls.discard(unpack_ex(suc)[0])
+                        a = self._add_url_to_patterns(*unpack_ex(suc))
+                        added = added or a
+                    if not added:
+                        break
+                    examples = success
+                    success = self.query_inferer(examples)

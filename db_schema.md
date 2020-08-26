@@ -82,7 +82,8 @@ Set of already tried URLs with certain techniques
     "hostname": "hostname",
     "search_1": "bool/true (First pass of search)",
     "search_2": "bool/true (Second pass of search)",
-    "discover": "bool/true (discover)"
+    "discover": "bool/true (discover)",
+    "infer": "bool/true (used as check for inference test)"
 }
 ```
 
