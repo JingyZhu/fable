@@ -241,7 +241,7 @@ def broken(url, html=False, ignore_soft_404=False):
     random_urls += change_url_digit(url)
     broken_decision, reasons = [], []
     for random_url in random_urls:
-        print(random_url)
+        # print(random_url)
         random_resp, msg = send_request(random_url)
         if msg == 'Not Allowed':
             continue
