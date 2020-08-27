@@ -179,7 +179,9 @@ def change_url_digit(url):
     for i in range(len(parts)):
         if not parts[i].isnumeric(): continue
         part_d = int(parts[i])
-        another_d = random.randrange(10 ** int(math.log10(part_d)), part_d)
+        base_d = 10 ** int(math.log10(part_d)) if part_d > 0 else 0
+        if part_d <= base_d: part_d = base_d + 1
+        another_d = random.randrange(base_d, part_d)
         new_parts = parts.copy()
         new_parts[i] = str(another_d)
         pos_rpr.append(new_parts)
@@ -220,14 +222,19 @@ def broken(url, html=False, ignore_soft_404=False):
         return True, "Not html"
     if ignore_soft_404:
         return False, "No hard broken"
+    # Ignore Homepages
+    if urlsplit(url).path in ['', '/']:
+        return False, "Homepage (no Soft-404 detection)"
     try:
         soup = BeautifulSoup(resp.text, 'lxml')
         if len(soup.find_all('link', {'rel': 'canonical'})) > 0:
             if urlsplit(resp.url).path in ['', '/']: raise
-            site = he.extract(url)
-            hp, _ = send_request(f'http://{site}')
-            if not url_utils.url_match(hp.url, resp.url):
+            if url_utils.url_match(url, resp.url):
                 return False, "With Canonical"
+            # site = he.extract(url)
+            # hp, _ = send_request(f'http://{site}')
+            # if not url_utils.url_match(hp.url, resp.url):
+            #     return False, "With Canonical"
     except: pass
     # Construct new url with random filename
     random_urls = construct_rand_urls(url)
