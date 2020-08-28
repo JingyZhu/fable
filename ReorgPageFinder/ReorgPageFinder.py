@@ -156,8 +156,8 @@ class ReorgPageFinder:
         Only applies to same domain currently
         Return bool on whether success
         """
-        if he.extract(reorg) != he.extract(url):
-            return False
+        # if he.extract(reorg) != he.extract(url):
+        #     return False
         patterns = gen_path_pattern(url)
         if len(patterns) <= 0: return False
         for pat in patterns:
@@ -178,10 +178,10 @@ class ReorgPageFinder:
         patterns = list(patterns)
         broken_urls = self.db.reorg.find({'hostname': self.site})
         # infer
-        reorg_keys = {'by', 'by_infer'}
+        reorg_keys = {'by', 'by_infer', 'by_search', 'by_discover', 'by_discover_test'}
         broken_urls = [reorg for reorg in broken_urls if len(set(reorg.keys()).intersection(reorg_keys)) == 0]
         self.db.reorg.update_many({'hostname': self.site, "title": ""}, {"$unset": {"title": ""}})
-        infer_urls = defaultdict(list) # Pattern: urls
+        infer_urls = defaultdict(list) # Pattern: [(urls, (meta))]
         for infer_url in list(broken_urls):
             for pat in patterns:
                 if not pattern_match(pat, infer_url['url']):
@@ -203,11 +203,12 @@ class ReorgPageFinder:
         for pat, pat_urls in infer_urls.items():
             self.logger.info(f'Pattern: {pat}')
             infered_dict = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site)
-            self.logger.info(f'infered_dict: {json.dumps(infered_dict, indent=4)}')
-            pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]}
+            self.logger.info(f'infered_dict: {json.dumps(infered_dict, indent=2)}')
+            pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]} # url: pattern
+            fp_urls = set([p[1] for p in self.pattern_dict[pat]])
             for infer_url, cand in infered_dict.items():
                 # logger.info(f'Infer url: {infer_url} {cand}')
-                reorg_url, trace = self.inferer.if_reorg(infer_url, cand)
+                reorg_url, trace = self.inferer.if_reorg(infer_url, cand, compare=False, fp_urls=fp_urls)
                 if reorg_url is not None:
                     self.logger.info(f'Found by infer: {infer_url} --> {reorg_url}')
                     if not self.fp_check(infer_url, reorg_url):
