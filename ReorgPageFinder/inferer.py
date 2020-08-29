@@ -15,6 +15,47 @@ from utils import search, crawl, text_utils, url_utils, sic_transit
 import logging
 logger = logging.getLogger('logger')
 
+def gen_path_pattern(url, dis=1):
+    """
+    Generate path patterns where all paths with same edit distance should follow
+    # TODO: Currently only support edit distance of 1,  Could have larger dis
+    """
+    us = urlsplit(url)
+    us = us._replace(netloc=us.netloc.split(':')[0])
+    if us.path == '':
+        us = us._replace(path='/')
+    if us.path[-1] == '/' and us.path != '/':
+        us = us._replace(path=us.path[:-1])
+    path_lists = list(filter(lambda x: x!= '', us.path.split('/')))
+    if us.query: 
+        path_lists.append(us.query)
+    patterns = []
+    patterns.append(tuple(['*'] + path_lists))
+    for i in range(len(path_lists)):
+        path_copy = path_lists.copy()
+        path_copy[i] = '*'
+        patterns.append(tuple([us.netloc] + path_copy))
+    return patterns
+
+
+def pattern_match(pattern, url, dis=1):
+    us = urlsplit(url)
+    us = us._replace(netloc=us.netloc.split(':')[0])
+    if us.path == '':
+        us = us._replace(path='/')
+    if us.path[-1] == '/' and us.path != '/':
+        us = us._replace(path=us.path[:-1])
+    path_lists = list(filter(lambda x: x!= '', us.path.split('/')))
+    path_lists = [us.netloc] + path_lists
+    if us.query: 
+        path_lists.append(us.query)
+    if len(pattern) != len(path_lists):
+        return False
+    for pat, path in zip(pattern, path_lists):
+        if pat == '*': continue
+        elif pat != path: return False
+    return True
+
 class Inferer:
     def __init__(self, proxies={}, memo=None, similar=None):
         self.PS = crawl.ProxySelector(proxies)
@@ -56,6 +97,7 @@ class Inferer:
                 output_query=True
                 path_len += 1
             max_reorg_url = max(path_len, max_reorg_url)
+
         for url, _ in urls:
             us = urlsplit(url)
             path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
@@ -63,9 +105,11 @@ class Inferer:
             max_url = max(path_len, max_url)
 
         sheets = []
-        sheet1_csv = defaultdict(list)
-        sheet2_csv = defaultdict(list)
-        sheet3_csv = defaultdict(list)
+        sheet1_csv = defaultdict(list) # Both url and meta
+        sheet2_csv = defaultdict(list) # Only meta
+        sheet3_csv = defaultdict(list) # Only URL
+
+        # Input the known input-output pair
         for ex_input, reorg_url in examples:
             url, meta = ex_input
             us = urlsplit(url)
@@ -105,6 +149,7 @@ class Inferer:
                     sheet2_csv[f'Output_{i}'].append('')
                     sheet3_csv[f'Output_{i}'].append('')
         urls_idx = {}
+        # Input the inferring examples
         for i, (url, meta) in enumerate(urls):
             us = urlsplit(url)
             urls_idx[url] = i + len(examples)

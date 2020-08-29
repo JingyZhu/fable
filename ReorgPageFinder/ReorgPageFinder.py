@@ -91,6 +91,7 @@ class ReorgPageFinder:
         self.db = db
         self.site = None
         self.pattern_dict = None
+        self.seen_reorg_pairs = None
         self.logname = './ReorgPageFinder.log' if logname is None else logname
         self.logger = logger if logger is not None else self._init_logger()
 
@@ -129,6 +130,7 @@ class ReorgPageFinder:
         reorg_urls = self.db.reorg.find({'hostname': site})
         reorg_urls = [reorg for reorg in reorg_urls if len(set(reorg.keys()).intersection(reorg_keys)) > 0]
         self.pattern_dict = defaultdict(list)
+        self.seen_reorg_pairs = set()
         for reorg_url in list(reorg_urls):
             # Patch the no title urls
             if 'title' not in reorg_url:
@@ -149,6 +151,7 @@ class ReorgPageFinder:
     def clear_site(self):
         self.site = None
         self.pattern_dict = None
+        self.seen_reorg_pairs = None
         self.logger.handlers.pop()
 
     def _add_url_to_patterns(self, url, title, reorg):
@@ -159,10 +162,31 @@ class ReorgPageFinder:
         # if he.extract(reorg) != he.extract(url):
         #     return False
         patterns = gen_path_pattern(url)
+        if (url, reorg) in self.seen_reorg_pairs:
+            return True
+        else:
+            self.seen_reorg_pairs.add((url, reorg))
         if len(patterns) <= 0: return False
         for pat in patterns:
             self.pattern_dict[pat].append(((url, title), reorg))
         return True
+
+    def _most_common_output(self, examples):
+        """
+        Given a list of examples, return ones with highest # common pattern
+
+        Return: List of examples in highest common pattern
+        """
+        output_patterns = defaultdict(list)
+        for ex in examples:
+            reorg_url = ex[1]
+            reorg_pats = gen_path_pattern(reorg_url)
+            for reorg_pat in reorg_pats:
+                output_patterns[reorg_pat].append(ex)
+            output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
+            output_pattern, output_ex = output_patterns[0]
+            print(output_pattern, len(output_ex))
+            return output_ex
 
     def query_inferer(self, examples):
         """
@@ -202,8 +226,13 @@ class ReorgPageFinder:
         success = []
         for pat, pat_urls in infer_urls.items():
             self.logger.info(f'Pattern: {pat}')
-            infered_dict = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site)
+            infered_dict_all = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site)
+            common_output = self._most_common_output(self.pattern_dict[pat])
+            # print(common_output)
+            infered_dict_common = self.inferer.infer(common_output, pat_urls, site=self.site)
+            infered_dict = {url: list(set(infered_dict_all[url] + infered_dict_common[url])) for url in infered_dict_all}
             self.logger.info(f'infered_dict: {json.dumps(infered_dict, indent=2)}')
+            
             pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]} # url: pattern
             fp_urls = set([p[1] for p in self.pattern_dict[pat]])
             for infer_url, cand in infered_dict.items():

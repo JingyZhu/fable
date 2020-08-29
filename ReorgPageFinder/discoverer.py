@@ -484,6 +484,8 @@ class Discoverer:
             new_url = url_utils.filter_wayback(wayback_url)
             new_us = urlsplit(new_url)
             new_is_homepage = new_us.path in ['/', ''] and not new_us.query
+            if new_is_homepage and (not is_homepage): 
+                return
             broken, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
             if not broken:
                 return new_url
