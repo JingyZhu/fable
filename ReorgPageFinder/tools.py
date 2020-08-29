@@ -282,9 +282,13 @@ class Similar:
         self.short_threshold = short_threshold if short_threshold else self.threshold - 0.1
         if use_db:
             self.db =  db
-            corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
+            corpus = self.db.corpus.aggregate([
+                {'$match':  {'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}},
+                {'$project': {'content': True}},
+                {'$sample': {'size': 100000}},
+            ], allowDiskUse=True)
             corpus = [c['content'] for c in list(corpus)] # TODO: Temp
-            corpus = random.sample(corpus, 100000)
+            # corpus = random.sample(corpus, 100000)
             self.tfidf = text_utils.TFidfStatic(corpus)
         else:
             self.tfidf = text_utils.TFidfStatic(corpus)
