@@ -206,6 +206,7 @@ def broken(url, html=False, ignore_soft_404=False):
     """
     Entry func: detect whether this url is broken
     html: Require the url to be html.
+    ignore_soft_404: Whether soft-404 detection will be ignored
 
     Return: True/False/"N/A", reason
     """

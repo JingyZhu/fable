@@ -35,12 +35,12 @@ def search():
 
 def discover():
 	global sites
-	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover_fp2.log')
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover1.log')
 	all_urls = json.load(open('Broken_urls.json', 'r'))
 	sites = sorted(list(all_urls.keys()))
 	pieces = 2
 	sites = [sites[int(i*len(sites) / pieces):int((i+1)*len(sites) / pieces)] for i in range(pieces)]
-	sites = sites[1]
+	sites = sites[0]
 	# sites = ['wikileaks.org']
 	
 	for i, site in enumerate(sites):
