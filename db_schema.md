@@ -84,7 +84,8 @@ Set of already tried URLs with certain techniques
     "search_2": "bool/true (Second pass of search)",
     "discover": "bool/true (discover)",
     "infer": "bool/true (used as check for inference test)",
-    "search_coverage": "bool/true (Test on coverage of search)"
+    "search_coverage": "bool/true (Test on coverage of search)",
+    "discover_BFS": "bool/true",
 }
 ```
 
@@ -100,6 +101,7 @@ Traces of detailed execution events (how each urls' alternate links are frying t
     "discover": "list of traces for discovery",
     "backpath_earliest": "Path structure on earliest searched backpath",
     "backpath_latest": "Path structure on latest searched backpath",
+    "discover_BFS": "list of traces for discovery",
 }
 ```
 

@@ -465,6 +465,35 @@ class Discoverer:
             return False
         return True
 
+    def _wayback_alias(self, url):
+        """
+        Old version of wayback_alias, used for internal alias found
+        Utilize wayback's archived redirections to find the alias/reorg of the page
+
+        Returns: reorg_url is latest archive is an redirection to working page, else None
+        """
+        param_dict = {
+            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
+        }
+        us = urlsplit(url)
+        is_homepage = us.path in ['/', ''] and not us.query
+        try:
+            wayback_url = self.memo.wayback_index(url, policy='latest', param_dict=param_dict)
+            _, wayback_url = self.memo.crawl(wayback_url, final_url=True)
+            match = url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
+        except:
+            return
+        if not match:
+            new_url = url_utils.filter_wayback(wayback_url)
+            new_us = urlsplit(new_url)
+            new_is_homepage = new_us.path in ['/', ''] and not new_us.query
+            if new_is_homepage and (not is_homepage): 
+                return
+            broken, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
+            if not broken:
+                return new_url
+        return
+
     def wayback_alias(self, url):
         """
         Utilize wayback's archived redirections to find the alias/reorg of the page
@@ -485,28 +514,30 @@ class Discoverer:
         url_match_count = 0
         it = len(wayback_ts_urls) - 1
         last_ts = wayback_ts_urls[-1][0] + datetime.timedelta(days=90)
+        seen_new_url = set()
         while url_match_count < 3 and it >= 0:
             ts, wayback_url = wayback_ts_urls[it]
+            it -= 1
             if ts + datetime.timedelta(days=90) > last_ts: # 2 snapshots too close
-                it -= 1
                 continue
             try:
                 response = crawl.requests_crawl(wayback_url, raw=True)
                 wayback_url = response.url
                 match = url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
             except:
-                it -= 1
                 continue
             if not match:
+                last_ts = ts
                 new_url = url_utils.filter_wayback(wayback_url)
+                if new_url in seen_new_url:
+                    continue
+                seen_new_url.add(new_url)
                 inter_urls = [url_utils.filter_wayback(wu.url) for wu in response.history] # Check for multiple redirections
                 inter_urls.append(new_url)
                 inter_uss = [urlsplit(inter_url) for inter_url in inter_urls]
                 logger.info(f'Wayback_alias: {ts}, {inter_urls}')
                 new_is_homepage = True in [inter_us.path in ['/', ''] and not inter_us.query for inter_us in inter_uss]
                 if new_is_homepage and (not is_homepage): 
-                    last_ts = ts
-                    it -= 1
                     continue
                 broken, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
                 if not broken:
@@ -572,7 +603,7 @@ class Discoverer:
                     wayback_linked[1].append((wayback_outgoing_link, anchor, sibtext))
             logger.info(f'Wayback linked: {wayback_linked[1]}')
             if broken:
-                new_src = self.wayback_alias(src)
+                new_src = self._wayback_alias(src)
                 if new_src:
                     broken = False
                     src = new_src 

@@ -6,7 +6,7 @@ from urllib.parse import urlsplit, urlparse, parse_qsl, parse_qs, urlunsplit
 from itertools import chain, combinations
 from bs4 import BeautifulSoup
 from queue import Queue
-from . import tools
+import tools
 from collections import defaultdict
 import re, json
 import random
@@ -28,6 +28,8 @@ GUESS_DEPTH = 3
 OUTGOING = 1
 MIN_GUESS = 6
 CUT = 30
+
+MAX_TRACE = 60
 
 def wsum_simi(simi):
     return 3/4*simi[0] + 1/4*simi[1]
@@ -183,8 +185,7 @@ class Backpath_Finder:
                     new_path.calc_priority(url, url_rep, self.similar)
                     seen.add(url_utils.url_norm(outgoing_link))
                     search_queue.append(new_path)
-            search_queue.sort(key=lambda x: x.priority)
-            search_queue = search_queue[:trim_size] if len(search_queue) > trim_size else search_queue
+            # search_queue = search_queue[:trim_size] if len(search_queue) > trim_size else search_queue
     
     def wayback_alias(self, url):
         """
@@ -411,15 +412,7 @@ class Discoverer:
         if cut <= 0:
             cut = len(outgoing_sigs)
         if len(outgoing_sigs) > cut:
-            repr_text = [title, content]
-            self.similar.tfidf._clear_workingset()
-            self.similar.tfidf.add_corpus([w[1] for w in outgoing_sigs] + [' '.join(w[2]) for w in outgoing_sigs] + repr_text)
-            scoreboard = defaultdict(lambda: (0, 0))
-            for outlink, anchor, sig in outgoing_sigs:
-                simis = (self.similar.max_similar(anchor, repr_text, init=False)[0], self.similar.max_similar(' '.join(sig), repr_text, init=False)[0])
-                scoreboard[outlink] = max(scoreboard[outlink], simis, key=lambda x: wsum_simi(x))
-            scoreboard = sorted(scoreboard.items(), key=lambda x: wsum_simi(x[1]), reverse=True)
-            outgoing_links = [sb[0] for sb in scoreboard[:cut]]
+            outgoing_links = [sb[0] for sb in outgoing_sigs[:cut]]
         else:
             outgoing_links = [osig[0] for osig in outgoing_sigs]
 
@@ -465,6 +458,36 @@ class Discoverer:
             return False
         return True
 
+    def _wayback_alias(self, url):
+        """
+        Old version of wayback_alias, used for internal alias found
+        Utilize wayback's archived redirections to find the alias/reorg of the page
+
+        Returns: reorg_url is latest archive is an redirection to working page, else None
+        """
+        param_dict = {
+            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
+        }
+        us = urlsplit(url)
+        is_homepage = us.path in ['/', ''] and not us.query
+        try:
+            wayback_url = self.memo.wayback_index(url, policy='latest', param_dict=param_dict)
+            _, wayback_url = self.memo.crawl(wayback_url, final_url=True)
+            match = url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
+        except:
+            return
+        if not match:
+            new_url = url_utils.filter_wayback(wayback_url)
+            new_us = urlsplit(new_url)
+            new_is_homepage = new_us.path in ['/', ''] and not new_us.query
+            if new_is_homepage and (not is_homepage): 
+                return
+            broken, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
+            if not broken:
+                return new_url
+        return
+
+
     def wayback_alias(self, url):
         """
         Utilize wayback's archived redirections to find the alias/reorg of the page
@@ -485,28 +508,30 @@ class Discoverer:
         url_match_count = 0
         it = len(wayback_ts_urls) - 1
         last_ts = wayback_ts_urls[-1][0] + datetime.timedelta(days=90)
+        seen_new_url = set()
         while url_match_count < 3 and it >= 0:
             ts, wayback_url = wayback_ts_urls[it]
+            it -= 1
             if ts + datetime.timedelta(days=90) > last_ts: # 2 snapshots too close
-                it -= 1
                 continue
             try:
                 response = crawl.requests_crawl(wayback_url, raw=True)
                 wayback_url = response.url
                 match = url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
             except:
-                it -= 1
                 continue
             if not match:
+                last_ts = ts
                 new_url = url_utils.filter_wayback(wayback_url)
+                if new_url in seen_new_url:
+                    continue
+                seen_new_url.add(new_url)
                 inter_urls = [url_utils.filter_wayback(wu.url) for wu in response.history] # Check for multiple redirections
                 inter_urls.append(new_url)
                 inter_uss = [urlsplit(inter_url) for inter_url in inter_urls]
                 logger.info(f'Wayback_alias: {ts}, {inter_urls}')
                 new_is_homepage = True in [inter_us.path in ['/', ''] and not inter_us.query for inter_us in inter_uss]
                 if new_is_homepage and (not is_homepage): 
-                    last_ts = ts
-                    it -= 1
                     continue
                 broken, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
                 if not broken:
@@ -515,7 +540,7 @@ class Discoverer:
                 url_match_count += 1
         return
 
-    def discover_backlinks(self, src, dst, dst_title, dst_content, dst_html, dst_snapshot, dst_ts=None):
+    def discover_backlinks(self, src, dst, dst_title, dst_content, dst_html, dst_snapshot, dst_ts=None, apply_lsp=True):
         """
         For src and dst, see:
             1. If src is archived on wayback
@@ -556,7 +581,9 @@ class Discoverer:
                 logger.info(f'Discover backlinks broken: {reason}')
                 return "notfound", None, None
             src_html, src = self.memo.crawl(src, final_url=True, max_retry=3)
-            top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html, cut=10)
+            if apply_lsp:
+                top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html, cut=10)
+            else: top_similar = None
             if top_similar is not None:
                 return "found", top_similar[0], (fromm, top_similar[1])
             else:
@@ -572,7 +599,7 @@ class Discoverer:
                     wayback_linked[1].append((wayback_outgoing_link, anchor, sibtext))
             logger.info(f'Wayback linked: {wayback_linked[1]}')
             if broken:
-                new_src = self.wayback_alias(src)
+                new_src = self._wayback_alias(src)
                 if new_src:
                     broken = False
                     src = new_src 
@@ -586,7 +613,10 @@ class Discoverer:
                     else:
                         return "notfound", None, "Linked, matched url broken"
                 elif dst_snapshot: # Only consider the case for dst with snapshots
-                    top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html)
+                    if apply_lsp:
+                        top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html)
+                    else:
+                        top_similar = None
                     if top_similar is not None: 
                         return "found", top_similar[0], (fromm, top_similar[1])
                     else:
@@ -598,14 +628,15 @@ class Discoverer:
             else: # Linked to dst, but broken today
                 return "reorg", wayback_outgoing_sigs, "Backlink broken today"
 
-    def discover(self, url, depth=None, seen=None, trim_size=10):
+    def discover(self, url, search_type, reorg_type, depth=None, seen=None):
         """
         Discover the potential reorganized site
-        Trim size: The largest size of outgoing queue
+        search_type: BFS/DFS
 
         Return: If Found: URL, Trace (whether it information got suffice, how copy is found, etc)
                 else: None, {'suffice': Bool, 'trace': traces}
         """
+        assert(search_type in {'BFS', 'DFS'})
         if depth is None: depth = self.depth
         has_snapshot = False
         url_ts = None
@@ -651,21 +682,11 @@ class Discoverer:
         outgoing_queue = []
         if has_snapshot: # Only loop to find backlinks when snapshot is available
             outgoing_sigs = crawl.outgoing_links_sig(wayback_url, html, wayback=True)
-            self.similar.tfidf._clear_workingset()
-            self.similar.tfidf.add_corpus([w[1] for w in outgoing_sigs] + [' '.join(w[2]) for w in outgoing_sigs] + repr_text)
-            scoreboard = defaultdict(int)
-            for outlink, anchor, sig in outgoing_sigs:
+            for outlink, _, _ in outgoing_sigs:
                 outlink = url_utils.filter_wayback(outlink)
-                # For each link, find highest link score
                 if outlink not in seen and self.loop_cand(url, outlink):
-                    simis = (self.similar.max_similar(anchor, repr_text, init=False)[0], self.similar.max_similar(' '.join(sig), repr_text, init=False)[0])
-                    spatial = tree_diff(url, outlink)
-                    scoreboard[outlink] = max(scoreboard[outlink], estimated_score(spatial, simis))
-            for outlink, score in scoreboard.items():
-                outgoing_queue.append((outlink, depth-OUTGOING, score))
+                    outgoing_queue.append((outlink, depth-OUTGOING))
 
-            outgoing_queue.sort(key=lambda x: x[2])
-            outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
 
         while len(guess_total) + len(outgoing_queue) > 0:
             # Ops for guessed links
@@ -680,7 +701,8 @@ class Discoverer:
                 if src in seen:
                     continue
                 seen.add(src)
-                status, msg_urls, reason = self.discover_backlinks(src, url, title, content, html, has_snapshot, url_ts)
+                status, msg_urls, reason = self.discover_backlinks(src, url, title, content, html, has_snapshot, \
+                                                                     url_ts, apply_lsp=reorg_type in {'content', 'title'})
                 logger.info(f'{status}, {reason}')
                 if status == 'found':
                     traces.append({
@@ -694,18 +716,14 @@ class Discoverer:
                         "status": "loop"
                     })
                     if link_depth >= OUTGOING:
-                        scoreboard = defaultdict(int)
-                        self.similar.tfidf._clear_workingset()
-                        self.similar.tfidf.add_corpus([w[1] for w in msg_urls] + [' '.join(w[2]) for w in msg_urls] + repr_text)
                         for outlink, anchor, sig in msg_urls:
                             outlink = url_utils.filter_wayback(outlink)
                             # For each link, find highest link score
                             if outlink not in seen and self.loop_cand(url, outlink):
-                                simis = (self.similar.max_similar(anchor, repr_text, init=False)[0], self.similar.max_similar(' '.join(sig), repr_text, init=False)[0])
-                                spatial = tree_diff(url, outlink)
-                                scoreboard[outlink] = max(scoreboard[outlink], estimated_score(spatial, simis))
-                        for outlink, score in scoreboard.items():
-                            outgoing_queue.append((outlink, link_depth-OUTGOING, score))
+                                if search_type == 'BFS':
+                                    outgoing_queue.append((outlink, link_depth-OUTGOING))
+                                elif search_type == 'DFS':
+                                    outgoing_queue.insert(0, (outlink, link_depth-OUTGOING))
                 elif status in ['notfound', 'reorg']:
                     traces.append({
                         "backlink": src,
@@ -714,10 +732,12 @@ class Discoverer:
                     })
                     if not has_snapshot:
                         suffice = suffice or 'Linked' in reason
-            
-            outgoing_queue.sort(key=lambda x: x[2])
+                
+                if len(traces) > 60:
+                    return None, {'suffice': suffice, 'trace': traces}
+
             dedup,uniq_q, uniq_c = set(), [], 0
-            while len(dedup) < trim_size and uniq_c < len(outgoing_queue):
+            while uniq_c < len(outgoing_queue):
                 if outgoing_queue[uniq_c][0] not in dedup:
                     dedup.add(outgoing_queue[uniq_c][0])
                     uniq_q.append(outgoing_queue[uniq_c])
