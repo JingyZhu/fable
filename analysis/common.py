@@ -1,3 +1,5 @@
+from urllib.parse import urlparse, parse_qs
+
 import json
 
 def get_urls(filename):
@@ -19,9 +21,18 @@ def get_urls(filename):
     all_urls = []
     for broken_reason, urls in file_obj.items():
         for url in urls:
+            url = url.replace(':80', '')
+            parsed_url = urlparse(url)
+            queries_list = parse_qs(parsed_url.query)
+
+            # collapse list into just dictionary.
+            queries = { k: v[0] for k, v in queries_list.items() }
             all_urls.append({
                 'url': url,
+                'parsed': parsed_url,
                 'broken_reason': broken_reason,
+                'query_params': queries,
+                'removed_query': remove_query(parsed_url)
             })
     return all_urls
 
@@ -40,4 +51,8 @@ def remove_query(parsed_url):
             hostname=parsed_url.netloc,
             path=parsed_url.path
     )
+
+def extract_url_from_wayback_url(wayback_url):
+    start_idx = wayback_url.index('http', 1) # start the search skipping the first element.
+    return wayback_url[start_idx:]
 
