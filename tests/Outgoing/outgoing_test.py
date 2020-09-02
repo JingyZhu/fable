@@ -24,8 +24,8 @@ sites = sorted(all_urls.keys(), reverse=True)
 
 def search():
 	global sites
-	rpf = ReorgPageFinder.ReorgPageFinder(logname='./search.log')
-	# sites = sites[:int(len(sites)/2)]
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./search2.log')
+	sites = sites[int(len(sites)/2):]
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
 		urls = all_urls[site]
@@ -35,12 +35,12 @@ def search():
 
 def discover():
 	global sites
-	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover2.log')
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover1.log')
 	all_urls = json.load(open('Broken_urls.json', 'r'))
 	sites = sorted(list(all_urls.keys()))
-	pieces = 4
+	pieces = 2
 	sites = [sites[int(i*len(sites) / pieces):int((i+1)*len(sites) / pieces)] for i in range(pieces)]
-	sites = sites[1]
+	sites = sites[0]
 	# sites = ['wikileaks.org']
 	
 	for i, site in enumerate(sites):
@@ -104,4 +104,5 @@ def backpath():
 					}})
 
 
-search()
+# search()
+discover()

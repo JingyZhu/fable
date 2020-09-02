@@ -3,8 +3,8 @@ import pandas as pd
 import pickle
 import os
 
-proxy = ServerProxy('http://172.31.30.96:8988', allow_none=True)
-files = ['test.csv', 'test2.csv']
+proxy = ServerProxy('http://18.216.242.95:8988', allow_none=True)
+files = ['sheet1.csv', 'sheet2.csv']
 
 inputs = []
 # Initialize for Input format: [pickled string of csv dict]

@@ -66,7 +66,7 @@ class Searcher:
                 if searched_html is None: continue
                 searched_contents[searched_url] = self.memo.extract_content(searched_html)
                 logger.debug(f'Extract Content: {searched_url}')
-                if he.extract(url) == he.extract(searched_url):
+                if he.extract(url) == he.extract(searched_url) or site == he.extract(searched_url):
                     searched_titles[searched_url] = self.memo.extract_title(searched_html)
                     logger.debug(f'Extract Title: {searched_url}')
             logger.debug(f'Finished crawling')

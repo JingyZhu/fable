@@ -252,7 +252,7 @@ class SiteTree:
         return annotations
 
 
-def plot_CDF(df, xtitle="", ytitle="", title="", cut=1, clear_bound=True):
+def plot_CDF(df, xtitle="", ytitle="", title="", cut=1, xrange=None, clear_bound=True):
     """
     Plot the CDF for different class
     data should be a pandas dataframe, where each row is a set of data. 
@@ -297,6 +297,8 @@ def plot_CDF(df, xtitle="", ytitle="", title="", cut=1, clear_bound=True):
                                  mode='lines', name=name, line={'width': 3}))
     diff = (max_v - min_v) / 100
     if clear_bound: fig.update_xaxes(range=[min_v - diff, max_v + diff])
+    if xrange:
+        fig.update_xaxes(range=xrange)
     fig.show()
 
 

@@ -253,7 +253,7 @@ def url_parent(url):
         hs = us.netloc.split(':')[0].split('.')
         return urlunsplit(us._replace(netloc='.'.join(hs[1:])))
     path = us.path
-    if path [-1] == '/' and not us.query: path = path[:-1]
+    if path and path [-1] == '/' and not us.query: path = path[:-1]
     path = os.path.dirname(path)
     return urlunsplit(us._replace(path=path, query=''))
     

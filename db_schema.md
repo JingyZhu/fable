@@ -82,7 +82,10 @@ Set of already tried URLs with certain techniques
     "hostname": "hostname",
     "search_1": "bool/true (First pass of search)",
     "search_2": "bool/true (Second pass of search)",
-    "discover": "bool/true (discover)"
+    "discover": "bool/true (discover)",
+    "infer": "bool/true (used as check for inference test)",
+    "search_coverage": "bool/true (Test on coverage of search)",
+    "discover_BFS": "bool/true",
 }
 ```
 
@@ -97,10 +100,36 @@ Traces of detailed execution events (how each urls' alternate links are frying t
     "search_2": "list of traces for second search",
     "discover": "list of traces for discovery",
     "backpath_earliest": "Path structure on earliest searched backpath",
-    "backpath_latest": "Path structure on latest searched backpath"
+    "backpath_latest": "Path structure on latest searched backpath",
+    "discover_BFS": "list of traces for discovery",
 }
 ```
 
+### search_trace
+Record for performance of search
+```json
+{
+    "_id": "url",
+    "url": "url",
+    "reorg_url": "reorg_url (if exists)",
+    "hostname": "site of url",
+    "site": "Actual (final) site of url",
+    "title": "str",
+    "topN": "str",
+    "title_site": {
+        "bing": ["list of results"],
+        "google": ["list of results"]
+    },
+    "title_exact": {
+        "bing": ["list of results"],
+        "google": ["list of results"]
+    },
+    "topN_site": {
+        "bing": ["list of results"],
+        "google": ["list of results"]
+    }
+}
+```
 
 ## DB: web_decay
 

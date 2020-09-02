@@ -10,16 +10,11 @@ logs/
 *.json
 */json/
 tmp/
+*.ipynb
 .ipynb_checkpoints/
 
 temp.py
 test.py
-broken_inspection.ipynb
-ReorgPageFinder.ipynb
-test.ipynb
-query.ipynb
-outgoing.ipynb
-module_test.ipynb
 broken_pages/*.yaml
 search/schedule.py
 *.mongo

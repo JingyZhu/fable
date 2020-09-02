@@ -245,8 +245,8 @@ class ReorgPageFinder:
                         by_dict.update(trace)
                         # Infer
                         self.db.reorg.update_one({'url': infer_url}, {'$set': {
-                            'reorg_url_infer': reorg_url, 
-                            'by_infer': by_dict
+                            'reorg_url': reorg_url, 
+                            'by': by_dict
                         }})
                         suc = ((pat_infer_urls[infer_url]), reorg_url)
                         self._add_url_to_patterns(*unpack_ex(suc))
@@ -294,8 +294,8 @@ class ReorgPageFinder:
             examples = success
 
     def first_search(self, infer=False):
-        # _search
-        noreorg_urls = db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}})
+        # search
+        noreorg_urls = db.reorg.find({"hostname": self.site, 'reorg_url': {"$exists": False}})
         searched_checked = db.checked.find({"hostname": self.site, "search_1": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
         urls = [u for u in noreorg_urls if u['url'] not in searched_checked ]
@@ -331,11 +331,11 @@ class ReorgPageFinder:
                 self.logger.info(f"HIT_1: {searched}")
                 fp = self.fp_check(url, searched)
                 if not fp: # False positive test
-                    # _search
-                    update_dict.update({'reorg_url_search': searched, 'by_search':{
+                    # search
+                    update_dict.update({'reorg_url': searched, 'by':{
                         "method": "search"
                     }})
-                    update_dict['by_search'].update(trace)
+                    update_dict['by'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'url': url,
@@ -385,7 +385,7 @@ class ReorgPageFinder:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # _search
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}})
+        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url': {"$exists": False}})
         searched_checked = self.db.checked.find({"hostname": self.site, "search_2": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
         urls = [u for u in noreorg_urls if u['url'] not in searched_checked ]
@@ -428,10 +428,10 @@ class ReorgPageFinder:
                 fp = self.fp_check(url, searched)
                 if not fp: # False positive test
                     # _search
-                    update_dict.update({'reorg_url_search': searched, 'by_search':{
+                    update_dict.update({'reorg_url': searched, 'by':{
                         "method": "search"
                     }})
-                    update_dict['by_search'].update(trace)
+                    update_dict['by'].update(trace)
                 else:
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'url': url,
@@ -481,7 +481,7 @@ class ReorgPageFinder:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # _discover
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_discover_test': {"$exists": False}})
+        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url': {"$exists": False}})
         discovered_checked = self.db.checked.find({"hostname": self.site, "discover": True})
         discovered_checked = set([sc['url'] for sc in discovered_checked])
         urls = [u for u in noreorg_urls if u['url'] not in discovered_checked ]
@@ -573,17 +573,17 @@ class ReorgPageFinder:
                 fp = self.fp_check(url, discovered)
                 if not fp: # False positive test
                     # _discover
-                    update_dict.update({'reorg_url_discover_test': discovered, 'by_discover_test':{
+                    update_dict.update({'reorg_url': discovered, 'by':{
                         "method": method
                     }})
                     by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath', 'suffice']}
                     # discover
-                    update_dict['by_discover_test'].update(by_discover)
+                    update_dict['by'].update(by_discover)
                 else:
                     # discover
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
                             'url': url,
-                            'false_positive_discover_test': True, 
+                            'false_positive_discover': True, 
                             'hostname': self.site
                         }}, upsert=True)
                     except: pass

@@ -145,7 +145,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     """
     Get the wayback machine index of certain url by querying the CDX
     wait: wait unitl not getting block
-    total_link: Returned url are in full links
+    total_link: Returned url are in full(wayback) links
 
     return: ( [(timestamp, url, stauts_code)], SUCCESS/EMPTY/ERROR_MSG)
     """
