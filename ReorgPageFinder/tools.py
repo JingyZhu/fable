@@ -76,7 +76,7 @@ class Memoizer:
         if use_db:
             self.db = db
         self.PS = crawl.ProxySelector(proxies)
-    
+
     def crawl(self, url, final_url=False, max_retry=0, **kwargs):
         """
         final_url: Whether also return final redirected URLS
@@ -92,10 +92,10 @@ class Memoizer:
             if not final_url:
                 return brotli.decompress(html['html']).decode()
             else:
-                return brotli.decompress(html['html']).decode(), html['final_url']  
+                return brotli.decompress(html['html']).decode(), html['final_url']
         elif html:
             try:
-                self.db.crawl.update_one({'_id': url}, {'$unset': {'title': '', 'content': ''}}) 
+                self.db.crawl.update_one({'_id': url}, {'$unset': {'title': '', 'content': ''}})
             except: pass
         retry = 0
         resp = crawl.requests_crawl(url, raw=True, **kwargs)
@@ -153,7 +153,7 @@ class Memoizer:
             return html
         else:
             return html, fu
-    
+
     def wayback_index(self, url, policy='latest-rep', ts=None, **kwargs):
         """
         Get most representative snapshot for a certain url
@@ -245,7 +245,7 @@ class Memoizer:
         else:
             logger.error(f'Wayback Index: Reach non existed policy')
             raise
-    
+
     def extract_content(self, html, **kwargs):
         if html is None:
             return ''
@@ -258,7 +258,7 @@ class Memoizer:
             self.db.crawl.update_one({'html': html_bin}, {"$set": {'content': content}})
         except Exception as e: logger.warn(f'extract content: {str(e)}')
         return content
-    
+
     def extract_title(self, html, **kwargs):
         if html is None:
             return ''
@@ -277,18 +277,23 @@ class Memoizer:
 
 
 class Similar:
-    def __init__(self, use_db=True, db=db, corpus=[], short_threshold=None):
+    def __init__(self, use_db=True, db=db, corpus=[], short_threshold=None, corpus_size=100000):
         if not use_db and len(corpus) == 0:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
         self.threshold = 0.8
         self.short_threshold = short_threshold if short_threshold else self.threshold - 0.1
         if use_db:
+            # self.db =  db
+            # corpus = self.db.corpus.find({'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}, {'content': True})
+            # corpus = [c['content'] for c in list(corpus)] # TODO: Temp
+            # corpus = random.sample(corpus, corpus_size)
+            # self.tfidf = text_utils.TFidfStatic(corpus)
             self.db =  db
             corpus = self.db.corpus.aggregate([
                 {'$match':  {'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}},
                 {'$project': {'content': True}},
-                {'$sample': {'size': 100000}},
+                {'$sample': {'size': corpus_size}},
             ], allowDiskUse=True)
             corpus = [c['content'] for c in list(corpus)] # TODO: Temp
             # corpus = random.sample(corpus, 100000)
@@ -297,12 +302,12 @@ class Similar:
             self.tfidf = text_utils.TFidfStatic(corpus)
             self.db = db # TODO: For testing only
         self.site = None
-    
+
     def match_url_sig(self, wayback_sig, liveweb_sigs):
         """
         See whether there is a url signature on liveweb that can match wayback sig
         Based on 2 methods: UNIQUE Similar anchor text, Non-UNIQUE same anchor text & similar sig
-        
+
         Return: link_sig, similarity, by{anchor, sig}
         """
         self.tfidf._clear_workingset()
@@ -332,7 +337,7 @@ class Similar:
                 if simi >= self.short_threshold:
                     return lws, simi, 'sig'
         return None
-    
+
     def max_similar(self, target_content, candidates_contents, init=True):
         """
         Return the max similarity between target_content and candidates_contents
@@ -369,7 +374,7 @@ class Similar:
             if simi >= self.threshold:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
-    
+
     def _init_titles(self, site, version='domdistiller'):
         update_sites(self.db.crawl)
         if site == self.site:
@@ -416,7 +421,7 @@ class Similar:
                 title = lw['title']
             else: continue
             lw_path[loc_dir] += 1
-            self.lw_titles[title].add(norm(lw['url'])) 
+            self.lw_titles[title].add(norm(lw['url']))
         self.lw_common = title_common(random.sample(self.lw_titles.keys(), min(COMMON_TITLE_SIZE, len(self.lw_titles.keys())) ))
         logger.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])} \n common: {self.lw_common}')
         seen = set()
@@ -442,7 +447,7 @@ class Similar:
                     continue
                 in_wb.add(new_url)
                 wb_crawl.append({'site': site, '_id': new_url, 'url': new_url, 'html': brotli.compress(html.encode())})
-        
+
         for wb in wb_crawl:
             wb_url = url_utils.filter_wayback(wb['url'])
             if wb_url in seen: continue
@@ -499,14 +504,14 @@ class Similar:
             if simi >= (self.short_threshold + self.threshold) / 2:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
-    
+
     def clear_titles(self):
         self.site = None
         self.lw_titles = None
         self.wb_titles = None
         self.lw_common = None
         self.wb_common = None
-    
+
     def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, cand_htmls=None, fixed=True):
         """
         All text-based similar tech is included
