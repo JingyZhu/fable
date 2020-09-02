@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from collections import defaultdict
 from multiprocessing import Pool, Lock
 from urllib.parse import urlparse
 
@@ -13,7 +14,7 @@ import logging
 from utils import crawl
 
 def Main():
-    all_urls = get_urls(args.page_list)
+    all_urls = common.get_urls(args.page_list)
     results = []
 
     pool = Pool()
@@ -26,7 +27,7 @@ def Main():
             # Skip URLs without query parameters for now.
             continue
 
-        removed_query = remove_query(parsed_url)
+        removed_query = common.remove_query(parsed_url)
         url_obj['removed_query'] = removed_query
         if removed_query in seen_removed_query:
             # don't do repeated work.
@@ -64,7 +65,7 @@ def process_url(url_obj):
 
 def check_url(parsed_url):
     '''Returns a list of URL candidates.'''
-    removed_query = remove_query(parsed_url)
+    removed_query = common.remove_query(parsed_url)
     removed_query += '*' # Make this a prefix search.
     # Restrict the results to only 200 status code.
     cdx_query_params = {
@@ -74,7 +75,24 @@ def check_url(parsed_url):
             total_link=True,
             param_dict=cdx_query_params)
     result = [ transform_candidate(c) for c in archived_candidates ]
-    return result
+    result = [ c for c in result if c['status_code'] == '200' ]
+    if len(result) == 0:
+        return []
+    return get_latest_snapshot(result)
+
+def get_latest_snapshot(candidates):
+    '''Returns a list of candidates that are the latest snapshot for each of the
+    candidate.'''
+    url_to_candidates = defaultdict(list)
+    for candidate in candidates:
+        url = common.extract_url_from_wayback_url(candidate['wayback_url'])
+        url_to_candidates[url].append(candidate)
+
+    retval = []
+    for url, url_candidates in url_to_candidates.items():
+        url_candidates.sort(key=lambda x: x['timestamp'], reverse=True)
+        retval.append(url_candidates[0])
+    return retval
 
 def transform_candidate(candidate):
     '''Each candidate is passed in the format described in utils/crawl.py:
