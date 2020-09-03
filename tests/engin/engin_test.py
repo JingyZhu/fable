@@ -18,8 +18,8 @@ rpfd = ReorgPageFinder_deploy.ReorgPageFinder(logname='./ReorgPageFinder_engin.l
 site = 'umich.edu'
 urls = json.load(open('Broken_engin.json', 'r'))
 rpfd.init_site(site, urls)
-rpfd.infer()
-rpfd.first_search(infer=True)
+# rpfd.infer()
+# rpfd.first_search(infer=True)
 rpfd.second_search(infer=True)
 rpfd.discover(infer=True)
 rpfd.infer()

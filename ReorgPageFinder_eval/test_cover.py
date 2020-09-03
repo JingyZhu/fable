@@ -21,8 +21,8 @@ sites = sorted(all_urls.keys())
 
 def search():
 	global sites
-	rpfe = ReorgPageFinder_coverage.ReorgPageFinder(logname='./search_cover2.log')
-	sites = sites[int(len(sites)/2):]
+	rpfe = ReorgPageFinder_coverage.ReorgPageFinder(logname='./search_cover3.log')
+	# sites = sites[int(len(sites)/2):]
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
 		urls = all_urls[site]
@@ -35,7 +35,7 @@ def discover():
 	sites = sorted(list(dis_urls.keys()))
 	pieces = 4
 	sites = [sites[int(i*len(sites) / pieces):int((i+1)*len(sites) / pieces)] for i in range(pieces)]
-	sites = sites[1]
+	sites = sites[2]
 	# sites = ['wikileaks.org']
 	
 	for i, site in enumerate(sites):
@@ -46,4 +46,4 @@ def discover():
 		rpfe.discover(site, urls, search_type='DFS')
 
 # search()
-discover()
+search()

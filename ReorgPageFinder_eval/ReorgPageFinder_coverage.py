@@ -60,7 +60,8 @@ class ReorgPageFinder:
             url,reorg_url = broken_urls.pop()
             i += 1
             self.logger.info(f'URL: {i} {url}')
-            search_trace = self.searcher.search(url)
+            # TODO Change with requirements
+            search_trace = self.searcher.search_title_exact_site(url)
             if search_trace is None:
                 continue
 

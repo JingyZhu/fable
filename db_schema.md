@@ -86,6 +86,9 @@ Set of already tried URLs with certain techniques
     "infer": "bool/true (used as check for inference test)",
     "search_coverage": "bool/true (Test on coverage of search)",
     "discover_BFS": "bool/true",
+    "discover_DFS": "bool/true",
+    "strawman": "bool/true",
+    "strawman_adv": "bool/true"
 }
 ```
 

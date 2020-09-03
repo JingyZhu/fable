@@ -293,12 +293,15 @@ class ReorgPageFinder:
                 self._add_url_to_patterns(*unpack_ex(suc))
             examples = success
 
-    def first_search(self, infer=False):
+    def first_search(self, infer=False, required_urls=None):
         # _search
-        noreorg_urls = db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}})
+        noreorg_urls = list(db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}}))
         searched_checked = db.checked.find({"hostname": self.site, "search_1": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
-        urls = [u for u in noreorg_urls if u['url'] not in searched_checked ]
+        
+        required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
+        
+        urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
         broken_urls = set([u['url'] for u in urls])
         self.logger.info(f'Search1 SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
@@ -380,15 +383,18 @@ class ReorgPageFinder:
                     examples = success
                     success = self.query_inferer(examples)
 
-    def second_search(self, infer=False):
+    def second_search(self, infer=False, required_urls=None):
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # _search
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}})
+        noreorg_urls = list(self.db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}}))
         searched_checked = self.db.checked.find({"hostname": self.site, "search_2": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
-        urls = [u for u in noreorg_urls if u['url'] not in searched_checked ]
+        
+        required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
+
+        urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
         broken_urls = set([u['url'] for u in urls])
         self.logger.info(f'Search2 SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
@@ -476,15 +482,18 @@ class ReorgPageFinder:
                     examples = success
                     success = self.query_inferer(examples)
     
-    def discover(self, infer=False):
+    def discover(self, infer=False, required_urls=None):
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # _discover
-        noreorg_urls = self.db.reorg.find({"hostname": self.site, 'reorg_url_discover_test': {"$exists": False}})
+        noreorg_urls = list(self.db.reorg.find({"hostname": self.site, 'reorg_url_discover_test': {"$exists": False}}))
         discovered_checked = self.db.checked.find({"hostname": self.site, "discover": True})
         discovered_checked = set([sc['url'] for sc in discovered_checked])
-        urls = [u for u in noreorg_urls if u['url'] not in discovered_checked ]
+        
+        required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
+        
+        urls = [u for u in noreorg_urls if u['url'] not in discovered_checked and u['url'] in required_urls]
         broken_urls = set([bu['url'] for bu in urls])
         self.logger.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0

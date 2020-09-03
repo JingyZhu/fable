@@ -91,3 +91,37 @@ class Searcher:
         else:
             results_by_q['topN_site'] = {'google': [], 'bing': []}
         return results_by_q
+
+    def search_title_exact_site(self, url):
+        global he
+        site = he.extract(url)
+        if '://' not in site: site = f'http://{site}'
+        _, final_url = self.memo.crawl(site, final_url=True)
+        if final_url is not None:
+            site = he.extract(final_url)
+        try:
+            wayback_url = self.memo.wayback_index(url)
+            html = self.memo.crawl(wayback_url, proxies=self.PS.select())
+            title = self.memo.extract_title(html, version='domdistiller')
+            content = self.memo.extract_content(html)
+        except Exception as e:
+            logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+            return
+        logger.info(f'title: {title}')
+        results_by_q = defaultdict(dict)
+        results_by_q['title'] = title
+        results_by_q['site'] = site
+        if title != '':
+            if site is not None:
+                site_str = f'site:{site}'
+            else:
+                site_str = ''
+            
+            # Title exact site
+            google_results = search.google_search(f'"{title}"', site_spec_url=site, use_db=self.use_db)
+            bing_results = search.bing_search(f'+"{title}" {site_str}', use_db=self.use_db)
+            results_by_q['title_exact_site'] = {'google': google_results, 'bing': bing_results}
+        else:
+            results_by_q['title_exact_site'] = {'google': [], 'bing': []}
+        
+        return results_by_q
