@@ -3,24 +3,10 @@ from urllib.parse import urlencode
 
 import unittest
 
+import common
 import check_if_copy_exists
 
 class TestCopyExists(unittest.TestCase):
-
-    def test_order_archived(self):
-        test = [
-            check_if_copy_exists.Archived('https://foo.com/?k1=v1&k2=v2', ''),
-            check_if_copy_exists.Archived('https://foo.com/?k1=v1', ''),
-            check_if_copy_exists.Archived('https://foo.com/?k1=v1', ''),
-            check_if_copy_exists.Archived('https://foo.com/?k2=v2', '')
-        ]
-        expected = [
-            check_if_copy_exists.Archived('https://foo.com/?k1=v1', ''),
-            check_if_copy_exists.Archived('https://foo.com/?k1=v1', ''),
-            check_if_copy_exists.Archived('https://foo.com/?k1=v1&k2=v2', ''),
-            check_if_copy_exists.Archived('https://foo.com/?k2=v2', '')
-        ]
-        self.assertSequenceEqual(sorted(test), expected)
 
     def test_get_any_two_candidates(self):
         base_url = 'https://foo.com/?'
@@ -143,7 +129,7 @@ def construct_url(base_url, kv_dict):
 
 def construct_archived_url(base_url, kv_dict):
     url = construct_url(base_url, kv_dict)
-    archived_obj = check_if_copy_exists.Archived(url, url)
+    archived_obj = common.Archived(url, url)
     return archived_obj
 
 def construct_url_set_for_kv(base_url, url_kv):
@@ -157,7 +143,7 @@ def construct_urls_with_key(base_url, url_kv):
     urls_with_key = defaultdict(set)
     for kv in url_kv:
         url = construct_url(base_url, kv)
-        archived_obj = check_if_copy_exists.Archived(url, url)
+        archived_obj = common.Archived(url, url)
         for k in kv:
             urls_with_key[k].add(archived_obj)
     return urls_with_key

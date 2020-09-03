@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 from collections import defaultdict
-from functools import total_ordering
 from multiprocessing import Pool, Lock, Manager
 from urllib.parse import urlparse, parse_qs
 
@@ -19,6 +18,8 @@ import random
 COMPARE_SUCCESS = 'success'
 COMPARE_FAILED = 'failed'
 COMPARE_UNCONCLUSIVE = 'unconclusive'
+
+NO_QUERY = 'NO_QUERY'
 
 # TF-IDF threshold to declare a page content to be changing.
 CONTENT_SIMILAR_THRESHOLD = 0.85
@@ -48,6 +49,12 @@ def Main():
         # Construct a mapping from k --> set(archived urls with k).
         urls_with_key = {}
         for archived in all_archived:
+            if len(archived.parsed_qs) == 0:
+                if NO_QUERY not in urls_with_key:
+                    urls_with_key[NO_QUERY] = set()
+                urls_with_key[NO_QUERY].add(archived)
+                continue
+
             for k in query_params:
                 if archived.has_key_in_params(k):
                     if k not in urls_with_key:
@@ -67,9 +74,9 @@ def Main():
             # assumption: all keys except the testing keys are influecing keys
             # we then remove non-influencing keys in the next step using the
             # non_influencing_keys set.
-            remaining_keys = query_params.keys() - testing
+            remaining_keys = query_params.keys() - testing - non_influencing_keys
             remaining_kv = { k: v for k, v in query_params.items() \
-                    if k in remaining_keys and k not in non_influencing_keys }
+                    if k in remaining_keys }
             # here, we can either
             #   1. return a copy, if we are able to find two URLs that contains
             #   the key k and exactly match on the remaining keys.
@@ -87,23 +94,56 @@ def Main():
                     comparison_result['url'] = url
                     result = comparison_result
                     break
+                continue
 
-            # 2. conclude whether the key is an influencing key.
-            else:
-                candidates = get_any_two_candidates(
-                        testing, remaining_kv, urls_with_key)
-                if candidates is None:
-                    # we can't test this query key. we are screwed.
-                    break
+            # 2. Compare a URL with another URL that does not have any query
+            # parameter.
+            candidate_with_key = get_one_candidate_with_key(testing,
+                    urls_with_key)
+            candidate_without_query = get_one_candidate_with_key({ NO_QUERY },
+                    urls_with_key)
+            if not (candidate_with_key is None or \
+                    candidate_without_query is None):
                 comparison_result = crawl_and_compare_pages(
-                        similar, candidates[0].wayback_url,
-                        candidates[1].wayback_url)
+                        similar, candidate_with_key.wayback_url,
+                        candidate_without_query.wayback_url)
                 if comparison_result['tf-idf'] >= CONTENT_SIMILAR_THRESHOLD:
-                    non_influencing_keys.add(k)
+                    for k in candidate_with_key.parsed_qs:
+                        if k in query_params:
+                            non_influencing_keys.add(k)
+                if len(non_influencing_keys) == len(query_params):
+                    result = comparison_result
+                    break
+                continue
+
+            # 3. conclude whether the key is an influencing key.
+            candidates = get_any_two_candidates(
+                    testing, remaining_kv, urls_with_key)
+            if candidates is None:
+                # we can't test this query key. we are screwed.
+                break
+            comparison_result = crawl_and_compare_pages(
+                    similar, candidates[0].wayback_url,
+                    candidates[1].wayback_url)
+            if comparison_result['tf-idf'] >= CONTENT_SIMILAR_THRESHOLD:
+                non_influencing_keys.add(k)
         results.append(result)
 
     with open(args.output_filename, 'w') as output_file:
         output_file.write(json.dumps(results))
+
+def get_one_candidate_with_key(keys_to_include, urls_with_key):
+    assert(len(keys_to_include) == 1) # we only test one key at a time.
+    key_to_find_archived = [ k for k in keys_to_include ][0]
+    if key_to_find_archived not in urls_with_key:
+        return None
+
+    archived_for_key = [ u for u in urls_with_key[key_to_find_archived] ]
+    if len(archived_for_key) == 0:
+        return None
+
+    archived_for_key.sort()
+    return archived_for_key[0]
 
 def get_any_two_candidates(keys_to_include, kv_to_match, urls_with_key):
     assert(len(keys_to_include) == 1) # we only test one key at a time.
@@ -202,79 +242,8 @@ def get_archived_urls(archived_urls_filename, urls_to_find_copy):
             wayback_url = candidate['wayback_url']
             candidate_url = common.extract_url_from_wayback_url(wayback_url)
             parsed_candidate = urlparse(candidate_url)
-            retval[url].append(Archived(candidate_url, wayback_url))
+            retval[url].append(common.Archived(candidate_url, wayback_url))
     return retval
-
-@total_ordering
-class Archived(object):
-    def __init__(self, url, wayback_url):
-        self.url = url
-        self.wayback_url = wayback_url
-        self.parsed = urlparse(url)
-        queries_list = parse_qs(self.parsed.query)
-        self.parsed_qs = { k: v[0] for k, v in queries_list.items() }
-        self.qs_key_order = sorted([ k for k in queries_list ])
-
-    def has_key_in_params(self, k):
-        return k in self.parsed_qs
-
-    def has_kv_in_params(self, k, v):
-        if not self.has_key_in_params(k):
-            return False
-        return v == self.parsed_qs[k]
-
-    def has_extra_keys(self, keys):
-        return len(self.parsed_qs.keys() - keys) > 0
-
-    def kv_match(self, other, ignore_keys=set()):
-        # can never match if the length does not match
-        if len(self.parsed_qs) != len(other.parsed_qs):
-            return False
-
-        # can never match if the length does not match
-        has_same_set_of_keys = len((self.parsed_qs.keys() |
-            other.parsed_qs.keys()) - self.parsed_qs.keys()) == 0
-        if not has_same_set_of_keys:
-            return False
-
-        # check for values
-        for k, v in self.parsed_qs.items():
-            # Skip key if we want to ignore this key.
-            if k in ignore_keys:
-                continue
-            other_values = other.parsed_qs[k]
-            if v != other_values:
-                return False
-        return True
-
-    def __lt__(self, other):
-        # an Archived object is ordered by the qs_key_order.
-        cur_index = 0
-        limit = min(len(self.qs_key_order), len(other.qs_key_order))
-        while cur_index < limit:
-            if self.qs_key_order[cur_index] == other.qs_key_order[cur_index]:
-                key = self.qs_key_order[cur_index]
-                if self.parsed_qs[key] != other.parsed_qs[key]:
-                    return self.parsed_qs[key] < other.parsed_qs[key]
-            else:
-                return self.qs_key_order[cur_index] < other.qs_key_order[cur_index]
-            cur_index += 1
-        return len(self.qs_key_order) < len(other.qs_key_order)
-
-    def __hash__(self):
-        return hash(self.url)
-
-    def __ne__(self, other):
-        return self.url != other.url
-
-    def __eq__(self, other):
-        return self.url == other.url
-
-    def __str__(self):
-        return self.url
-
-    def __repr__(self):
-        return 'AR:' + self.url
 
 if __name__ == '__main__':
     parser = ArgumentParser()
