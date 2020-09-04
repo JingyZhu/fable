@@ -88,7 +88,8 @@ Set of already tried URLs with certain techniques
     "discover_BFS": "bool/true",
     "discover_DFS": "bool/true",
     "strawman": "bool/true",
-    "strawman_adv": "bool/true"
+    "strawman_adv": "bool/true",
+    "infer_efficiency": "bool/true",
 }
 ```
 
@@ -131,6 +132,25 @@ Record for performance of search
         "bing": ["list of results"],
         "google": ["list of results"]
     }
+}
+```
+
+### reorg_infer
+Record for testing the efficiency of infer
+```json
+{
+    "_id": "url",
+    "url": "url",
+    "hostname": "hostname",
+    "title": "title",
+    "reorg_url_search": "reorg_url",
+    "by_search": "dict",
+    "reorg_url_search": "reorg_url",
+    "by_search": "dict",
+    "reorg_url_discover": "reorg_url",
+    "by_discover": "dict",
+    "reorg_url_infer": "",
+    "by_infer": ""
 }
 ```
 

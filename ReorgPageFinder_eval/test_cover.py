@@ -16,7 +16,6 @@ from utils import text_utils, url_utils
 all_urls = json.load(open('../tests/Outgoing/Broken_urls.json', 'r'))
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 
-# sites = sorted(all_urls.keys())
 sites = sorted(all_urls.keys())
 
 def search():
@@ -45,5 +44,16 @@ def discover():
 		rpfe.init_site(site)
 		rpfe.discover(site, urls, search_type='DFS')
 
+def infer():
+	rpfe = ReorgPageFinder_coverage.ReorgPageFinder(logname='./infer_eff.log')
+	infer_urls = json.load(open('../tests/Outgoing/Broken_urls_infer.json', 'r'))
+	sites = sorted(infer_urls.keys())
+	for i, site in enumerate(sites):
+		print(f'SiTENO.{i}: {site}')
+		urls = infer_urls[site]
+
+		rpfe.init_site_infer(site)
+		rpfe.infer_urls(site, urls)
+
 # search()
-search()
+infer()

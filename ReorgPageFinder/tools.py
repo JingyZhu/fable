@@ -252,7 +252,8 @@ class Memoizer:
         html_bin = brotli.compress(html.encode())
         try:
             content = self.db.crawl.find_one({'html': html_bin, 'content': {"$exists": True}})
-        except: pass
+        except: 
+            content = None
         if content:
             return content['content']
         content = text_utils.extract_body(html, **kwargs)
@@ -267,7 +268,8 @@ class Memoizer:
         html_bin = brotli.compress(html.encode())
         try:
             title = self.db.crawl.find_one({'html': html_bin, 'title': {"$exists": True}})
-        except: pass
+        except: 
+            title = None
         if title:
             return title['title']
         # Require to be extracted next time
