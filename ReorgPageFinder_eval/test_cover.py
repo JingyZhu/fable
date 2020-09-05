@@ -48,6 +48,7 @@ def infer():
 	rpfe = ReorgPageFinder_coverage.ReorgPageFinder(logname='./infer_eff.log')
 	infer_urls = json.load(open('../tests/Outgoing/Broken_urls_infer.json', 'r'))
 	sites = sorted(infer_urls.keys())
+	# sites = ['prospect.org']
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
 		urls = infer_urls[site]
@@ -55,5 +56,23 @@ def infer():
 		rpfe.init_site_infer(site)
 		rpfe.infer_urls(site, urls)
 
+
+def search_gt_10():
+	rpfe = ReorgPageFinder_coverage.ReorgPageFinder(logname='./search_gt_10_2.log')
+	search_urls = json.load(open('Broken_urls_gt_10.json', 'r'))
+	sites = sorted(list(search_urls.keys()))
+	pieces = 2
+	sites = [sites[int(i*len(sites) / pieces):int((i+1)*len(sites) / pieces)] for i in range(pieces)]
+	sites = sites[1]
+	# sites = ['wikileaks.org']
+	
+	for i, site in enumerate(sites):
+		print(f'SiTENO.{i}: {site}')
+		urls = search_urls[site]
+
+		rpfe.init_site(site)
+		rpfe.search_gt_10(site, urls)
+
 # search()
 infer()
+# search_gt_10()

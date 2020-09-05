@@ -85,6 +85,7 @@ Set of already tried URLs with certain techniques
     "discover": "bool/true (discover)",
     "infer": "bool/true (used as check for inference test)",
     "search_coverage": "bool/true (Test on coverage of search)",
+    "search_gt_10": "bool/true (Test on hit rate of search with more than 10 results)",
     "discover_BFS": "bool/true",
     "discover_DFS": "bool/true",
     "strawman": "bool/true",

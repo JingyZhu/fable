@@ -110,6 +110,20 @@ class ReorgPageFinder:
         self.site = site
         self.pattern_dict = defaultdict(list)
         self.seen_reorg_pairs = set()
+
+        reorg_keys = {'reorg_url', 'reorg_url_search', 'reorg_url_discover_test', 'reorg_url_discover', 'reorg_url_infer'}
+        reorg_urls = self.db.reorg_infer.find({'hostname': site})
+        reorg_urls = [reorg for reorg in reorg_urls if len(set(reorg.keys()).intersection(reorg_keys)) > 0]
+        for reorg_url in list(reorg_urls):
+            if 'title' not in reorg_url:
+                try:
+                    wayback_reorg_url = self.memo.wayback_index(reorg_url['url'])
+                    reorg_html, wayback_reorg_url = self.memo.crawl(wayback_reorg_url, final_url=True)
+                    reorg_title = self.memo.extract_title(reorg_html, version='domdistiller')
+                except:
+                    reorg_title = 'N/A'
+                reorg_url['title'] = reorg_title
+                self.db.reorg_infer.update_one({'url': reorg_url['url']}, {'$set': {'title': reorg_title}})
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
@@ -165,7 +179,7 @@ class ReorgPageFinder:
         infer_checked = self.db.checked.find({"hostname": self.site, CHECK_NAME: True})
         infer_checked = set([ic['url'] for ic in infer_checked])
         broken_urls = [reorg for reorg in broken_urls if reorg['url'] not in infer_checked]
-        self.db.reorg_infer.update_many({'hostname': self.site, "title": ""}, {"$unset": {"title": ""}})
+        # self.db.reorg_infer.update_many({'hostname': self.site, "title": ""}, {"$unset": {"title": ""}})
         infer_urls = defaultdict(list) # Pattern: [(urls, (meta))]
         for infer_url in list(broken_urls):
             for pat in patterns:
@@ -220,8 +234,8 @@ class ReorgPageFinder:
                         self.db.checked.update_one({'url': infer_url}, {'$set': {CHECK_NAME: True}})
                         break
 
-                if reorg_url != 'N/A':
-                    self.db.checked.update_one({'_id': infer_url}, {'$set': {CHECK_NAME: True}})
+                # if reorg_url != 'N/A':
+                #     self.db.checked.update_one({'_id': infer_url}, {'$set': {CHECK_NAME: True}})
         return success
 
     def search_by_queries(self, site, required_urls):
@@ -262,6 +276,85 @@ class ReorgPageFinder:
             except Exception as e:
                 self.logger.warn(f'Search_cover update checked: {str(e)}')
     
+    def fp_check(self, url, reorg_url):
+        """
+        Determine False Positive
+
+        returns: Boolean on if false positive
+        """
+        if url_utils.url_match(url, reorg_url):
+            return True
+        html, url = self.memo.crawl(url, final_url=True)
+        reorg_html, reorg_url = self.memo.crawl(reorg_url, final_url=True)
+        if html is None or reorg_html is None:
+            return False
+        content = self.memo.extract_content(html)
+        reorg_content = self.memo.extract_content(reorg_html)
+        self.similar.tfidf._clear_workingset()
+        simi = self.similar.tfidf.similar(content, reorg_content)
+        return simi >= 0.8
+
+    def search_gt_10(self, site, required_urls):
+        if self.similar.site is None or self.similar.site != self.site:
+            self.similar.clear_titles()
+            self.similar._init_titles(self.site)
+        required_urls = set(required_urls)
+        site_urls = list(db.reorg.find({"hostname": site}))
+        searched_checked = db.checked.find({"hostname": self.site, "search_gt_10": True})
+        searched_checked = set([sc['url'] for sc in searched_checked])
+        urls = [u for u in site_urls if u['url'] not in searched_checked and u['url'] in required_urls]
+        broken_urls = set([u['url'] for u in urls])
+        self.logger.info(f'Search gt 10 SITE: {site} #URLS: {len(broken_urls)}')
+        i = 0
+        while len(broken_urls) > 0:
+            url = broken_urls.pop()
+            i += 1
+            self.logger.info(f'URL: {i} {url}')
+            searched = self.searcher.search_gt_10(url, search_engine='bing')
+            if searched is None:
+                searched = self.searcher.search_gt_10(url, search_engine='google')
+            update_dict = {}
+            has_title = self.db.reorg.find_one({'url': url})
+            # if has_title is None: # No longer in reorg (already deleted)
+            #     continue
+            if 'title' not in has_title or has_title['title'] == 'N/A':
+                try:
+                    wayback_url = self.memo.wayback_index(url)
+                    html = self.memo.crawl(wayback_url)
+                    title = self.memo.extract_title(html, version='domdistiller')
+                except: # No snapthost on wayback
+                    self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                    continue
+                update_dict = {'title': title}
+            else:
+                title = has_title['title']
+
+            if searched is not None:
+                searched, trace = searched
+                self.logger.info(f"HIT_gt_10: {searched}")
+                fp = self.fp_check(url, searched)
+                if not fp: # False positive test
+                    # _search
+                    update_dict.update({'reorg_url_search_gt_10': searched, 'by_search_gt_10':{
+                        "method": "search"
+                    }})
+                    update_dict['by_search_gt_10'].update(trace)
+
+
+            if len(update_dict) > 0:
+                try:
+                    self.db.reorg.update_one({'url': url}, {"$set": update_dict}) 
+                except Exception as e:
+                    self.logger.warn(f'Second search update DB: {str(e)}')
+            searched_checked.add(url)
+            try:
+                self.db.checked.update_one({'_id': url}, {"$set": {
+                    "url": url,
+                    "hostname": self.site,
+                    "search_gt_10": True
+                }}, upsert=True)
+            except: pass
+
     def discover(self, site, required_urls, search_type):
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
@@ -389,9 +482,9 @@ class ReorgPageFinder:
             added = self._add_url_to_patterns(*unpack_ex(example))
             if not added: 
                 continue
+            self.db.checked.update_one({'url': url}, {'$set': {CHECK_NAME:True}})
             success = self.query_inferer([example])
             while len(success) > 0:
-                self.db.checked.update_one({'url': url}, {'$set': {CHECK_NAME:True}})
                 added = False
                 for suc in success:
                     broken_urls.discard(unpack_ex(suc)[0])

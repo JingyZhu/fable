@@ -510,6 +510,10 @@ class Discoverer:
         try:
             wayback_ts_urls = self.memo.wayback_index(url, policy='all', param_dict=param_dict)
         except: return
+
+        if not wayback_ts_urls or len(wayback_ts_urls) == 0:
+            return
+
         wayback_ts_urls = [(dparser.parse(c[0]), c[1]) for c in wayback_ts_urls]
         url_match_count = 0
         it = len(wayback_ts_urls) - 1
