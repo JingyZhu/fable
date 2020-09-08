@@ -32,7 +32,8 @@ def merge_tag(tag):
     merge_dict = {
         'link_sig': 'link_anchor',
         'earliest': 'link_anchor',
-        'latest': 'link_anchor'
+        'latest': 'link_anchor',
+        'backpath_earliest': 'discover'
     }
     return merge_dict[tag] if tag in merge_dict else str(tag)
 
@@ -108,6 +109,14 @@ def get_features(url, reorg, broken_reason=None):
         feature_d['matched'] = reorg['by_discover']['type']
         feature_d = {k: merge_tag(v) for k, v in feature_d.items()}
         features['discover'] = feature_d
+    if 'reorg_url' in reorg:
+        feature_s = feature.copy()
+        feature_s['reorg_url'] = reorg['reorg_url']
+        feature_s['to_home'] = to_home(url, reorg['reorg_url'])
+        feature_s['found'] = reorg['by']['method']
+        feature_s['matched'] = reorg['by']['type']
+        feature_s = {k: merge_tag(v) for k, v in feature_s.items()}
+        features['original'] = feature_s
     return features
 
 
@@ -158,6 +167,7 @@ def features_2_table(objs):
 def confidence(url, reorg, broken_reason=None, r_feature=False):
     """
     Calculate the confidence given url and reorg by using Bayesian Inference
+    r_feature: Whether features is also returned
 
     Return {type: (url, reorg_url, confidence)}
     """
