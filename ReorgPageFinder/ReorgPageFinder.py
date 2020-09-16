@@ -195,7 +195,7 @@ class ReorgPageFinder:
         """
         if len(examples) <= 0:
             return []
-        patterns = set()
+        patterns = set() # All patterns in example
         for (url, title), reorg_url in examples:
             pats = gen_path_pattern(url)
             patterns.update(pats)

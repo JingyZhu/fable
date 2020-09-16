@@ -487,6 +487,8 @@ class Similar:
             elif norm(target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
                 logger.debug(f'wayback title of url: {target_url} none UNIQUE')
                 return []
+        else:
+            self.wb_titles[target_title].add(target_url)
         self.tfidf._clear_workingset()
         self.tfidf.add_corpus([unique_title(target_title, self.wb_common)] + [unique_title(ct, self.lw_common) for ct in candidates_titles.values()])
         simi_cand = []

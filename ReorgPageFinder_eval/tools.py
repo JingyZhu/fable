@@ -353,10 +353,11 @@ class Similar:
                 max_content = c
         return max_simi, max_content
 
-    def content_similar(self, target_content, candidates_contents, candidates_html=None):
+    def content_similar(self, target_content, candidates_contents, candidates_html=None, all_values=False):
         """
         See whether there are content from candidates that is similar target
         candidates: {url: content}
+        all_values: Whether returns all values instead of matched ones
 
         Return a list with all candidate higher than threshold
         """
@@ -366,7 +367,7 @@ class Similar:
         for url, c in candidates_contents.items():
             simi = self.tfidf.similar(target_content, c)
             logger.debug(f'simi: {simi}')
-            if simi >= self.threshold:
+            if simi >= self.threshold or all_values:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
@@ -481,6 +482,8 @@ class Similar:
             elif norm(target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
                 logger.debug(f'wayback title of url: {target_url} none UNIQUE')
                 return []
+        else:
+            self.wb_titles[target_title].add(target_url)
         self.tfidf._clear_workingset()
         self.tfidf.add_corpus([unique_title(target_title, self.wb_common)] + [unique_title(ct, self.lw_common) for ct in candidates_titles.values()])
         simi_cand = []

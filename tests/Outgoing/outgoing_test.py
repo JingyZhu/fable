@@ -24,19 +24,19 @@ sites = sorted(all_urls.keys(), reverse=True)
 
 def search():
 	global sites
-	rpf = ReorgPageFinder.ReorgPageFinder(logname='./search2.log')
-	sites = sites[int(len(sites)/2):]
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./search.log')
+	# sites = sites[int(len(sites)/2):]
 	for i, site in enumerate(sites):
 		print(f'SiTENO.{i}: {site}')
 		urls = all_urls[site]
 		rpf.init_site(site, urls)
-		rpf.first_search()
+		# rpf.first_search()
 		rpf.second_search()
 
 def discover():
 	global sites
-	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover1.log')
-	all_urls = json.load(open('Broken_urls.json', 'r'))
+	rpf = ReorgPageFinder.ReorgPageFinder(logname='./discover.log')
+	# all_urls = json.load(open('Broken_urls.json', 'r'))
 	sites = sorted(list(all_urls.keys()))
 	pieces = 2
 	sites = [sites[int(i*len(sites) / pieces):int((i+1)*len(sites) / pieces)] for i in range(pieces)]
@@ -104,5 +104,5 @@ def backpath():
 					}})
 
 
-# search()
-discover()
+search()
+# discover()

@@ -223,4 +223,62 @@ class Searcher:
                 similar = search_once(search_results)
                 if similar is not None: 
                     return similar
-        return    
+        return
+
+    def similar_outlinks(self,  url):
+        global he
+        site = he.extract(url)
+        if '://' not in site: site = f'http://{site}'
+        _, final_url = self.memo.crawl(site, final_url=True)
+        if final_url is not None:
+            site = he.extract(final_url)
+        try:
+            wayback_url = self.memo.wayback_index(url)
+            html = self.memo.crawl(wayback_url, proxies=self.PS.select())
+            title = self.memo.extract_title(html, version='domdistiller')
+            content = self.memo.extract_content(html)
+        except Exception as e:
+            logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+            return
+        logger.info(f'title: {title}')
+        search_results, searched = [], set()
+        similar_all = []
+
+        def search_once(search_results):
+            """Incremental Search"""
+            global he
+            nonlocal url, title, content, html, searched
+            searched_contents = {}
+            search_cand = [s for s in search_results if s not in searched]
+            logger.info(f'#Search cands: {search_cand}')
+            searched.update(search_results)
+            for searched_url in search_cand:
+                searched_html = self.memo.crawl(searched_url, proxies=self.PS.select())
+                logger.debug(f'Crawl: {searched_url}')
+                if searched_html is None: continue
+                searched_contents[searched_url] = self.memo.extract_content(searched_html)
+                logger.debug(f'Extract Content: {searched_url}')
+            logger.debug(f'Finished crawling')
+            # TODO: May move all comparison techniques to similar class
+            similars = self.similar.content_similar(content, searched_contents, all_values=True)
+            similars = [s for s in similars is he.extract(s[0]) not in [site, he.extract(url)]]
+            return similars
+
+        if title != '':
+            search_results = search.google_search(f'{title}')
+            similar_all += search_once(search_results)
+            search_results = search.bing_search(f'{title}')
+            similar_all += search_once(search_results)
+        
+        self.similar.tfidf._clear_workingset()
+        topN = self.similar.tfidf.topN(content)
+        topN = ' '.join(topN)
+        
+        logger.info(f'topN: {topN}')
+        if len(topN) > 0:
+            search_results = search.google_search(topN) 
+            similar_all += search_once(search_results) 
+            search_results = search.bing_search(f'{topN}')
+            similar_all += search_once(search_results)
+        similar_all.sort(key=lambda x: x[1], reverse=True)
+        return similar_all

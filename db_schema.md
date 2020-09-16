@@ -91,6 +91,7 @@ Set of already tried URLs with certain techniques
     "strawman": "bool/true",
     "strawman_adv": "bool/true",
     "infer_efficiency": "bool/true",
+    "outlink_matter": "bool/true"
 }
 ```
 
@@ -152,6 +153,19 @@ Record for testing the efficiency of infer
     "by_discover": "dict",
     "reorg_url_infer": "",
     "by_infer": ""
+}
+```
+
+### outlinks
+Check matter outlinks
+```json
+{
+    "_id": "url",
+    "url": "url",
+    "hostname": "hostname",
+    "title": "title",
+    "most_similar": "url|N/A",
+    "similarity": "float"
 }
 ```
 

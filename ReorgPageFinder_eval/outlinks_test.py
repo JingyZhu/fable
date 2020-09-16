@@ -8,29 +8,23 @@ import time
 
 import sys
 sys.path.append('../../')
-from ReorgPageFinder import discoverer, searcher, inferer, tools, ReorgPageFinder_deploy
+import ReorgPageFinder_coverage
 import config
 from utils import text_utils, url_utils
 
 
-all_urls = json.load(open('Broken_urls_manual.json', 'r'))
+all_urls = json.load(open('Broken_outlinks_matter.json', 'r'))
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 
 sites = sorted(all_urls.keys())
 
-black_list = {'ebates.com', 'eclipse.org'}
-rpfd = ReorgPageFinder_deploy.ReorgPageFinder(logname='./ReorgPageFinder_2.log')
+rpfc = ReorgPageFinder_coverage.ReorgPageFinder(logname='./ReorgPageFinder_1.log')
 
-pieces = 4
+pieces = 2
 sites = [sites[int(i*len(sites) / pieces):int((i+1)*len(sites) / pieces)] for i in range(pieces)]
-sites = sites[1]
+sites = sites[0]
 
 for i, site in enumerate(sites):
-    if site in black_list:
-        continue
     print(f'SiTENO.{i}: {site}')
     urls = all_urls[site]
-    rpfd.init_site(site, urls)
-    rpfd.second_search(infer=True, required_urls=urls)
-    rpfd.discover(infer=True, required_urls=urls)
-    rpfd.infer()
+    rpfc.search_outlinks(site, urls)

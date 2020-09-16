@@ -238,6 +238,7 @@ class ReorgPageFinder:
                 #     self.db.checked.update_one({'_id': infer_url}, {'$set': {CHECK_NAME: True}})
         return success
 
+
     def search_by_queries(self, site, required_urls):
         required_urls = set(required_urls)
         site_urls = db.reorg.find({"hostname": site})
@@ -530,3 +531,76 @@ class ReorgPageFinder:
                     break 
                 examples = success
                 success = self.query_inferer(examples)
+    
+    def search_outlinks(self, site, required_urls):
+        """
+        Search for same content but for different contents
+        """
+        required_urls = set(required_urls)
+        try:
+            self.db.outlinks.insert_many([{
+                "_id": u,
+                "url": u,
+                "hostname": site
+            } for u in required_urls], ordered=False)
+        except:
+            pass
+        site_urls = list(db.outlinks.find({"hostname": site}))
+        searched_checked = db.checked.find({"hostname": self.site, "outlink_matter": True})
+        searched_checked = set([sc['url'] for sc in searched_checked])
+        urls = [u for u in site_urls if u['url'] not in searched_checked and u['url'] in required_urls]
+        broken_urls = set([u['url'] for u in urls])
+        self.logger.info(f'Matter outlinks: {site} #URLS: {len(broken_urls)}')
+        i = 0
+        while len(broken_urls) > 0:
+            url = broken_urls.pop()
+            i += 1
+            self.logger.info(f'URL: {i} {url}')
+            similarities = self.searcher.similar_outlinks(url)
+            if len(similarities) == 0:
+                simi = 0
+                most_simi = 'N/A'
+            else:
+                most_simi, simi = similarities[0]
+            update_dict = {}
+            has_title = self.db.outlinks.find_one({'url': url})
+            # if has_title is None: # No longer in reorg (already deleted)
+            #     continue
+            if 'title' not in has_title or has_title['title'] == 'N/A':
+                try:
+                    wayback_url = self.memo.wayback_index(url)
+                    html = self.memo.crawl(wayback_url)
+                    title = self.memo.extract_title(html, version='domdistiller')
+                except: # No snapthost on wayback
+                    self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                    try:
+                        self.db.na_urls.update_one({'_id': url}, {'$set': {
+                            'no_snapshot': True,
+                            "hostname": site,
+                            'url': url
+                        }}, upsert=True)
+                    except: pass
+                    continue
+                update_dict = {'title': title}
+            else:
+                title = has_title['title']
+
+            update_dict.update({
+                'most_similar': most_simi, 
+                'similarity': simi,
+                "hostname": site,
+                "url": url
+            })
+            if len(update_dict) > 0:
+                try:
+                    self.db.outlinks.update_one({'_id': url}, { "$set": update_dict}, upsert=True) 
+                except Exception as e:
+                    self.logger.warn(f'outlinks matters update DB: {str(e)}')
+            searched_checked.add(url)
+            try:
+                self.db.checked.update_one({'_id': url}, {"$set": {
+                    "url": url,
+                    "hostname": self.site,
+                    "outlink_matter": True
+                }}, upsert=True)
+            except: pass
