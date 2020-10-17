@@ -3,15 +3,11 @@ node_modules/
 .vscode/
 package-lock.json
 .DS_Store
-config.yml
 
 logs/
 *.html
 *.json
 */json/
-tmp/
-*.ipynb
-.ipynb_checkpoints/
 
 temp.py
 test.py
