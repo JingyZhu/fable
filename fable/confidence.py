@@ -15,10 +15,8 @@ from pymongo import MongoClient
 import pandas as pd
 import math, copy
 
-import sys
-sys.path.append('../')
-import config
-from utils import search, crawl, text_utils, url_utils, sic_transit
+from . import config
+from .utils import search, crawl, text_utils, url_utils, sic_transit
 
 import logging
 logger = logging.getLogger('logger')

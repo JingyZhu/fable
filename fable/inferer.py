@@ -2,15 +2,12 @@ from xmlrpc.client import ServerProxy
 import pandas as pd
 import pickle
 from urllib.parse import urlsplit
-from . import tools
 from collections import defaultdict
 import string
 import time
 
-import sys
-sys.path.append('../')
-import config
-from utils import search, crawl, text_utils, url_utils, sic_transit
+from . import config, tools
+from .utils import search, crawl, text_utils, url_utils, sic_transit
 
 import logging
 logger = logging.getLogger('logger')

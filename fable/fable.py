@@ -1,4 +1,4 @@
-from ReorgPageFinder import discoverer, searcher, inferer, tools
+from fable import discoverer, searcher, inferer, tools
 import pymongo
 from pymongo import MongoClient
 from urllib.parse import urlsplit, parse_qsl
@@ -8,11 +8,10 @@ import time
 import json
 import logging
 
-import config
-from utils import text_utils, url_utils, crawl, sic_transit
+from . import config
+from .utils import text_utils, url_utils, crawl, sic_transit
 
-db_broken = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').fable
 he = url_utils.HostExtractor()
 
 

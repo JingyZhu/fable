@@ -13,15 +13,13 @@ import brotli
 from dateutil import parser as dparser
 from urllib.parse import urlsplit, urlparse
 
-import sys
-sys.path.append('../')
-import config
-from utils import text_utils, crawl, url_utils, search
+from . import config
+from .utils import text_utils, crawl, url_utils, search
 
 import logging
 logger = logging.getLogger('logger')
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').fable
 DEFAULT_CACHE = 3600*24
 LEAST_SITE_URLS = 20 # Least # of urls a site must try to crawl to enable title comparison
 COMMON_TITLE_SIZE = 5 # Common prefix/suffix extraction's sample number of title
@@ -314,6 +312,7 @@ class Similar:
         self.tfidf._clear_workingset()
         anchor_count = defaultdict(set)
         corpus = [wayback_sig[1]] + [s for s in wayback_sig[2] if s != '']
+        # TODO (new or not?): Not consider if the liveweb still have this link (only if exact match?)
         for link, anchor, sig in liveweb_sigs:
             anchor_count[anchor].add(link)
             corpus.append(anchor)

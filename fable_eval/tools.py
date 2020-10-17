@@ -15,8 +15,8 @@ from urllib.parse import urlsplit, urlparse
 
 import sys
 sys.path.append('../')
-import config
-from utils import text_utils, crawl, url_utils, search
+from fable import config
+from fable.utils import text_utils, crawl, url_utils, search
 
 import logging
 logger = logging.getLogger('logger')

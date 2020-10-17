@@ -9,8 +9,8 @@ import json
 import logging
 import sys
 
-import config
-from utils import text_utils, url_utils, crawl, sic_transit
+from fable import config
+from fable.utils import text_utils, url_utils, crawl, sic_transit
 
 db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 he = url_utils.HostExtractor()

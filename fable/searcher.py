@@ -6,16 +6,14 @@ from urllib.parse import urlparse
 from pymongo import MongoClient
 import pymongo
 import re
-from . import tools
 
-import sys
-sys.path.append('../')
-import config
-from utils import search, crawl, text_utils, url_utils
+from . import config, tools
+from .utils import search, crawl, text_utils, url_utils
 
 import logging
 logger = logging.getLogger('logger')
 he = url_utils.HostExtractor()
+
 class Searcher:
     def __init__(self, use_db=True, proxies={}, memo=None, similar=None):
         """

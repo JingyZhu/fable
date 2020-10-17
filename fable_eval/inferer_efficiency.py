@@ -9,8 +9,8 @@ import time
 
 import sys
 sys.path.append('../')
-import config
-from utils import search, crawl, text_utils, url_utils, sic_transit
+from fable import config
+from fable.utils import search, crawl, text_utils, url_utils, sic_transit
 
 import logging
 logger = logging.getLogger('logger')

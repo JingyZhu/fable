@@ -23,10 +23,9 @@ import scipy.sparse as sp
 import numpy as np
 from collections import defaultdict
 
-sys.path.append('../')
-from utils import url_utils
+from . import url_utils
 try:
-    import config
+    from fable import config
 except:
     print("No config.py, Specify you own port")
 

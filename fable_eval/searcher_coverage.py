@@ -11,8 +11,8 @@ import tools
 
 import sys
 sys.path.append('../')
-import config
-from utils import search, crawl, text_utils, url_utils
+from fable import config
+from fable.utils import search, crawl, text_utils, url_utils
 
 import logging
 logger = logging.getLogger('logger')
@@ -239,7 +239,7 @@ class Searcher:
             content = self.memo.extract_content(html)
         except Exception as e:
             logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
-            return
+            return []
         logger.info(f'title: {title}')
         search_results, searched = [], set()
         similar_all = []
@@ -261,7 +261,7 @@ class Searcher:
             logger.debug(f'Finished crawling')
             # TODO: May move all comparison techniques to similar class
             similars = self.similar.content_similar(content, searched_contents, all_values=True)
-            similars = [s for s in similars is he.extract(s[0]) not in [site, he.extract(url)]]
+            similars = [si for si in similars if he.extract(si[0]) not in [site, he.extract(url)]]
             return similars
 
         if title != '':

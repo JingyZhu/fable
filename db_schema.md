@@ -1,4 +1,4 @@
-# DB: ReorgPageFinder
+# DB: fable/ReorgPageFinder
 ### crawl
 Record all crawled pages and its html
 ```json
@@ -111,6 +111,36 @@ Traces of detailed execution events (how each urls' alternate links are frying t
 }
 ```
 
+
+### traces
+New traces document to trace all metadata gathered during running FABLE
+```json
+{
+    "_id": "url",
+    "url": "url",
+    "hostname": "hostname",
+    "{class} (name of trace)": 
+        {
+            "wayback_url": "url/None if not applicable",
+            "title": "str",
+            "title_wo_suffix": "str",
+            "topN": "str",
+            "search_topN": {"google": [], "bing": []},
+            "search_title_site": {"google": [], "bing": []},
+            "search_title_exact": {"google": [], "bing": []},
+            "discover": [{
+                "url",: "url",
+                "reason": "str",
+                "(sig)": "If applicable"
+            }],
+            "backpath": [{
+                "url": "url",
+                "sig": "link signature"
+            }]
+        }
+}
+```
+
 ### search_trace
 Record for performance of search
 ```json
@@ -168,6 +198,7 @@ Check matter outlinks
     "similarity": "float"
 }
 ```
+
 
 ## DB: web_decay
 

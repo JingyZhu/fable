@@ -9,10 +9,10 @@ whois
 BeautifulSoup4
 brotli
 dateparser
-python-nmap
 Unidecode
 reppy
 sklearn
-boilerpipe
+boilerpipe3
 url_normalize
 cchardet
+pandas

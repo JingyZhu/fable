@@ -15,16 +15,12 @@ tmp/
 
 temp.py
 test.py
-broken_pages/*.yaml
-search/schedule.py
 *.mongo
 backlinks.csv
 sample.csv
 seed_outgoing.csv
 alexa_top1k.txt
 
-jupyter.log
-ReorgPageFinder.log
 *.log
 
 results/

@@ -9,8 +9,8 @@ import time
 import sys
 sys.path.append('../../')
 import ReorgPageFinder_coverage
-import config
-from utils import text_utils, url_utils
+from fable import config
+from fable.utils import text_utils, url_utils
 
 
 all_urls = json.load(open('../tests/Outgoing/Broken_urls.json', 'r'))

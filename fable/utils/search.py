@@ -8,14 +8,13 @@ from bs4 import BeautifulSoup
 from pymongo import MongoClient
 
 
-sys.path.append('../')
-import config
-from utils import text_utils, crawl, url_utils
+from fable import config
+from . import text_utils, crawl, url_utils
 
 google_query_dict = {
     "q": None,
-    "key" : config.SEARCH_KEY,
-    "cx" : config.SEARCH_CX
+    "key" : config.GOOGLE_SEARCH_KEY,
+    "cx" : config.GOOGLE_SEARCH_CX
 }
 
 bing_query_dict = {

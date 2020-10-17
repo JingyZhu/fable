@@ -4,7 +4,6 @@ Get confidence of a url with alias
 from ReorgPageFinder import discoverer, searcher, inferer, tools
 import os
 from urllib.parse import urlsplit, urlparse, urlunsplit
-import tools
 from collections import defaultdict
 import re, json
 import random
@@ -17,13 +16,13 @@ import math, copy
 
 import sys
 sys.path.append('../')
-import config
-from utils import search, crawl, text_utils, url_utils, sic_transit
+from fable import config, tools
+from fable.utils import search, crawl, text_utils, url_utils, sic_transit
 
 import logging
 logger = logging.getLogger('logger')
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').fable
 he = url_utils.HostExtractor()
 
 memo = tools.Memoizer()

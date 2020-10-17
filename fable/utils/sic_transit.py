@@ -10,10 +10,9 @@ import sys
 from math import ceil
 from bs4 import BeautifulSoup
 
-sys.path.append('../')
-import config
-from utils import text_utils, url_utils
-from utils.crawl import rp 
+from fable import config
+from . import text_utils, url_utils
+from .crawl import rp 
 import logging
 logger = logging.getLogger('logger')
 

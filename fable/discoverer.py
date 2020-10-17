@@ -6,17 +6,14 @@ from urllib.parse import urlsplit, urlparse, parse_qsl, parse_qs, urlunsplit
 from itertools import chain, combinations
 from bs4 import BeautifulSoup
 from queue import Queue
-from . import tools
 from collections import defaultdict
 import re, json
 import random
 from dateutil import parser as dparser
 import datetime
 
-import sys
-sys.path.append('../')
-import config
-from utils import search, crawl, text_utils, url_utils, sic_transit
+from . import config, tools
+from .utils import search, crawl, text_utils, url_utils, sic_transit
 
 import logging
 logger = logging.getLogger('logger')

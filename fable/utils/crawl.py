@@ -22,9 +22,10 @@ from reppy.robots import Robots
 from reppy.cache import RobotsCache
 from reppy.ttl import HeaderWithDefaultPolicy
 import sys
+
 sys.path.append('../')
-import config
-from utils.url_utils import filter_wayback
+from .. import config
+from .url_utils import filter_wayback
 
 import logging
 logger = logging.getLogger('logger')

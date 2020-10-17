@@ -9,9 +9,7 @@ import subprocess
 from collections import defaultdict
 from url_normalize import url_normalize
 
-import sys
-sys.path.append('../')
-import config
+from fable import config
 
 def filter_wayback(url):
     if 'web.archive.org/web' not in url:
