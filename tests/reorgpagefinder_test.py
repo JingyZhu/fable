@@ -1,4 +1,3 @@
-from ReorgPageFinder import discoverer, searcher, inferer, tools, ReorgPageFinder
 import pymongo
 from pymongo import MongoClient
 from urllib.parse import urlsplit
@@ -6,48 +5,17 @@ import os
 from collections import defaultdict
 import time
 import json
+import sys
 
-import config
-from utils import text_utils, url_utils
+sys.path.append('../')
+from fable import config
+from fable.utils import text_utils, url_utils
+from fable import ReorgPageFinder
 
 db_wd = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
-# sites = json.load(open('reorg_benchmark.json', 'r'))
-# sites.sort()
 
-# sites = [
-# 	"bluesombrero.com",
-# 	"climbtothestars.org",
-# 	"comptia.org",
-# 	"csu.edu",
-# ]
-
-# sites =  [
-# 	"drive.com.au",
-#     "dunelm.com",
-#     "easttexasmatters.com",
-#     "easydns.com",
-# ]
-
-sites = [
-	"echo-online.de",
-    "emerils.com",
-    "ewtn.com",
-    "fairtrade.org.uk",
-]
-
-
-rpf = ReorgPageFinder.ReorgPageFinder(logname='./ReorgPageFinder3.log')
-
-for site in sites:
-	urls = db_wd.url_status_implicit_broken.find({
-		"$and": [
-			{'$or': [{'broken': True}, {'sic_broken': True}]},
-			{'hostname': site}
-	]})
-	urls = [url['url'] for url in urls]
-	rpf.init_site(site, urls)
-	rpf.infer()
-	rpf.first_search()
-	rpf.second_search()
-	rpf.discover()
-	rpf.infer()
+rpf = ReorgPageFinder(logname='./rpf.log')
+urls = ['http://www.ftc.gov/os/highlights/2013/chairwomans-message.shtml']
+rpf.init_site('ftc.gov', urls)
+rpf.search(required_urls=urls)
+rpf.discover(required_urls=urls)

@@ -147,6 +147,8 @@ class ReorgPageFinder_deploy:
         if len(self.logger.handlers) > 2:
             self.logger.handlers.pop()
         formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
         file_handler = logging.FileHandler(f'./logs/{site}.log')
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)

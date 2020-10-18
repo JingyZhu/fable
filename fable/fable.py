@@ -143,6 +143,8 @@ class ReorgPageFinder:
         if len(self.logger.handlers) > 2:
             self.logger.handlers.pop()
         formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
         file_handler = logging.FileHandler(f'./logs/{site}.log')
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
@@ -292,103 +294,21 @@ class ReorgPageFinder:
                 self._add_url_to_patterns(*unpack_ex(suc))
             examples = success
 
-    def first_search(self, infer=False, required_urls=None):
-        # _search
-        noreorg_urls = list(db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}}))
-        searched_checked = db.checked.find({"hostname": self.site, "search_1": True})
-        searched_checked = set([sc['url'] for sc in searched_checked])
-        
-        required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
-        
-        urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
-        broken_urls = set([u['url'] for u in urls])
-        self.logger.info(f'Search1 SITE: {self.site} #URLS: {len(broken_urls)}')
-        i = 0
-        self.similar.clear_titles()
-        while len(broken_urls) > 0:
-            url = broken_urls.pop()
-            i += 1
-            self.logger.info(f'URL: {i} {url}')
-            searched = self.searcher.search(url, search_engine='bing')
-            if searched is None:
-                searched = self.searcher.search(url, search_engine='google')
-            try:
-                wayback_url = self.memo.wayback_index(url)
-                html = self.memo.crawl(wayback_url)
-                title = self.memo.extract_title(html, version='domdistiller')
-            except: # No snapthost on wayback
-                self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
-                try: self.db.na_urls.update_one({'_id': url}, {"$set": {
-                    'url': url,
-                    'hostname': self.site,
-                    'no_snapshot': True
-                }}, upsert=True)
-                except: pass
-                continue
 
-
-            update_dict = {'title': title}
-            if searched is not None:
-                searched, trace = searched
-                self.logger.info(f"HIT_1: {searched}")
-                fp = self.fp_check(url, searched)
-                if not fp: # False positive test
-                    # _search
-                    update_dict.update({'reorg_url_search': searched, 'by_search':{
-                        "method": "search"
-                    }})
-                    update_dict['by_search'].update(trace)
-                else:
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'url': url,
-                            'false_positive_search': True, 
-                            'hostname': self.site
-                        }}, upsert=True)
-                    except: pass
-                    searched = None
-
-
-            try:
-                self.db.reorg.update_one({'url': url}, {"$set": update_dict}) 
-            except Exception as e:
-                self.logger.warn(f'First search update DB: {str(e)}')
-            searched_checked.add(url)
-            try:
-                self.db.checked.update_one({'_id': url}, {"$set": {
-                    "url": url,
-                    "hostname": self.site,
-                    "search_1": True
-                }}, upsert=True)
-            except Exception as e:
-                self.logger.warn(f'Search_1 update checked: {str(e)}')
-            
-            if not infer:
-                continue
-            
-            if searched is not None:
-                example = ((url, title), searched)
-                added = self._add_url_to_patterns(*unpack_ex(example))
-                if not added: 
-                    continue
-                success = self.query_inferer([example])
-                while len(success) > 0:
-                    added = False
-                    for suc in success:
-                        broken_urls.discard(unpack_ex(suc)[0])
-                        a = self._add_url_to_patterns(*unpack_ex(suc))
-                        added = added or a
-                    if not added: 
-                        break 
-                    examples = success
-                    success = self.query_inferer(examples)
-
-    def second_search(self, infer=False, required_urls=None):
-        if self.similar.site is None or self.similar.site != self.site:
+    def search(self, infer=False, required_urls=None, title=True):
+        """
+        infer: Infer every time found a new alias
+        Required urls: URLs that will be run on
+        title: Whether title comparison is taken into consideration
+        """
+        if not title:
+            self.similar.clear_titles()
+        elif self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # _search
         noreorg_urls = list(self.db.reorg.find({"hostname": self.site, 'reorg_url_search': {"$exists": False}}))
-        searched_checked = self.db.checked.find({"hostname": self.site, "search_2": True})
+        searched_checked = self.db.checked.find({"hostname": self.site, "search": True})
         searched_checked = set([sc['url'] for sc in searched_checked])
         
         required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
@@ -482,6 +402,10 @@ class ReorgPageFinder:
                     success = self.query_inferer(examples)
     
     def discover(self, infer=False, required_urls=None):
+        """
+        infer: Infer every time found a new alias
+        Required urls: URLs that will be run on
+        """
         if self.similar.site is None or self.similar.site != self.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
@@ -538,19 +462,19 @@ class ReorgPageFinder:
                     break
                 suffice = trace['suffice']
 
-                discovered, trace = self.discoverer.bf_find(url, policy='earliest')
-                if trace.get('backpath'):
-                    try:
-                        self.db.trace.update_one({'_id': url}, {"$set": {
-                            "url": url,
-                            "hostname": self.site,
-                            "backpath_earliest": trace['backpath']
-                        }}, upsert=True)
-                    except Exception as e:
-                        self.logger.warn(f'Discover update trace backpath: {str(e)}')
-                if discovered:
-                    method = 'backpath_earliest'
-                    break
+                # discovered, trace = self.discoverer.bf_find(url, policy='earliest')
+                # if trace.get('backpath'):
+                #     try:
+                #         self.db.trace.update_one({'_id': url}, {"$set": {
+                #             "url": url,
+                #             "hostname": self.site,
+                #             "backpath_earliest": trace['backpath']
+                #         }}, upsert=True)
+                #     except Exception as e:
+                #         self.logger.warn(f'Discover update trace backpath: {str(e)}')
+                # if discovered:
+                #     method = 'backpath_earliest'
+                #     break
                 break
 
             update_dict = {}
