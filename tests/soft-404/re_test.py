@@ -13,7 +13,6 @@ from ReorgPageFinder import discoverer, searcher, inferer, tools, ReorgPageFinde
 import config
 from utils import url_utils, sic_transit
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
 filter_list = ['.xml', '.pdf', '.jpg', '.jpeg', '.gif', '.png', '.doc', '.ppt']
 
 

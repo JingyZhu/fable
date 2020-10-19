@@ -4,11 +4,9 @@ Create Index for different collections used by ReorgPageFinder
 from pymongo import MongoClient
 import pymongo
 
-import sys
-sys.path.append('../')
-from . import config
+from fable import config
 
-db = config.MONGO_DB
+db = config.DB
 
 db.crawl.create_index([('html', pymongo.ASCENDING)])
 

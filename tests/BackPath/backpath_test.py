@@ -11,8 +11,6 @@ from ReorgPageFinder import discoverer, searcher, inferer, tools, ReorgPageFinde
 import config
 from utils import text_utils, url_utils
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
-
 all_urls = json.load(open('test_urls.json', 'r'))
 
 memo = tools.Memoizer()

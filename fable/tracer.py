@@ -13,7 +13,7 @@ import inspect
 from . import config
 from .utils import url_utils
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').fable
+db = config.DB
 
 default_name = 'fable'
 

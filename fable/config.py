@@ -59,4 +59,4 @@ for dc, dc_value in DEFAULT_CONFIG.items():
         locals().update({dc: dc_value})
         var_dict.update({dc: dc_value})
 
-MONGO_DB = eval(f"MongoClient(MONGO_HOSTNAME, username=MONGO_USER, password=MONGO_PWD, authSource='admin').{MONGO_DB}")
+DB = eval(f"MongoClient(MONGO_HOSTNAME, username=MONGO_USER, password=MONGO_PWD, authSource='admin').{MONGO_DB}")

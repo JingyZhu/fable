@@ -11,7 +11,7 @@ import logging
 from . import config
 from .utils import text_utils, url_utils, crawl, sic_transit
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').fable
+db = config.DB
 he = url_utils.HostExtractor()
 
 

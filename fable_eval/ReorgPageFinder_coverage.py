@@ -12,7 +12,7 @@ import sys
 from fable import config
 from fable.utils import text_utils, url_utils, crawl, sic_transit
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
+db = config.DB
 he = url_utils.HostExtractor()
 
 KEYNAME = 'infer_basic'

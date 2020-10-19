@@ -18,8 +18,6 @@ urls_year = json.load(open('Broken_urls_years.json', 'r'))
 # --->adv
 # all_urls = {site: [(url, urls_year[url]) for url in site_urls] for site, site_urls in all_urls.items()}
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').ReorgPageFinder
-
 # sites = sorted(all_urls.keys())
 sites = sorted(all_urls.keys())
 
