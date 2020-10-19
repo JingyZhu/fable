@@ -8,7 +8,7 @@ import sys
 sys.path.append('../')
 from . import config
 
-db = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').fable
+db = config.MONGO_DB
 
 db.crawl.create_index([('html', pymongo.ASCENDING)])
 

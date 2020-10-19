@@ -281,7 +281,10 @@ class Memoizer:
 
 
 class Similar:
-    def __init__(self, use_db=True, db=db, corpus=[], short_threshold=None):
+    def __init__(self, use_db=True, db=db, corpus=[], short_threshold=None, corpus_size=100000):
+        """
+        corpus_size: size of corpus to sample on: (0-250k)
+        """
         if not use_db and len(corpus) == 0:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
@@ -292,9 +295,9 @@ class Similar:
             corpus = self.db.corpus.aggregate([
                 {'$match':  {'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}},
                 {'$project': {'content': True}},
-                {'$sample': {'size': 100000}},
+                {'$sample': {'size': corpus_size}},
             ], allowDiskUse=True)
-            corpus = [c['content'] for c in list(corpus)] # TODO: Temp
+            corpus = [c['content'] for c in list(corpus)]
             # corpus = random.sample(corpus, 100000)
             self.tfidf = text_utils.TFidfStatic(corpus)
         else:
