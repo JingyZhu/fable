@@ -182,7 +182,7 @@ class Memoizer:
             param_dict = kwargs['param_dict']
             del(kwargs['param_dict'])
             default_param = False
-        cps = self.db.wayback_index.find_one({'url': url})
+        cps = self.db.wayback_index.find_one({'_id': url})
         if not cps or default_key[default_param] not in cps:
             cps, status = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
             if len(cps) == 0: # No snapshots

@@ -2,7 +2,7 @@
 Utils for text
 """
 import justext
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from langcodes import Language
 from langdetect import detect_langs
@@ -207,6 +207,17 @@ def find_complement_string(A, B):
             complement.append(A[ida])
             ida += 1
     return ' '.join(complement)
+
+
+def tokenize(texts):
+    """
+    Simple function for tokenizing a text. Extracted from sklearn src code
+    
+    Returns: list of features in the original order
+    """
+    cv = CountVectorizer()
+    analyze = cv.build_analyzer()
+    return analyze(texts)
 
 
 def article_date(html):
@@ -514,8 +525,8 @@ def extract_title(html, version='mine'):
 
 
 def k_shingling(text1, text2, k=5):
-    text1 = text1.split()
-    text2 = text2.split()
+    text1 = tokenize(text1)
+    text2 = tokenize(text2)
     if len(text1) < k:
         shingle1 = [tuple(text1)]
     else:
