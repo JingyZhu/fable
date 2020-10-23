@@ -1,5 +1,6 @@
 FROM continuumio/anaconda3
 
+WORKDIR /home
 # Prepare
 RUN mkdir /usr/share/man/man1
 RUN conda config --set changeps1 false 
@@ -7,7 +8,8 @@ RUN conda config --set changeps1 false
 RUN apt update && apt install -y wget \
     curl \
     openjdk-11-jdk \
-    gcc g++
+    gcc g++ \
+    net-tools
 
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
