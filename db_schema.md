@@ -1,11 +1,12 @@
 # DB: fable/ReorgPageFinder
+
 ### crawl
 Record all crawled pages and its html
 ```json
 {
-    "url": "url",
+    "url": "url (hash indexed)",
     "statuscode": "",
-    "html": "byte",
+    "html": "byte (hash indexed)",
     "final_url": "string",
     "content": "string (optional)",
     "title": "string (optional)",
@@ -29,8 +30,7 @@ Used to initialize tfidf for document corpus
 Wayback indexed timestamps
 ```json
 {
-    "_id": "url",
-    "url": "string",
+    "url": "string (hash indexed)",
     "ts": "[int]",
     "ts_nb": "[int] (not broken, including 3xx)"
 }
@@ -40,7 +40,7 @@ Wayback indexed timestamps
 Wayback most representative ts for a url
 ```json
 {
-    "url": "string",
+    "url": "string (hash indexed)",
     "ts": "int",
     "wayback_url": "string",
     "policy": "string",
@@ -48,12 +48,24 @@ Wayback most representative ts for a url
 }
 ```
 
+### searched
+##### Index: query_engine (hash) , query_site_engine (hash)
+Searched query (siteSearch) with results
+```json
+{
+    "query": "string",
+    "engine": "google|bing",
+    "(site)": "string",
+    "results": ["string"]
+}
+```
+
 ### reorg
 Set of URLs for trying to find copies on
 ```json
 {
-    "url": "url",
-    "hostname": "hostname",
+    "url": "url (hash indexed)",
+    "hostname": "hostname (Ascending indexed)",
     "title": "title",
     "by": "string (Found by which technique)",
     "reorg_url": "str (Reorganized URL)"
@@ -425,18 +437,6 @@ urls infered by rules from searched urls for urls cannot find copies
     "status": "2xx|45xx",
     "html": "byte (if status 2xx)",
     "content": "string (if status 2xx)"
-}
-```
-
-### searched
-##### Index: query, query_site_engine (unique)
-Searched query (siteSearch) with results
-```json
-{
-    "query": "string",
-    "site": "string (empty if no site search is used)",
-    "engine": "google|bing",
-    "results": ["string"]
 }
 ```
 
