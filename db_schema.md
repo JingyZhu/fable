@@ -4,7 +4,7 @@
 Record all crawled pages and its html
 ```json
 {
-    "url": "url (hash indexed)",
+    "url": "url (unique indexed)",
     "statuscode": "",
     "html": "byte (hash indexed)",
     "final_url": "string",
@@ -30,7 +30,7 @@ Used to initialize tfidf for document corpus
 Wayback indexed timestamps
 ```json
 {
-    "url": "string (hash indexed)",
+    "url": "string (unique indexed)",
     "ts": "[int]",
     "ts_nb": "[int] (not broken, including 3xx)"
 }
@@ -40,7 +40,7 @@ Wayback indexed timestamps
 Wayback most representative ts for a url
 ```json
 {
-    "url": "string (hash indexed)",
+    "url": "string (unique indexed)",
     "ts": "int",
     "wayback_url": "string",
     "policy": "string",
@@ -64,7 +64,7 @@ Searched query (siteSearch) with results
 Set of URLs for trying to find copies on
 ```json
 {
-    "url": "url (hash indexed)",
+    "url": "url (hash unique indexed)",
     "hostname": "hostname (Ascending indexed)",
     "title": "title",
     "by": "string (Found by which technique)",
@@ -76,8 +76,7 @@ Set of URLs for trying to find copies on
 URLs that are not applicable for finding alternate links
 ```json
 {
-    "_id": "url",
-    "url": "url",
+    "url": "url (hash unique indexed)",
     "hostname": "hostname",
     "no_snapshot": "Bool (This URL has no snapshots in the wayback)",
     "no_working_parent": "Bool (This url's parent doesn't have snapshot/doesn't link to this url/ doesn't work today)",

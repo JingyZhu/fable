@@ -22,6 +22,7 @@ import multiprocessing as mp
 import scipy.sparse as sp
 import numpy as np
 from collections import defaultdict
+import functools
 
 from . import url_utils
 try:
@@ -47,7 +48,7 @@ def localserver(PORT):
     if len(port_occupied) <= 0:
         Popen(['http-server', '-a', 'localhost', '-p', str(PORT), tmp_path], stdout=NULL, stderr=NULL)
     else:
-        print("Port {} occupied by other process".format(PORT))
+        print(f"Port {PORT} occupied by other process", file=sys.stderr)
 
 localserver(PORT)
 
@@ -134,8 +135,10 @@ class TFidfStatic:
         self.idx = {i: c for c, i in enumerate(inputs)}
         # Get vocabulary from inputs
         idf = self.vectorizer.idf_
-        vocab = defaultdict(None, self.vectorizer.vocabulary_)
-        vocab.default_factory = vocab.__len__
+        # vocab = defaultdict(None, self.vectorizer.vocabulary_)
+        vocab = self.vectorizer.vocabulary_.copy()
+        vsize = len(vocab)
+        # vocab.default_factory = vocab.__len__
         inputs_tfidf = TfidfVectorizer()
         inputs_matrix = inputs_tfidf.fit_transform(inputs)
         # Add unseen vocab to existed corpus
@@ -145,12 +148,17 @@ class TFidfStatic:
         for word in inputs_vocab.keys():
             # Added with proper index if not in vocabulary
             if word not in vocab:
-                vocab[word]
+                vocab[word] = vsize
+                vsize += 1
                 df = (num_docs + 1) / np.exp(inputs_idf[inputs_vocab[word]] - 1) - 1
                 df = np.log((self.tfidf.shape[0] + 1) / (df + 1)) + 1
                 idf = np.append(idf, [df])
         # Construct workingset
         self.workingset_vec = TfidfVectorizer(vocabulary=vocab)
+        def my_validate_vocab(self):
+            self.vocabulary_ = self.vocabulary
+        self.workingset_vec._validate_vocabulary = functools.partial(my_validate_vocab, self.workingset_vec)
+        self.fixed_vocabulary_ = True       
         self.workingset_vec.idf_ = idf
         # self.workingset_vec._idf_diag = sp.diags(idf, offsets=0,
         #                                 shape=(idf.shape[0], idf.shape[0]),
