@@ -7,11 +7,14 @@ from pymongo import MongoClient
 import pymongo
 import re
 
-from . import config, tools
+from . import config, tools, tracer
 from .utils import search, crawl, text_utils, url_utils
 
 import logging
-logger = logging.getLogger('logger')
+if not isinstance(logging.getLoggerClass(), tracer.tracer):
+    logging.setLoggerClass(tracer.tracer)
+tracer = logging.getLogger('logger')
+
 he = url_utils.HostExtractor()
 
 class Searcher:
@@ -44,30 +47,26 @@ class Searcher:
             title = self.memo.extract_title(html, version='domdistiller')
             content = self.memo.extract_content(html)
         except Exception as e:
-            logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+            tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             return
-        logger.info(f'title: {title}')
+        tracer.title(url, title)
         search_results, searched = [], set()
 
-        def search_once(search_results):
+        def search_once(search_results, typee):
             """Incremental Search"""
             global he
-            nonlocal url, title, content, html, searched
+            nonlocal url, title, content, html, searched, search_engine
             searched_contents = {}
             searched_titles = {}
             search_cand = [s for s in search_results if s not in searched]
-            logger.info(f'#Search cands: {search_cand}')
+            tracer.search_results(url, search_engine, typee, search_results)
             searched.update(search_results)
             for searched_url in search_cand:
                 searched_html = self.memo.crawl(searched_url, proxies=self.PS.select())
-                logger.debug(f'Crawl: {searched_url}')
                 if searched_html is None: continue
                 searched_contents[searched_url] = self.memo.extract_content(searched_html)
-                logger.debug(f'Extract Content: {searched_url}')
                 if he.extract(url) == he.extract(searched_url) or site == he.extract(searched_url):
                     searched_titles[searched_url] = self.memo.extract_title(searched_html)
-                    logger.debug(f'Extract Title: {searched_url}')
-            logger.debug(f'Finished crawling')
             # TODO: May move all comparison techniques to similar class
             similars, fromm = self.similar.similar(url, title, content, searched_titles, searched_contents)
             if len(similars) > 0:
@@ -78,12 +77,12 @@ class Searcher:
         if title != '':
             if search_engine == 'google':
                 search_results = search.google_search(f'{title}', site_spec_url=site)
-                similar = search_once(search_results)
+                similar = search_once(search_results, typee='title_site')
                 if similar is not None: 
                     return similar
                 if len(search_results) >= 8:
                     search_results = search.google_search(f'"{title}"', use_db=self.use_db)
-                    similar = search_once(search_results)
+                    similar = search_once(search_results, typee='title_exact')
                     if similar is not None: 
                         return similar
             else:
@@ -92,23 +91,23 @@ class Searcher:
                 else:
                     site_str = ''
                 search_results = search.bing_search(f'{title} {site_str}', use_db=self.use_db)
-                similar = search_once(search_results)
+                similar = search_once(search_results, typee='title_site')
                 if similar is not None: 
                     return similar
                 if len(search_results) >= 8:
                     search_results = search.bing_search(f'+"{title}"', use_db=self.use_db)
-                    similar = search_once(search_results)
+                    similar = search_once(search_results, typee='title_exact')
                     if similar is not None: 
                         return similar
         
         self.similar.tfidf._clear_workingset()
         topN = self.similar.tfidf.topN(content)
         topN = ' '.join(topN)
-        logger.info(f'topN: {topN}')
+        tracer.topN(url, topN)
         if len(topN) > 0:
             if search_engine == 'google':
                 search_results = search.google_search(topN, site_spec_url=site, use_db=self.use_db)
-                similar = search_once(search_results)
+                similar = search_once(search_results, typee='topN')
                 if similar is not None:
                     return similar
             else:
@@ -117,7 +116,7 @@ class Searcher:
                 else: 
                     site_str = ''
                 search_results = search.bing_search(f'{topN} {site_str}', use_db=self.use_db)
-                similar = search_once(search_results)
+                similar = search_once(search_results, typee='topN')
                 if similar is not None: 
                     return similar
         return

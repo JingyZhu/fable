@@ -13,11 +13,13 @@ import brotli
 from dateutil import parser as dparser
 from urllib.parse import urlsplit, urlparse
 
-from . import config
+from . import config, tracer
 from .utils import text_utils, crawl, url_utils, search
 
 import logging
-logger = logging.getLogger('logger')
+if not isinstance(logging.getLoggerClass(), tracer.tracer):
+    logging.setLoggerClass(tracer.tracer)
+tracer = logging.getLogger('logger')
 
 db = config.DB
 DEFAULT_CACHE = 3600*24
@@ -98,7 +100,7 @@ class Memoizer:
         retry = 0
         resp = crawl.requests_crawl(url, raw=True, **kwargs)
         if isinstance(resp, tuple) and resp[0] is None:
-            logger.info(f'requests_crawl: Blocked url {url}, {resp[1]}')
+            tracer.info(f'requests_crawl: Blocked url {url}, {resp[1]}')
             if not final_url:
                 return None
             else:
@@ -110,7 +112,7 @@ class Memoizer:
             time.sleep(5)
             resp = crawl.requests_crawl(url, raw=True, **kwargs)
         if resp is None:
-            logger.info(f'requests_crawl: Unable to get HTML of {url}')
+            tracer.info(f'requests_crawl: Unable to get HTML of {url}')
             if not final_url:
                 return None
             else:
@@ -146,7 +148,7 @@ class Memoizer:
             }
             if final_url: obj.update({'final_url': fu})
             self.db.crawl.update_one({'_id': url}, {"$set": obj}, upsert=True)
-        except Exception as e: logger.warn(f'crawl: {url} {str(e)}')
+        except Exception as e: tracer.warn(f'crawl: {url} {str(e)}')
         if not final_url:
             return html
         else:
@@ -186,7 +188,7 @@ class Memoizer:
         if not cps or default_key[default_param] not in cps:
             cps, status = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
             if len(cps) == 0: # No snapshots
-                logger.info(f"Wayback Index: No snapshots {status}")
+                tracer.info(f"Wayback Index: No snapshots {status}")
                 return
             cps.sort(key=lambda x: x[0])
             try:
@@ -241,7 +243,7 @@ class Memoizer:
             except Exception as e: pass
             return rep[1]
         else:
-            logger.error(f'Wayback Index: Reach non existed policy')
+            tracer.error(f'Wayback Index: Reach non existed policy')
             raise
     
     def extract_content(self, html, **kwargs):
@@ -257,7 +259,7 @@ class Memoizer:
         content = text_utils.extract_body(html, **kwargs)
         try:
             self.db.crawl.update_one({'html': html_bin}, {"$set": {'content': content}})
-        except Exception as e: logger.warn(f'extract content: {str(e)}')
+        except Exception as e: tracer.warn(f'extract content: {str(e)}')
         return content
     
     def extract_title(self, html, **kwargs):
@@ -276,7 +278,7 @@ class Memoizer:
             return title
         try:
             self.db.crawl.update_one({'html': html_bin}, {"$set": {'title': title}})
-        except Exception as e: logger.warn(f'extract title: {str(e)}')
+        except Exception as e: tracer.warn(f'extract title: {str(e)}')
         return title
 
 
@@ -373,7 +375,7 @@ class Similar:
         simi_cand = []
         for url, c in candidates_contents.items():
             simi = self.tfidf.similar(target_content, c)
-            logger.debug(f'simi: {simi}')
+            tracer.debug(f'simi: {simi}')
             if simi >= self.threshold:
                 simi_cand.append((url, simi))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
@@ -382,7 +384,7 @@ class Similar:
         update_sites(self.db.crawl)
         if site == self.site:
             return
-        logger.info(f'_init_titles {site}')
+        tracer.info(f'_init_titles {site}')
         memo = Memoizer()
         self.site = site
         self.lw_titles = defaultdict(set)
@@ -426,7 +428,7 @@ class Similar:
             lw_path[loc_dir] += 1
             self.lw_titles[title].add(norm(lw['url'])) 
         self.lw_common = title_common(random.sample(self.lw_titles.keys(), min(COMMON_TITLE_SIZE, len(self.lw_titles.keys())) ))
-        logger.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])} \n common: {self.lw_common}')
+        tracer.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])} \n common: {self.lw_common}')
         seen = set()
         if len(wb_crawl) < LEAST_SITE_URLS:
             # Get more urls from wayback
@@ -469,7 +471,7 @@ class Similar:
             wb_path[loc_dir] += 1
             self.wb_titles[title].add(norm(wb_url))
         self.wb_common = title_common(random.sample(self.wb_titles.keys(), min(COMMON_TITLE_SIZE, len(self.wb_titles.keys())) ))
-        logger.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n common: {self.wb_common}')
+        tracer.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n common: {self.wb_common}')
 
     def title_similar(self, target_url, target_title, candidates_titles, fixed=True):
         """
@@ -484,10 +486,10 @@ class Similar:
             self._init_titles(site)
         if target_title in self.wb_titles:
             if len(self.wb_titles[target_title]) > 1:
-                logger.debug(f'wayback title of url: {target_url} none UNIQUE')
+                tracer.debug(f'wayback title of url: {target_url} none UNIQUE')
                 return []
             elif norm(target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
-                logger.debug(f'wayback title of url: {target_url} none UNIQUE')
+                tracer.debug(f'wayback title of url: {target_url} none UNIQUE')
                 return []
         else:
             self.wb_titles[target_title].add(target_url)
@@ -500,10 +502,10 @@ class Similar:
                 self._init_titles(site)
             if c in self.lw_titles:
                 if len(self.lw_titles[c]) > 1:
-                    logger.debug(f'title of url: {url} none UNIQUE')
+                    tracer.debug(f'title of url: {url} none UNIQUE')
                     continue
                 elif norm(url) not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
-                    logger.debug(f'title of url: {url} none UNIQUE')
+                    tracer.debug(f'title of url: {url} none UNIQUE')
                     continue
             simi = self.tfidf.similar(unique_title(target_title, self.wb_common), unique_title(c, self.lw_common))
             if simi >= (self.short_threshold + self.threshold) / 2:

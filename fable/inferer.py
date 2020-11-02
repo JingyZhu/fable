@@ -6,11 +6,13 @@ from collections import defaultdict
 import string
 import time
 
-from . import config, tools
+from . import config, tools, tracer
 from .utils import search, crawl, text_utils, url_utils, sic_transit
 
 import logging
-logger = logging.getLogger('logger')
+if not isinstance(logging.getLoggerClass(), tracer.tracer):
+    logging.setLoggerClass(tracer.tracer)
+tracer = logging.getLogger('logger')
 
 def gen_path_pattern(url, dis=1):
     """
@@ -188,7 +190,7 @@ class Inferer:
                 outputs = self.proxy.handle(sheets, site + str(time.time()))
                 break
             except Exception as e:
-                logger.error(f'infer: exception on RPC {str(e)}')
+                tracer.error(f'infer: exception on RPC {str(e)}')
                 count += 1
                 time.sleep(2)
                 continue

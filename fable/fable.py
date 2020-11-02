@@ -9,6 +9,7 @@ import json
 import logging
 
 from . import config
+from . import tracer.tracer as tracing
 from .utils import text_utils, url_utils, crawl, sic_transit
 
 db = config.DB
@@ -80,7 +81,8 @@ def path_edit_distance(url1, url2):
     return dis
 
 class ReorgPageFinder:
-    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, logger=None, logname=None):
+    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, tracer=None, logname=None):
+        """tracer: self-extended logger"""
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
@@ -91,21 +93,15 @@ class ReorgPageFinder:
         self.site = None
         self.pattern_dict = None
         self.seen_reorg_pairs = None
-        self.logname = './ReorgPageFinder.log' if logname is None else logname
-        self.logger = logger if logger is not None else self._init_logger()
+        self.logname = './fable.log' if logname is None else logname
+        self.tracer = tracer if tracer is not None else self._init_tracer()
 
-    def _init_logger(self):
-        logger = logging.getLogger('logger')
-        logger.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
-        file_handler = logging.FileHandler(self.logname)
-        file_handler.setFormatter(formatter)
-        std_handler = logging.StreamHandler()
-        std_handler.setFormatter(formatter)
-
-        logger.addHandler(file_handler)
-        logger.addHandler(std_handler)
-        return logger
+    def _init_tracer(self):
+        if not isinstance(logging.getLoggerClass(), tracing):
+            logging.setLoggerClass(tracing)
+        tracer = logging.getLogger('logger')
+        tracer._set_meta(self.logname, self.db)
+        return tracer
     
     def init_site(self, site, urls):
         self.site = site
@@ -218,7 +214,7 @@ class ReorgPageFinder:
                         title = self.memo.extract_title(wayback_infer_html)
                         self.db.reorg.update_one({'_id': infer_url['_id']}, {'$set': {'title': title}})
                     except Exception as e:
-                        self.logger.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+                        self.tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
                         title = ""
                 else: title = infer_url['title'] 
                 infer_urls[pat].append((infer_url['url'], (title)))
@@ -226,13 +222,13 @@ class ReorgPageFinder:
             return []
         success = []
         for pat, pat_urls in infer_urls.items():
-            self.logger.info(f'Pattern: {pat}')
+            self.tracer.info(f'Pattern: {pat}')
             infered_dict_all = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site)
             common_output = self._most_common_output(self.pattern_dict[pat])
             # print(common_output)
             infered_dict_common = self.inferer.infer(common_output, pat_urls, site=self.site)
             infered_dict = {url: list(set(infered_dict_all[url] + infered_dict_common[url])) for url in infered_dict_all}
-            self.logger.info(f'infered_dict: {json.dumps(infered_dict, indent=2)}')
+            self.tracer.info(f'infered_dict: {json.dumps(infered_dict, indent=2)}')
             
             pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]} # url: pattern
             fp_urls = set([p[1] for p in self.pattern_dict[pat]])
@@ -240,7 +236,7 @@ class ReorgPageFinder:
                 # logger.info(f'Infer url: {infer_url} {cand}')
                 reorg_url, trace = self.inferer.if_reorg(infer_url, cand, compare=False, fp_urls=fp_urls)
                 if reorg_url is not None:
-                    self.logger.info(f'Found by infer: {infer_url} --> {reorg_url}')
+                    self.tracer.info(f'Found by infer: {infer_url} --> {reorg_url}')
                     if not self.fp_check(infer_url, reorg_url):
                         by_dict = {'method': 'infer'}
                         by_dict.update(trace)
@@ -315,12 +311,12 @@ class ReorgPageFinder:
 
         urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
         broken_urls = set([u['url'] for u in urls])
-        self.logger.info(f'Search2 SITE: {self.site} #URLS: {len(broken_urls)}')
+        self.tracer.info(f'Search SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
         while len(broken_urls) > 0:
             url = broken_urls.pop()
             i += 1
-            self.logger.info(f'URL: {i} {url}')
+            self.tracer.info(f'URL: {i} {url}')
             searched = self.searcher.search(url, search_engine='bing')
             if searched is None:
                 searched = self.searcher.search(url, search_engine='google')
@@ -436,45 +432,15 @@ class ReorgPageFinder:
                         break
 
                 discovered, trace = self.discoverer.bf_find(url, policy='latest')
-                if trace.get('backpath'):
-                    try:
-                        self.db.trace.update_one({'_id': url}, {"$set": {
-                            "url": url,
-                            "hostname": self.site,
-                            "backpath_latest": trace['backpath']
-                        }}, upsert=True)
-                    except Exception as e:
-                        self.logger.warn(f'Discover update trace backpath: {str(e)}')
                 if discovered:
                     method = 'backpath_latest'
                     break
 
                 discovered, trace = self.discoverer.discover(url)
-                try:
-                    self.db.trace.update_one({'_id': url}, {"$set": {
-                        "url": url,
-                        "hostname": self.site,
-                        "discover": trace['trace']
-                    }}, upsert=True)
-                except Exception as e:
-                    self.logger.warn(f'Discover update trace discover: {str(e)}')
                 if discovered:
                     break
                 suffice = trace['suffice']
 
-                # discovered, trace = self.discoverer.bf_find(url, policy='earliest')
-                # if trace.get('backpath'):
-                #     try:
-                #         self.db.trace.update_one({'_id': url}, {"$set": {
-                #             "url": url,
-                #             "hostname": self.site,
-                #             "backpath_earliest": trace['backpath']
-                #         }}, upsert=True)
-                #     except Exception as e:
-                #         self.logger.warn(f'Discover update trace backpath: {str(e)}')
-                # if discovered:
-                #     method = 'backpath_earliest'
-                #     break
                 break
 
             update_dict = {}

@@ -134,20 +134,22 @@ New traces document to trace all metadata gathered during running FABLE
         {
             "wayback_url": "url/None if not applicable",
             "title": "str",
-            "title_wo_suffix": "str",
+            "title_wo_suffix": "str (title without suffix)",
             "topN": "str",
             "search_topN": {"google": [], "bing": []},
             "search_title_site": {"google": [], "bing": []},
             "search_title_exact": {"google": [], "bing": []},
             "discover": [{
-                "url",: "url",
+                "backlink",: "url",
+                "backlink_wayback": "wayback",
+                "status": "str",
                 "reason": "str",
-                "(sig)": "If applicable"
+                "(link)": "If applicable"
             }],
             "backpath": [{
                 "url": "url",
                 "sig": "link signature"
-            }]
+            }] // Currently only log the found path
         }
 }
 ```

@@ -26,7 +26,6 @@ class tracer(logging.Logger):
         logging.Logger.__init__(self, name)
         self.name = name
         self.db = db
-        self._init_logger()
         self.update_data = defaultdict(dict)
     
     def _init_logger(self):
@@ -35,7 +34,7 @@ class tracer(logging.Logger):
         """
         self.setLevel(logging.INFO)
         formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
-        file_handler = logging.FileHandler(self.name + '.log')
+        file_handler = logging.FileHandler(self.attr_name + '.log')
         file_handler.setFormatter(formatter)
         std_handler = logging.StreamHandler()
         std_handler.setFormatter(formatter)
@@ -43,6 +42,11 @@ class tracer(logging.Logger):
         self.addHandler(file_handler)
         self.addHandler(std_handler)
         # return logger
+    
+    def _set_meta(self, attr_name, db):
+        self.attr_name = attr_name
+        self.db = db
+        self._init_logger()
     
     def _get_stackinfo(self, level=2):
         """level: relative stack pos to current stack"""
@@ -68,29 +72,41 @@ class tracer(logging.Logger):
     
     def search_results(self, url, engine, typee, results):
         """
-        type: topN/title_site/title_exact
+        typee: topN/title_site/title_exact
         engine: google/bing
         """
         if f"search_{typee}" not in self.update_data[url]:
             self.update_data[url][f"search_{typee}"] = {'google': [], 'bing':[]}
         self.update_data[url][f"search_{typee}"][engine] = results
         filename, func, lineno = self._get_stackinfo()
-        self.info(f'[{filename} {func}:{lineno}] \n search results {typee} {engine}: \n {results}')
+        self.info(f'[{filename} {func}:{lineno}] \n Search results: {typee} {engine}: \n {results}')
     
+    def discover(self, url, backlink, backlink_wayback, status, reason, link=None):
+        """
+        reason: orig_reason (found|notfound|loop)
+        """
+        self.update_data[url].setdefault('discover', [])
+        record = {
+            'backlink': backlink,
+            'backlink_wayback': backlink_wayback,
+            'status': status,
+            "reason": reason
+        }
+        if link: record.update({'link': link})
+        self.update_data[url]['discover'].append(link)
+        filename, func, lineno = self._get_stackinfo()
+        self.info(f"{filename} {func}:{lineno}] \n Backlink: {status} {reason} {link if link else ''}")
+
+    def backpath_findpath(self, url, path):
+        self.update_data[url].setdefault('backpath', [])
+        
+        filename, func, lineno = self._get_stackinfo()
+        self.info(f"{filename} {func}:{lineno}] \n Backpath: {path}")
+
     def flush(self):
         self.info(f'Flushing URL(s)')
         for url, d in self.update_data.items():
             try:
-                self.db.traces.update_one({'url': url}, {'$set': {self.name: d}}, upsert=True)
+                self.db.traces.update_one({'url': url}, {'$set': {self.attr_name: d}}, upsert=True)
             except Exception as e:
                 self.warn(f'flush exception {url}: {str(e)}')
-        
-
-gtracer = None
-
-def set_gtracer(name=default_name, db=db):
-    """set a global tracer under this file for different file to call"""
-    gtracer = tracer(name, db)
-
-def clear_gtracer():
-    gtracer = None
