@@ -148,7 +148,8 @@ New traces document to trace all metadata gathered during running FABLE
             }],
             "backpath": [{
                 "url": "url",
-                "sig": "link signature"
+                "sig": "link signature",
+                "wayback_url": ["waback_url"]
             }] // Currently only log the found path
         }
 }

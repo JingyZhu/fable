@@ -9,7 +9,7 @@ import json
 import logging
 
 from . import config
-from . import tracer.tracer as tracing
+from .tracer import tracer as tracing
 from .utils import text_utils, url_utils, crawl, sic_transit
 
 db = config.DB
@@ -81,7 +81,7 @@ def path_edit_distance(url1, url2):
     return dis
 
 class ReorgPageFinder:
-    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, tracer=None, logname=None):
+    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, tracer=None, logname='fable'):
         """tracer: self-extended logger"""
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
@@ -93,13 +93,13 @@ class ReorgPageFinder:
         self.site = None
         self.pattern_dict = None
         self.seen_reorg_pairs = None
-        self.logname = './fable.log' if logname is None else logname
+        self.logname = logname
         self.tracer = tracer if tracer is not None else self._init_tracer()
 
     def _init_tracer(self):
-        if not isinstance(logging.getLoggerClass(), tracing):
-            logging.setLoggerClass(tracing)
+        logging.setLoggerClass(tracing)
         tracer = logging.getLogger('logger')
+        logging.setLoggerClass(logging.Logger)
         tracer._set_meta(self.logname, self.db)
         return tracer
     
@@ -136,20 +136,20 @@ class ReorgPageFinder:
                 self.db.reorg.update_one({'url': reorg_url['url']}, {'$set': {'title': reorg_title}})
             for k in set(reorg_url.keys()).intersection(reorg_keys):
                 self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url[k])
-        if len(self.logger.handlers) > 2:
-            self.logger.handlers.pop()
+        if len(self.tracer.handlers) > 2:
+            self.tracer.handlers.pop()
         formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
         if not os.path.exists('logs'):
             os.mkdir('logs')
         file_handler = logging.FileHandler(f'./logs/{site}.log')
         file_handler.setFormatter(formatter)
-        self.logger.addHandler(file_handler)
+        self.tracer.addHandler(file_handler)
 
     def clear_site(self):
         self.site = None
         self.pattern_dict = None
         self.seen_reorg_pairs = None
-        self.logger.handlers.pop()
+        self.tracer.handlers.pop()
 
     def _add_url_to_patterns(self, url, title, reorg):
         """
@@ -330,7 +330,7 @@ class ReorgPageFinder:
                     html = self.memo.crawl(wayback_url)
                     title = self.memo.extract_title(html, version='domdistiller')
                 except: # No snapthost on wayback
-                    self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                    self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
                     try: self.db.na_urls.update_one({'_id': url}, {"$set": {
                         'url': url,
                         'hostname': self.site,
@@ -342,10 +342,11 @@ class ReorgPageFinder:
             else:
                 title = has_title['title']
 
+            self.tracer.flush()
 
             if searched is not None:
                 searched, trace = searched
-                self.logger.info(f"HIT_2: {searched}")
+                self.tracer.info(f"HIT: {searched}")
                 fp = self.fp_check(url, searched)
                 if not fp: # False positive test
                     # _search
@@ -367,15 +368,17 @@ class ReorgPageFinder:
                 try:
                     self.db.reorg.update_one({'url': url}, {"$set": update_dict}) 
                 except Exception as e:
-                    self.logger.warn(f'Second search update DB: {str(e)}')
+                    self.tracer.warn(f'Second search update DB: {str(e)}')
             searched_checked.add(url)
-            try:
-                self.db.checked.update_one({'_id': url}, {"$set": {
-                    "url": url,
-                    "hostname": self.site,
-                    "search_2": True
-                }}, upsert=True)
-            except: pass
+            
+            # TODO: temp
+            # try:
+            #     self.db.checked.update_one({'_id': url}, {"$set": {
+            #         "url": url,
+            #         "hostname": self.site,
+            #         "search_2": True
+            #     }}, upsert=True)
+            # except: pass
 
             if not infer:
                 continue
@@ -414,12 +417,12 @@ class ReorgPageFinder:
         
         urls = [u for u in noreorg_urls if u['url'] not in discovered_checked and u['url'] in required_urls]
         broken_urls = set([bu['url'] for bu in urls])
-        self.logger.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
+        self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
         while len(broken_urls) > 0:
             url = broken_urls.pop()
             i += 1
-            self.logger.info(f'URL: {i} {url}')
+            self.tracer.info(f'URL: {i} {url}')
             method, suffice = 'discover', False
             while True: # Dummy while lloop served as goto
                 discovered = self.discoverer.wayback_alias(url)
@@ -443,6 +446,7 @@ class ReorgPageFinder:
 
                 break
 
+            self.tracer.flush()
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
             # if has_title is None: # No longer in reorg (already deleted)
@@ -453,7 +457,7 @@ class ReorgPageFinder:
                     html = self.memo.crawl(wayback_url)
                     title = self.memo.extract_title(html, version='domdistiller')
                 except: # No snapthost on wayback
-                    self.logger.error(f'WB_Error {url}: Fail to get data from wayback')
+                    self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
                     try: self.db.na_urls.update_one({'_id': url}, {"$set": {
                         'url': url,
                         'hostname': self.site,
@@ -467,7 +471,7 @@ class ReorgPageFinder:
 
 
             if discovered is not None:
-                self.logger.info(f'Found reorg: {discovered}')
+                self.tracer.info(f'Found reorg: {discovered}')
                 fp = self.fp_check(url, discovered)
                 if not fp: # False positive test
                     # _discover
@@ -499,19 +503,21 @@ class ReorgPageFinder:
                 try:
                     self.db.reorg.update_one({'url': url}, {'$set': update_dict})
                 except Exception as e:
-                    self.logger.warn(f'Discover update DB: {str(e)}')
+                    self.tracer.warn(f'Discover update DB: {str(e)}')
             discovered_checked.add(url)
-            try:
-                self.db.checked.update_one({'_id': url}, {"$set": {
-                    "url": url,
-                    "hostname": self.site,
-                    "discover": True
-                }}, upsert=True)
-            except Exception as e:
-                self.logger.warn(f'Discover update checked: {str(e)}')
+            # TODO: temp
+            # try:
+            #     self.db.checked.update_one({'_id': url}, {"$set": {
+            #         "url": url,
+            #         "hostname": self.site,
+            #         "discover": True
+            #     }}, upsert=True)
+            # except Exception as e:
+            #     self.tracer.warn(f'Discover update checked: {str(e)}')
             
             if not infer:
                 continue
+
             # TEMP
             if discovered is not None:
                 example = ((url, title), discovered)

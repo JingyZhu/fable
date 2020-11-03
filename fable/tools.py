@@ -17,9 +17,9 @@ from . import config, tracer
 from .utils import text_utils, crawl, url_utils, search
 
 import logging
-if not isinstance(logging.getLoggerClass(), tracer.tracer):
-    logging.setLoggerClass(tracer.tracer)
+logging.setLoggerClass(tracer.tracer)
 tracer = logging.getLogger('logger')
+logging.setLoggerClass(logging.Logger)
 
 db = config.DB
 DEFAULT_CACHE = 3600*24
@@ -283,7 +283,7 @@ class Memoizer:
 
 
 class Similar:
-    def __init__(self, use_db=True, db=db, corpus=[], short_threshold=None, corpus_size=100000):
+    def __init__(self, use_db=True, db=db, corpus=[], short_threshold=None, corpus_size=10000):
         """
         corpus_size: size of corpus to sample on: (0-250k)
         """

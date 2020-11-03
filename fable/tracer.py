@@ -52,23 +52,36 @@ class tracer(logging.Logger):
         """level: relative stack pos to current stack"""
         st = inspect.stack()[level]
         return st.filename, st.function, st.lineno
+    
+    def info(self, s, level=2, **kwargs):
+        filename, func, lineno = self._get_stackinfo(level=level)
+        super().info(f'[{filename} {func}:{lineno}] \n {s}', **kwargs)
+    
+    def warn(self, s, level=2, **kwargs):
+        filename, func, lineno = self._get_stackinfo(level=level)
+        super().warn(f'[{filename} {func}:{lineno}] \n {s}', **kwargs)
+    
+    def debug(self, s, level=2, **kwargs):
+        filename, func, lineno = self._get_stackinfo(level=level)
+        super().debug(f'[{filename} {func}:{lineno}] \n {s}', **kwargs)
+    
+    def error(self, s, level=2, **kwargs):
+        filename, func, lineno = self._get_stackinfo(level=level)
+        super().error(f'[{filename} {func}:{lineno}] \n {s}', **kwargs)
 
     def wayback_url(self, url, wayback):
         self.update_data[url]['wayback_url'] = wayback
-        filename, func, lineno = self._get_stackinfo()
-        self.info(f'[{filename} {func}:{lineno}] \n Wayback: {wayback}')
+        self.info(f'Wayback: {wayback}', level=3)
     
     def title(self, url, title, titlewosuffix=None):
         self.update_data[url]['title'] = title
         if titlewosuffix:
             self.update_data[url]['title'] = titlewosuffix
-        filename, func, lineno = self._get_stackinfo()
-        self.info(f'[{filename} {func}:{lineno}] \n title: {title}')
+        self.info(f'title: {title}', level=3)
     
     def topN(self, url, topN):
         self.update_data[url]['topN'] = topN
-        filename, func, lineno = self._get_stackinfo()
-        self.info(f'[{filename} {func}:{lineno}] \n topN: {topN}')
+        self.info(f'topN: {topN}', level=3)
     
     def search_results(self, url, engine, typee, results):
         """
@@ -78,8 +91,7 @@ class tracer(logging.Logger):
         if f"search_{typee}" not in self.update_data[url]:
             self.update_data[url][f"search_{typee}"] = {'google': [], 'bing':[]}
         self.update_data[url][f"search_{typee}"][engine] = results
-        filename, func, lineno = self._get_stackinfo()
-        self.info(f'[{filename} {func}:{lineno}] \n Search results: {typee} {engine}: \n {results}')
+        self.info(f'Search results: {typee} {engine}: \n {results}', level=3)
     
     def discover(self, url, backlink, backlink_wayback, status, reason, link=None):
         """
@@ -93,20 +105,24 @@ class tracer(logging.Logger):
             "reason": reason
         }
         if link: record.update({'link': link})
-        self.update_data[url]['discover'].append(link)
-        filename, func, lineno = self._get_stackinfo()
-        self.info(f"{filename} {func}:{lineno}] \n Backlink: {status} {reason} {link if link else ''}")
+        self.update_data[url]['discover'].append(record)
+        self.info(f"Backlink: {status} {reason} {link if link else ''}", level=3)
 
     def backpath_findpath(self, url, path):
         self.update_data[url].setdefault('backpath', [])
-        
-        filename, func, lineno = self._get_stackinfo()
-        self.info(f"{filename} {func}:{lineno}] \n Backpath: {path}")
+        path_dict = path.to_dict()
+        del(path_dict['url'])
+        self.update_data[url]['backpath'] = path_dict
+        self.info(f"Backpath: {path}", level=3)
 
     def flush(self):
         self.info(f'Flushing URL(s)')
         for url, d in self.update_data.items():
             try:
-                self.db.traces.update_one({'url': url}, {'$set': {self.attr_name: d}}, upsert=True)
+                db_d = self.db.traces.find_one({'url': url})
+                db_d = db_d.get(self.attr_name, {}) if db_d else {}
+                db_d.update(d)
+                self.db.traces.update_one({'url': url}, {'$set': {self.attr_name: db_d}}, upsert=True)
             except Exception as e:
                 self.warn(f'flush exception {url}: {str(e)}')
+        self.update_data = defaultdict(dict)

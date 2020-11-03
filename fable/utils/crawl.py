@@ -25,10 +25,14 @@ import sys
 
 sys.path.append('../')
 from .. import config
+from .. import tracer
 from .url_utils import filter_wayback
 
 import logging
+# if not isinstance(logging.getLoggerClass(), tracer.tracer):
+logging.setLoggerClass(tracer.tracer)
 logger = logging.getLogger('logger')
+logging.setLoggerClass(logging.Logger)
 
 requests_header = {'user-agent': config.config('user_agent')}
 CRAWL_DELAY = 3

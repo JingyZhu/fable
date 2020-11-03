@@ -13,7 +13,7 @@ from fable.utils import text_utils, url_utils
 from fable import ReorgPageFinder
 
 
-rpf = ReorgPageFinder(logname='./rpf.log')
+rpf = ReorgPageFinder(logname='fable')
 urls = ['http://www.ftc.gov/os/highlights/2013/chairwomans-message.shtml']
 rpf.init_site('ftc.gov', urls)
 rpf.search(required_urls=urls)

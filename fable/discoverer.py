@@ -16,9 +16,9 @@ from . import config, tools, tracer
 from .utils import search, crawl, text_utils, url_utils, sic_transit
 
 import logging
-if not isinstance(logging.getLoggerClass(), tracer.tracer):
-    logging.setLoggerClass(tracer.tracer)
+logging.setLoggerClass(tracer.tracer)
 tracer = logging.getLogger('logger')
+logging.setLoggerClass(logging.Logger)
 
 he = url_utils.HostExtractor()
 
@@ -71,7 +71,7 @@ class Path:
     def __init__(self, url, wayback_url=None, link_sig=('', ('', '')), ss=None):
         self.url = url
         self.path = ss.path + [url] if ss else [url]
-        self.wayback_path = ss.wayback_path + [wayback_url] if ss and wayback_url else [wayback_url]
+        self.wayback_path = ss.wayback_path + [wayback_url] if ss else [wayback_url]
         self.sigs = ss.sigs + [link_sig] if ss else [link_sig]
         self.length = ss.length + 1 if ss else 0
     
@@ -81,6 +81,12 @@ class Path:
         self.sigs = d['sigs']
         self.length = len(self.path)
     
+    def update_wayback(self, wayback_url):
+        """
+        Update the last array of wayback
+        """
+        self.wayback_path[-1] = wayback_url
+
     def calc_priority(self, dst, dst_rep, similar=None):
         """
         similar must be initialized to contain dst_rep and sigs
@@ -168,7 +174,9 @@ class Backpath_Finder:
                 return path
 
             wayback_url = self.memo.wayback_index(path.url, policy=self.memo_policy, ts=ts, param_dict=param_dict)
+            path.update_wayback(wayback_url)
             tracer.info(wayback_url)
+
             if wayback_url is None:
                 continue
             wayback_html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
@@ -241,7 +249,7 @@ class Backpath_Finder:
         while o_pointer < len(path.path) - 1:
             i_pointer = max(i_pointer, o_pointer)
             curr_url = path.path[o_pointer] if not matched else curr_url
-            logger.info(f'curr_url: {curr_url} {matched}')
+            tracer.info(f'curr_url: {curr_url} {matched}')
             curr_us = urlsplit(curr_url)
             is_homepage = curr_us.path in ['/', ''] and not curr_us.query
             broken, reason = sic_transit.broken(curr_url, html=True, ignore_soft_404=is_homepage)
@@ -396,7 +404,7 @@ class Discoverer:
                 continue
             html = self.memo.crawl(outgoing_link, proxies=self.PS.select())
             if html is None: continue
-            logger.info(f'Test if outgoing link same: {outgoing_link}')
+            tracer.info(f'Test if outgoing link same: {outgoing_link}')
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
             outgoing_title = self.memo.extract_title(html, version='domdistiller')
             similars, fromm = self.similar.similar(dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
@@ -573,7 +581,7 @@ class Discoverer:
             return {
                 "status": "notfound",
                 "link": None,
-                "reason: ""backlink no snapshot",
+                "reason": "backlink no snapshot",
                 "wayback_src": None
             }
         
@@ -732,9 +740,10 @@ class Discoverer:
                     continue
                 seen.add(src)
                 r_dict = self.discover_backlinks(src, url, title, content, html, has_snapshot, url_ts)
-                tracer.discover(url, src, r_dict.get("wayback_src"), r_dict['status'], r_dict.get("links"))
+                status, reason = r_dict['status'], r_dict['reason']
+                tracer.discover(url, src, r_dict.get("wayback_src"), status, reason, r_dict.get("links"))
                 if status == 'found':
-                    return r_dict['url(s)'], {'suffice': True}
+                    return r_dict['url(s)'], {'suffice': True, 'type': reason[0], 'value': reason[1]}
                 elif status == 'loop':
                     out_sigs = r_dict['url(s)']
                     if link_depth >= OUTGOING:

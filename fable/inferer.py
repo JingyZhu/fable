@@ -10,9 +10,9 @@ from . import config, tools, tracer
 from .utils import search, crawl, text_utils, url_utils, sic_transit
 
 import logging
-if not isinstance(logging.getLoggerClass(), tracer.tracer):
-    logging.setLoggerClass(tracer.tracer)
+logging.setLoggerClass(tracer.tracer)
 tracer = logging.getLogger('logger')
+logging.setLoggerClass(logging.Logger)
 
 def gen_path_pattern(url, dis=1):
     """

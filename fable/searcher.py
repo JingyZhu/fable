@@ -11,9 +11,9 @@ from . import config, tools, tracer
 from .utils import search, crawl, text_utils, url_utils
 
 import logging
-if not isinstance(logging.getLoggerClass(), tracer.tracer):
-    logging.setLoggerClass(tracer.tracer)
+logging.setLoggerClass(tracer.tracer)
 tracer = logging.getLogger('logger')
+logging.setLoggerClass(logging.Logger)
 
 he = url_utils.HostExtractor()
 
