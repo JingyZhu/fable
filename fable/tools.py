@@ -89,6 +89,7 @@ class Memoizer:
         else:
             html = self.db.crawl.find_one({'_id': url, 'final_url': {"$exists": True}})
         if html and (html['ttl'] > time.time() or is_wayback):
+            tracer.debug(f'memo.crawl: db has the valid crawl')
             if not final_url:
                 return brotli.decompress(html['html']).decode()
             else:
@@ -187,6 +188,7 @@ class Memoizer:
         cps = self.db.wayback_index.find_one({'_id': url})
         if not cps or default_key[default_param] not in cps:
             cps, status = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
+            tracer.debug('Wayback Index (tools): Get wayback query response')
             if len(cps) == 0: # No snapshots
                 tracer.info(f"Wayback Index: No snapshots {status}")
                 return
@@ -198,6 +200,7 @@ class Memoizer:
                 }}, upsert=True)
             except: pass
         else:
+            tracer.debug('Wayback Index (tools): db has wayback_index')
             key = default_key[default_param]
             cps = [(c, url_utils.constr_wayback(url, c)) for c in cps[key]]
 

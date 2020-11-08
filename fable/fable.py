@@ -81,8 +81,10 @@ def path_edit_distance(url1, url2):
     return dis
 
 class ReorgPageFinder:
-    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, tracer=None, logname='fable'):
-        """tracer: self-extended logger"""
+    def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, tracer=None, logname='fable', loglevel=logging.INFO):
+        """
+        tracer: self-extended logger
+        """
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
@@ -94,13 +96,13 @@ class ReorgPageFinder:
         self.pattern_dict = None
         self.seen_reorg_pairs = None
         self.logname = logname
-        self.tracer = tracer if tracer is not None else self._init_tracer()
+        self.tracer = tracer if tracer is not None else self._init_tracer(loglevel=loglevel)
 
-    def _init_tracer(self):
+    def _init_tracer(self, loglevel):
         logging.setLoggerClass(tracing)
         tracer = logging.getLogger('logger')
         logging.setLoggerClass(logging.Logger)
-        tracer._set_meta(self.logname, self.db)
+        tracer._set_meta(self.logname, self.db, loglevel)
         return tracer
     
     def init_site(self, site, urls):
@@ -425,6 +427,7 @@ class ReorgPageFinder:
             self.tracer.info(f'URL: {i} {url}')
             method, suffice = 'discover', False
             while True: # Dummy while lloop served as goto
+                self.tracer.info("Start wayback alias")
                 discovered = self.discoverer.wayback_alias(url)
                 if discovered:
                     fp = self.fp_check(url, discovered)
@@ -433,12 +436,14 @@ class ReorgPageFinder:
                     else:
                         trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
                         break
-
+                
+                self.tracer.info("Start backpath (latest)")
                 discovered, trace = self.discoverer.bf_find(url, policy='latest')
                 if discovered:
                     method = 'backpath_latest'
                     break
-
+                
+                self.tracer.info("Start discover")
                 discovered, trace = self.discoverer.discover(url)
                 if discovered:
                     break

@@ -276,7 +276,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
         try:
             r = requests.get(url, timeout=timeout, proxies=proxies, headers=requests_header)
             if wait and (r.status_code == 429 or r.status_code == 504) and count < 3:  # Requests limit
-                logger.info(f'requests_crawl: get status code {r.status_code}')
+                logger.debug(f'requests_crawl: get status code {r.status_code}')
                 count += 1
                 time.sleep(10)
                 continue
@@ -285,12 +285,13 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
             logger.warn(f"There is an exception with requests_crawl: {str(e)}")
             return
     if r.status_code >= 400:
-        if r.status_code == 403: logger.info(f'requests_crawl: Get status code 403')
+        if r.status_code in [401, 403, 404]: logger.debug(f'requests_crawl: Get status code {r.status_code}')
         return
+    logger.debug(f'requests_crawl: got response')
     headers = {k.lower(): v.lower() for k, v in r.headers.items()}
     content_type = headers['content-type'] if 'content-type' in headers else ''
     if html and 'html' not in content_type:
-        logger.info('requests_crawl: No html in content-type')
+        logger.debug('requests_crawl: No html in content-type')
         return
     r.encoding = r.apparent_encoding
     if raw:

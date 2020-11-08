@@ -4,7 +4,7 @@ Global tracer for recording the metadata gathered during finding aliases
 import pymongo
 from pymongo import MongoClient
 import brotli
-import re, os
+import re, os, sys
 from collections import defaultdict
 from urllib.parse import urlsplit, urlparse
 import logging
@@ -28,26 +28,30 @@ class tracer(logging.Logger):
         self.db = db
         self.update_data = defaultdict(dict)
     
-    def _init_logger(self):
+    def _init_logger(self, loglevel):
         """
         Init logger data structure
         """
-        self.setLevel(logging.INFO)
+        self.setLevel(loglevel)
         formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
         file_handler = logging.FileHandler(self.attr_name + '.log')
         file_handler.setFormatter(formatter)
-        std_handler = logging.StreamHandler()
+        std_handler = logging.StreamHandler(sys.stdout)
         std_handler.setFormatter(formatter)
 
         self.addHandler(file_handler)
         self.addHandler(std_handler)
         # return logger
     
-    def _set_meta(self, attr_name, db):
+    def _set_meta(self, attr_name, db=db, loglevel=logging.INFO):
         self.attr_name = attr_name
         self.db = db
-        self._init_logger()
+        self._init_logger(loglevel=loglevel)
     
+    def _unset_meta(self):
+        self.attr_name = ''
+        self.handlers = []
+
     def _get_stackinfo(self, level=2):
         """level: relative stack pos to current stack"""
         st = inspect.stack()[level]
