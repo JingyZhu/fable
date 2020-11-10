@@ -67,8 +67,10 @@ Set of URLs for trying to find copies on
     "url": "url (hash unique indexed)",
     "hostname": "hostname (Ascending indexed)",
     "title": "title",
-    "by": "string (Found by which technique)",
-    "reorg_url": "str (Reorganized URL)"
+    "class (logname)": {
+        "by": "string (Found by which technique)",
+        "reorg_url": "str (Reorganized URL)"
+    }
 }
 ```
 

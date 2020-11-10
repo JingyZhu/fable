@@ -1,7 +1,7 @@
 """
 Get confidence of a url with alias
 """
-from ReorgPageFinder import discoverer, searcher, inferer, tools
+from . import discoverer, searcher, inferer, tools
 import os
 from urllib.parse import urlsplit, urlparse, urlunsplit
 from . import tools
