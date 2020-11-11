@@ -1,6 +1,9 @@
 FROM continuumio/anaconda3
 
-WORKDIR /home
+RUN mkdir /home/fable
+COPY . /home/fable
+WORKDIR /home/fable
+
 # Prepare
 RUN mkdir /usr/share/man/man1
 RUN conda config --set changeps1 false 
@@ -24,3 +27,6 @@ RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd6
 RUN apt install -y ./google-chrome-stable_current_amd64.deb && rm google-chrome-stable_current_amd64.deb
 
 ENTRYPOINT /bin/sh -c /bin/bash
+
+# # To run: sudo docker run --rm -it --mount type=bind,src=/mnt/fable-files,target=/mnt/fable-files --name fable fable 
+# ENTRYPOINT ["python3", "rw.py"]
