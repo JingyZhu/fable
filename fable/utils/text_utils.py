@@ -172,6 +172,9 @@ class TFidfStatic:
         self.workingset_tfidf = None
     
     def similar(self, text1, text2):
+        pre_simi = k_shingling(text1, text2)
+        if pre_simi <= 0.05 or pre_simi >= 0.95:
+            return pre_simi
         if self.workingset_vec is None:
             inputs_tfidf = TfidfVectorizer()
             try:

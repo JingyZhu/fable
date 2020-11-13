@@ -503,13 +503,14 @@ class Discoverer:
             # *If homepage to homepage redir, no soft-404 will be checked
             broken, _ = sic_transit.broken(new_url, html=True, ignore_soft_404=homepage_redir)
             if broken: return False
+            if homepage_redir: return True
             if isinstance(ts, str): ts = dparser.parse(ts)
             ts_year = ts.year
             # *If url ended with / (say /dir/), consider both /* and /dir/*
             url_prefix = urlsplit(url)
             url_dir = [os.path.dirname(url_prefix.path)]
             if url_prefix.path[-1] == '/': url_dir.append(os.path.dirname(url_dir[0]))
-            url_prefix = url_prefix._replace(path=url_dir[-1] + '*', query='')
+            url_prefix = url_prefix._replace(path=url_dir[-1] + '/*', query='')
             url_prefix = urlunsplit(url_prefix)
             param_dict = {
                 'from': str(ts_year) + '0101',
@@ -519,11 +520,11 @@ class Discoverer:
             }
             neighbor, _ = crawl.wayback_index(url_prefix, param_dict=param_dict, total_link=True)
             # *Get closest crawled urls in the same dir, which is not target itself  
-            lambda_func = lambda u: not url_utils.url_match(url, url_utils.filter_wayback(u))
+            lambda_func = lambda u: not url_utils.url_match(url, url_utils.filter_wayback(u) ) and not url_utils.filter_wayback(u)[-1] == '/'
             lambda_func2 = lambda u: os.path.dirname(urlsplit(url_utils.filter_wayback(u)).path) in url_dir
             neighbor = sorted([n for n in neighbor if lambda_func(n[1]) and lambda_func2(n[1])], key=lambda x: abs((dparser.parse(x[0]) - ts).total_seconds()))
-            tracer.debug(f'Choose closest neighbor: {neighbor[0][1]}')
             try:
+                tracer.debug(f'Choose closest neighbor: {neighbor[0][1]}')
                 response = crawl.requests_crawl(neighbor[0][1], raw=True)
                 neighbor_url = response.url
                 match = url_utils.url_match(new_url, neighbor_url)
@@ -535,7 +536,7 @@ class Discoverer:
 
         while url_match_count < 3 and it >= 0:
             ts, wayback_url = wayback_ts_urls[it]
-            tracer.debug(f'ts: {ts} it: {it}')
+            tracer.debug(f'wayback_alias iteration: ts: {ts} it: {it}')
             it -= 1
             if ts + datetime.timedelta(days=90) > last_ts: # 2 snapshots too close
                 continue
@@ -561,8 +562,8 @@ class Discoverer:
 
                 # *If non-home URL is redirected to homepage, it should not be a valid redirection
                 new_is_homepage = True in [inter_us.path in ['/', ''] and not inter_us.query for inter_us in inter_uss]
-                if new_is_homepage and (not is_homepage): 
-                    continue
+                # ? if new_is_homepage and (not is_homepage): 
+                # ?    continue
                 # //pass_check, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
                 # //ass_check = not pass_check
                 pass_check = verify_alias(url, new_url, ts, homepage_redir=is_homepage and new_is_homepage)
