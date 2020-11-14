@@ -108,7 +108,7 @@ class Memoizer:
                 return None, None
 
         # Retry if get bad crawl
-        while retry < max_retry and resp is None :
+        while retry < max_retry and resp is None:
             retry += 1
             time.sleep(5)
             resp = crawl.requests_crawl(url, raw=True, **kwargs)
@@ -166,7 +166,6 @@ class Memoizer:
           - earliest: earliest snapshot
           - latest: latest snapshot
           - all: all snapshots (return lists instead of str)
-        TODO: Non-db version
         """
         assert(policy in {'latest-rep', 'closest-later', 'closest-earlier', 'earliest', 'latest', 'closest', 'all'})
         wayback_q = {"url": url, "policy": policy}

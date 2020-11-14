@@ -445,8 +445,9 @@ class Discoverer:
         Old version of wayback_alias, used for internal alias found
         Utilize wayback's archived redirections to find the alias/reorg of the page
 
-        Returns: reorg_url is latest archive is an redirection to working page, else None
+        Returns: reorg_url is latest archive of an redirection to working page, else None
         """
+        tracer.debug(f'_wayback_alias: {url}')
         param_dict = {
             "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
         }
@@ -626,7 +627,7 @@ class Discoverer:
                 })
                 return r_dict
 
-        # *No archive in wayback for guessed_url
+        # *No archive in wayback for src url (usually is guessed_url)
         if wayback_src is None:
             return {
                 "status": "notfound",
@@ -650,7 +651,7 @@ class Discoverer:
                 src_broken = False
                 src = new_src 
         if wayback_linked[0] and not src_broken: # src linking to dst and is working today
-            src_html, src = self.memo.crawl(src, final_url=True, max_retry=3)
+            src_html, src = self.memo.crawl(src, final_url=True, max_retry=2)
             rval = self.find_same_link(wayback_linked[1], src, src_html)
             if rval:
                 matched_sig, simi, by = rval
