@@ -142,7 +142,7 @@ class ReorgPageFinder:
             self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url[self.logname]['reorg_url'])
         if len(self.tracer.handlers) > 2:
             self.tracer.handlers.pop()
-        formatter = logging.Formatter('%(levelname)s %(asctime)s [%(filename)s %(funcName)s:%(lineno)s]: \n %(message)s')
+        formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
         if not os.path.exists('logs'):
             os.mkdir('logs')
         file_handler = logging.FileHandler(f'./logs/{site}.log')
@@ -377,7 +377,7 @@ class ReorgPageFinder:
                     self.tracer.warn(f'Second search update DB: {str(e)}')
             searched_checked.add(url)
             
-            # TODO: temp
+            # ! TODO: temp
             # try:
             #     self.db.checked.update_one({'_id': url}, {"$set": {
             #         "url": url,
@@ -514,7 +514,7 @@ class ReorgPageFinder:
                 except Exception as e:
                     self.tracer.warn(f'Discover update DB: {str(e)}')
             discovered_checked.add(url)
-            # TODO: temp
+            # ! TODO: temp
             # try:
             #     self.db.checked.update_one({'_id': url}, {"$set": {
             #         "url": url,

@@ -144,6 +144,7 @@ class Memoizer:
             obj = {
                 "_id": url,
                 "url": url,
+                "site": he.extract(url),
                 "html": brotli.compress(html.encode()),
                 "ttl": ttl
             }
@@ -383,13 +384,13 @@ class Similar:
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def _init_titles(self, site, version='domdistiller'):
-        update_sites(self.db.crawl)
+        # ! update_sites(self.db.crawl)
         if site == self.site:
             return
         tracer.info(f'_init_titles {site}')
         memo = Memoizer()
         self.site = site
-        self.lw_titles = defaultdict(set)
+        self.lw_titles = defaultdict(set) # *{title: set(path)}
         self.wb_titles = defaultdict(set)
         lw_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('^((?!web\.archive\.org).)*$')}))
         wb_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('web.archive.org')}))
@@ -488,10 +489,10 @@ class Similar:
             self._init_titles(site)
         if target_title in self.wb_titles:
             if len(self.wb_titles[target_title]) > 1:
-                tracer.debug(f'wayback title of url: {target_url} none UNIQUE')
+                tracer.debug(f'wayback title of url: {target_url} none UNIQUE: {self.wb_titles[target_title]}')
                 return []
             elif norm(target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
-                tracer.debug(f'wayback title of url: {target_url} none UNIQUE')
+                tracer.debug(f'wayback title of url: {target_url} none UNIQUE: {self.wb_titles[target_title]}')
                 return []
         else:
             self.wb_titles[target_title].add(target_url)
@@ -504,10 +505,10 @@ class Similar:
                 self._init_titles(site)
             if c in self.lw_titles:
                 if len(self.lw_titles[c]) > 1:
-                    tracer.debug(f'title of url: {url} none UNIQUE')
+                    tracer.debug(f'title of url: {url} none UNIQUE: {self.lw_titles[c]}')
                     continue
                 elif norm(url) not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
-                    tracer.debug(f'title of url: {url} none UNIQUE')
+                    tracer.debug(f'title of url: {url} none UNIQUE: {self.lw_titles[c]}')
                     continue
             simi = self.tfidf.similar(unique_title(target_title, self.wb_common), unique_title(c, self.lw_common))
             if simi >= (self.short_threshold + self.threshold) / 2:

@@ -42,32 +42,6 @@ def estimated_score(spatial, simi):
     return k*p + (1-k*p)*spatial
 
 
-def tree_diff(dest, src):
-    seq1, seq2 = [], []
-    us1, us2 = urlsplit(dest), urlsplit(src)
-    h1s, h2s = us1.netloc.split(':')[0], us2.netloc.split(':')[0]
-    seq1.append(h1s)
-    seq2.append(h2s)
-    p1s, p2s = us1.path, us2.path
-    if p1s == '': p1s == '/'
-    if p2s == '': p2s == '/'
-    p1s, p2s = p1s.split('/'), p2s.split('/')
-    seq1 += p1s[1:]
-    seq2 += p2s[1:]
-    diff = 0
-    for i, (s1, s2) in enumerate(zip(seq1, seq2)):
-        if s1 != s2: 
-            diff += 1
-            break
-    diff += len(seq1) + len(seq2) - 2*(i+1)
-    q1s, q2s = parse_qsl(us1.query), parse_qsl(us2.query)
-    if diff == 0:
-        diff += len(set(q1s).union(q2s)) - len(set(q1s).intersection(q2s))
-    else:
-        diff += min(len(q1s), len(set(q1s).union(q2s)) - len(set(q1s).intersection(q2s)))
-    return diff
-
-
 class Path:
     def __init__(self, url, wayback_url=None, link_sig=('', ('', '')), ss=None):
         self.url = url
@@ -92,7 +66,7 @@ class Path:
         """
         similar must be initialized to contain dst_rep and sigs
         """
-        c1 = tree_diff(dst, self.url)
+        c1 = url_utils.tree_diff(dst, self.url)
         c2 = len(self.path)
         if similar:
             anchor, sig = self.sigs[-1]
@@ -769,7 +743,7 @@ class Discoverer:
                 # *For each link, find highest link score
                 if outlink not in seen and self.loop_cand(url, outlink):
                     simis = (self.similar.max_similar(anchor, repr_text, init=False)[0], self.similar.max_similar(' '.join(sig), repr_text, init=False)[0])
-                    spatial = tree_diff(url, outlink)
+                    spatial = url_utils.tree_diff(url, outlink)
                     scoreboard[outlink] = max(scoreboard[outlink], estimated_score(spatial, simis))
             for outlink, score in scoreboard.items():
                 outgoing_queue.append((outlink, depth-OUTGOING, score))
@@ -806,7 +780,7 @@ class Discoverer:
                             # For each link, find highest link score
                             if outlink not in seen and self.loop_cand(url, outlink):
                                 simis = (self.similar.max_similar(anchor, repr_text, init=False)[0], self.similar.max_similar(' '.join(sig), repr_text, init=False)[0])
-                                spatial = tree_diff(url, outlink)
+                                spatial = url_utils.tree_diff(url, outlink)
                                 scoreboard[outlink] = max(scoreboard[outlink], estimated_score(spatial, simis))
                         for outlink, score in scoreboard.items():
                             outgoing_queue.append((outlink, link_depth-OUTGOING, score))

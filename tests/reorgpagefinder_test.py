@@ -13,8 +13,8 @@ from fable.utils import text_utils, url_utils
 from fable import ReorgPageFinder
 
 
-rpf = ReorgPageFinder(logname='fable')
-urls = ['http://www.ftc.gov/os/highlights/2013/chairwomans-message.shtml']
-rpf.init_site('ftc.gov', urls)
+urls = ['http://parkweb.vic.gov.au/safety/fire,-flood-and-other-closures']
+rpf = ReorgPageFinder(logname='coverage-imp')
+rpf.init_site('parkweb.vic.gov.au', urls)
 rpf.search(required_urls=urls)
-rpf.discover(required_urls=urls)
+# rpf.discover(required_urls=urls)
