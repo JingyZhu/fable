@@ -6,6 +6,7 @@ import pymongo
 from pymongo import MongoClient
 import brotli
 import re, os
+import regex
 import time
 from collections import defaultdict
 import random
@@ -25,6 +26,8 @@ db = config.DB
 DEFAULT_CACHE = 3600*24
 LEAST_SITE_URLS = 20 # Least # of urls a site must try to crawl to enable title comparison
 COMMON_TITLE_SIZE = 5 # Common prefix/suffix extraction's sample number of title
+
+VERTICAL_BAR_SET = '\u007C\u00A6\u2016\uFF5C\u2225\u01C0\u01C1\u2223\u2502\u0964\u0965'
 
 he = url_utils.HostExtractor()
 

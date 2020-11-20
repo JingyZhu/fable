@@ -20,66 +20,6 @@ def unpack_ex(ex):
     (url, title), reorg = ex
     return url, title, reorg
 
-
-def gen_path_pattern(url, dis=1):
-    """
-    Generate path patterns where all paths with same edit distance should follow
-    # TODO: Currently only support edit distance of 1,  Could have larger dis
-    """
-    us = urlsplit(url)
-    us = us._replace(netloc=us.netloc.split(':')[0])
-    if us.path == '':
-        us = us._replace(path='/')
-    if us.path[-1] == '/' and us.path != '/':
-        us = us._replace(path=us.path[:-1])
-    path_lists = list(filter(lambda x: x!= '', us.path.split('/')))
-    if us.query: 
-        path_lists.append(us.query)
-    patterns = []
-    patterns.append(tuple(['*'] + path_lists))
-    for i in range(len(path_lists)):
-        path_copy = path_lists.copy()
-        path_copy[i] = '*'
-        patterns.append(tuple([us.netloc] + path_copy))
-    return patterns
-
-
-def pattern_match(pattern, url, dis=1):
-    us = urlsplit(url)
-    us = us._replace(netloc=us.netloc.split(':')[0])
-    if us.path == '':
-        us = us._replace(path='/')
-    if us.path[-1] == '/' and us.path != '/':
-        us = us._replace(path=us.path[:-1])
-    path_lists = list(filter(lambda x: x!= '', us.path.split('/')))
-    path_lists = [us.netloc] + path_lists
-    if us.query: 
-        path_lists.append(us.query)
-    if len(pattern) != len(path_lists):
-        return False
-    for pat, path in zip(pattern, path_lists):
-        if pat == '*': continue
-        elif pat != path: return False
-    return True
-
-
-def path_edit_distance(url1, url2):
-    us1, us2 = urlsplit(url1), urlsplit(url2)
-    dis = 0
-    h1s, h2s = us1.netloc.split(':')[0].split('.'), us2.netloc.split(':')[0].split('.')
-    if h1s[0] == 'www': h1s = h1s[1:]
-    if h2s[0] == 'www': h2s = h2s[1:]
-    if h1s != h2s:
-        dis += 1
-    path1 = list(filter(lambda x: x!= '', us1.path.split('/')))
-    path2 = list(filter(lambda x: x!= '', us2.path.split('/')))
-    for part1, part2 in zip(path1, path2):
-        if part1 != part2: dis += 1
-    dis += abs(len(path1) - len(path2))
-    query1, query2 = sorted(parse_qsl(us1.query)), sorted(parse_qsl(us2.query))
-    dis += (query1 != query2)
-    return dis
-
 class ReorgPageFinder:
     def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, tracer=None, logname='fable', loglevel=logging.INFO):
         """
@@ -162,7 +102,7 @@ class ReorgPageFinder:
         """
         # if he.extract(reorg) != he.extract(url):
         #     return False
-        patterns = gen_path_pattern(url)
+        patterns = url_utils.gen_path_pattern(url)
         if (url, reorg) in self.seen_reorg_pairs:
             return True
         else:
@@ -181,7 +121,7 @@ class ReorgPageFinder:
         output_patterns = defaultdict(list)
         for ex in examples:
             reorg_url = ex[1]
-            reorg_pats = gen_path_pattern(reorg_url)
+            reorg_pats = url_utils.gen_path_pattern(reorg_url)
             for reorg_pat in reorg_pats:
                 output_patterns[reorg_pat].append(ex)
             output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
@@ -198,7 +138,7 @@ class ReorgPageFinder:
             return []
         patterns = set() # All patterns in example
         for (url, title), reorg_url in examples:
-            pats = gen_path_pattern(url)
+            pats = url_utils.gen_path_pattern(url)
             patterns.update(pats)
         patterns = list(patterns)
         broken_urls = self.db.reorg.find({'hostname': self.site})
@@ -209,7 +149,7 @@ class ReorgPageFinder:
         infer_urls = defaultdict(list) # Pattern: [(urls, (meta))]
         for infer_url in list(broken_urls):
             for pat in patterns:
-                if not pattern_match(pat, infer_url['url']):
+                if not url_utils.pattern_match(pat, infer_url['url']):
                     continue
                 if 'title' not in infer_url:
                     try:

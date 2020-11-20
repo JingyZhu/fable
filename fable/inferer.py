@@ -14,47 +14,6 @@ logging.setLoggerClass(tracer.tracer)
 tracer = logging.getLogger('logger')
 logging.setLoggerClass(logging.Logger)
 
-def gen_path_pattern(url, dis=1):
-    """
-    Generate path patterns where all paths with same edit distance should follow
-    # TODO: Currently only support edit distance of 1,  Could have larger dis
-    """
-    us = urlsplit(url)
-    us = us._replace(netloc=us.netloc.split(':')[0])
-    if us.path == '':
-        us = us._replace(path='/')
-    if us.path[-1] == '/' and us.path != '/':
-        us = us._replace(path=us.path[:-1])
-    path_lists = list(filter(lambda x: x!= '', us.path.split('/')))
-    if us.query: 
-        path_lists.append(us.query)
-    patterns = []
-    patterns.append(tuple(['*'] + path_lists))
-    for i in range(len(path_lists)):
-        path_copy = path_lists.copy()
-        path_copy[i] = '*'
-        patterns.append(tuple([us.netloc] + path_copy))
-    return patterns
-
-
-def pattern_match(pattern, url, dis=1):
-    us = urlsplit(url)
-    us = us._replace(netloc=us.netloc.split(':')[0])
-    if us.path == '':
-        us = us._replace(path='/')
-    if us.path[-1] == '/' and us.path != '/':
-        us = us._replace(path=us.path[:-1])
-    path_lists = list(filter(lambda x: x!= '', us.path.split('/')))
-    path_lists = [us.netloc] + path_lists
-    if us.query: 
-        path_lists.append(us.query)
-    if len(pattern) != len(path_lists):
-        return False
-    for pat, path in zip(pattern, path_lists):
-        if pat == '*': continue
-        elif pat != path: return False
-    return True
-
 class Inferer:
     def __init__(self, proxies={}, memo=None, similar=None):
         self.PS = crawl.ProxySelector(proxies)
