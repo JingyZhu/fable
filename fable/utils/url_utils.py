@@ -303,8 +303,8 @@ def common_prefix_diff(dest, src):
     p1s, p2s = us1.path, us2.path
     if p1s == '': p1s == '/'
     if p2s == '': p2s == '/'
-    if len(p1s) and p1s[-1] == '/': p1s = p1s[:-1]
-    if len(p2s) and p2s[-1] == '/': p2s = p2s[:-1]
+    if len(p1s) > 1 and p1s[-1] == '/': p1s = p1s[:-1]
+    if len(p2s) > 1 and p2s[-1] == '/': p2s = p2s[:-1]
     p1s, p2s = p1s.split('/')[1:], p2s.split('/')[1:]
     if us1.netloc.split(':')[0] != us2.netloc.split(':')[0]:
         return len(p1s) - 1
@@ -314,5 +314,12 @@ def common_prefix_diff(dest, src):
             i -= 1
             break
     i += 1
-    return len(p1s) - i
-    
+    return len(p1s) - i if i < len(p1s) else i - len(p2s)
+
+
+def netloc_dir(url):
+    us = urlsplit(url)
+    p = us.path
+    if len(p) > 1 and p[-1] == '/': p = p[:-1]
+    if p == '':  p == '/'
+    return (us.netloc.split(':')[0], os.path.dirname(p))

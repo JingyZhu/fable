@@ -16,3 +16,4 @@ boilerpipe3
 url_normalize
 cchardet
 pandas
+regex

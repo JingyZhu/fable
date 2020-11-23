@@ -45,15 +45,15 @@ def title_common(titles):
     """Extract common parts of titles. Returns: set of common token"""
     if len(titles) == 0:
         return []
-    common = set(re.split('_| \| |\|| - |-', titles[0]))
+    common = set(regex.split('_| \| |\|| - |-', titles[0]))
     for t in titles[1:]:
-        common = common.intersection(re.split('_| \| |\|| - |-', t))
+        common = common.intersection(regex.split('_| \| |\|| - |-', t))
     return common
 
 
 def unique_title(title, common):
     """Eliminate common suffix/prefix of certain site"""
-    title_tokens = re.split('_| \| |\|| - |-', title)
+    title_tokens = regex.split('_| \| |\|| - |-', title)
     unique = []
     for token in title_tokens:
         if token not in common:
