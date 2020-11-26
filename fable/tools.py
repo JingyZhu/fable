@@ -41,14 +41,31 @@ def update_sites(collection):
         except: pass
 
 
-def title_common(titles):
-    """Extract common parts of titles. Returns: set of common token"""
-    if len(titles) == 0:
-        return []
-    common = set(regex.split('_| \| |\|| - |-', titles[0]))
-    for t in titles[1:]:
-        common = common.intersection(regex.split('_| \| |\|| - |-', t))
-    return common
+def title_prepapre(crawls, wayback=False):
+    """
+    Prepapre required data structures for unique_title
+    wayback: whether the common prefix/suffix extraction is for wayback urls. If set to False, mean liveweb pages.
+    """
+    urls = [c['url'] for c in crawls]
+    urls_title = [{'url': c['url'], 'title': c['title']} for c in crawls]
+    if not wayback:
+        return sorted(urls), sorted(urls_title, key=lambda x: x['url'])
+    else:
+        netloc_dir = defaultdict(list)
+        for ut in urls_title:
+            ut.update({
+                'url': url_utils.filter_wayback(ut['url']),
+                'ts': url_utils.get_ts(ut['url'])
+            })
+            nd = url_utils.netloc_dir(ut['url'])
+            netloc_dir[nd].append(ut)
+        idx = 0
+        url_index, url_meta = [], []
+        for k in sorted(netloc_dir):
+            url_index.append((k, idx))
+            url_meta += sorted(netloc_dir[k], key=lambda x: x['url'])
+            idx += len(netloc_dir[k])
+        return url_index, url_meta
 
 
 def unique_title(title, common):
@@ -402,8 +419,10 @@ class Similar:
         lw_crawl = [lw for lw in lw_crawl if 'title' in lw] + [lw for lw in lw_crawl if 'title' not in lw]
         wb_crawl = [wb for wb in wb_crawl if 'title' in wb] + [wb for wb in wb_crawl if 'title' not in wb]
         lw_path, wb_path = defaultdict(int), defaultdict(int)
+        
+        start = time.time()
+        # * Get more urls from search engine
         if len(lw_crawl) < LEAST_SITE_URLS:
-            # Get more urls from search engine
             new_urls = search.bing_search(f"site:{site}", param_dict={'count': 50})
             iterr = 0
             in_lw = set([lw['url'] for lw in lw_crawl])
@@ -418,9 +437,9 @@ class Similar:
                 in_lw.add(new_url)
                 lw_crawl.append({'site': site, '_id': new_url, 'url': new_url, 'html': brotli.compress(html.encode())})
 
+        # * Guarantee every path has at lease one title
         for lw in lw_crawl:
             loc_dir = (urlsplit(lw['url']).netloc.split(':')[0], os.path.dirname(urlsplit(lw['url']).path))
-            # Guarantee every path has at lease one title
             if 'title' not in lw and lw_path[loc_dir] < 2:
                 html = brotli.decompress(lw['html']).decode()
                 title = text_utils.extract_title(html, version=version)
@@ -432,12 +451,17 @@ class Similar:
                 title = lw['title']
             else: continue
             lw_path[loc_dir] += 1
-            self.lw_titles[title].add(norm(lw['url'])) 
-        self.lw_common = title_common(random.sample(self.lw_titles.keys(), min(COMMON_TITLE_SIZE, len(self.lw_titles.keys())) ))
-        tracer.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])} \n common: {self.lw_common}')
+            self.lw_titles[title].add(norm(lw['url']))
+        # * Prepare data structures for title prefix/suffix filteration
+        lw_crawl_title = [lw for lw in lw_crawl if 'title' in lw]
+        self.lw_index, self.lw_meta = title_prepapre(lw_crawl_title, wayback=False)
+        end = time.time()
+        tracer.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])}, init_time: {end-start:.2f}')
+
+        start = time.time()
         seen = set()
+        # * Get more urls from wayback
         if len(wb_crawl) < LEAST_SITE_URLS:
-            # Get more urls from wayback
             param_dict = {
                 "filter": ['statuscode:200', 'mimetype:text/html'],
                 "collapse": "urlkey",
@@ -476,8 +500,11 @@ class Similar:
             else: continue
             wb_path[loc_dir] += 1
             self.wb_titles[title].add(norm(wb_url))
-        self.wb_common = title_common(random.sample(self.wb_titles.keys(), min(COMMON_TITLE_SIZE, len(self.wb_titles.keys())) ))
-        tracer.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n common: {self.wb_common}')
+        # * Prepare data structures for title prefix/suffix filteration
+        wb_crawl_title = [wb for wb in wb_crawl if 'title' in wb]
+        self.wb_index, self.wb_meta = title_prepapre(wb_crawl_title, wayback=True)
+        end = time.time()
+        tracer.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n init_time: {end - start:.2f}')
 
     def title_similar(self, target_url, target_title, candidates_titles, fixed=True):
         """
