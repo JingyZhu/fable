@@ -41,7 +41,7 @@ def update_sites(collection):
         except: pass
 
 
-def title_prepapre(crawls, wayback=False):
+def title_prepare(crawls, wayback=False):
     """
     Prepapre required data structures for unique_title
     wayback: whether the common prefix/suffix extraction is for wayback urls. If set to False, mean liveweb pages.
