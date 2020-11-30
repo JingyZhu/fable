@@ -454,7 +454,7 @@ class Similar:
             self.lw_titles[title].add(norm(lw['url']))
         # * Prepare data structures for title prefix/suffix filteration
         lw_crawl_title = [lw for lw in lw_crawl if 'title' in lw]
-        self.lw_index, self.lw_meta = title_prepapre(lw_crawl_title, wayback=False)
+        self.lw_index, self.lw_meta = title_prepare(lw_crawl_title, wayback=False)
         end = time.time()
         tracer.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])}, init_time: {end-start:.2f}')
 
@@ -502,7 +502,7 @@ class Similar:
             self.wb_titles[title].add(norm(wb_url))
         # * Prepare data structures for title prefix/suffix filteration
         wb_crawl_title = [wb for wb in wb_crawl if 'title' in wb]
-        self.wb_index, self.wb_meta = title_prepapre(wb_crawl_title, wayback=True)
+        self.wb_index, self.wb_meta = title_prepare(wb_crawl_title, wayback=True)
         end = time.time()
         tracer.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n init_time: {end - start:.2f}')
 
