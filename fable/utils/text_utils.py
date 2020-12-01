@@ -455,7 +455,8 @@ def newspaper_title_extract(html, lang=None):
 
 def mine_title_extract(html, lang=None):
     # TODO Inplement this func
-    pass
+    soup = BeautifulSoup(html, 'lxml')
+    return soup.title.text
 
 
 def domdistiller_title_extract(html, lang=None):

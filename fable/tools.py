@@ -41,10 +41,24 @@ def update_sites(collection):
         except: pass
 
 
+def title_common(titles):
+    """Extract common parts of titles. Returns: set of common token"""
+    if len(titles) == 0:
+        return []
+    common = set(re.split('_| \| |\|| - |-', titles[0]))
+    for t in titles[1:]:
+        common = common.intersection(re.split('_| \| |\|| - |-', t))
+    return common
+
+
 def title_prepare(crawls, wayback=False):
     """
     Prepapre required data structures for unique_title
     wayback: whether the common prefix/suffix extraction is for wayback urls. If set to False, mean liveweb pages.
+    
+    Returns: site_index, site_meta
+        liveweb: site_index is sorted urls
+        wayback: site_index is [((hostname, dir), start_idx) in site_meta]
     """
     urls = [c['url'] for c in crawls]
     urls_title = [{'url': c['url'], 'title': c['title']} for c in crawls]
@@ -454,7 +468,8 @@ class Similar:
             self.lw_titles[title].add(norm(lw['url']))
         # * Prepare data structures for title prefix/suffix filteration
         lw_crawl_title = [lw for lw in lw_crawl if 'title' in lw]
-        self.lw_index, self.lw_meta = title_prepare(lw_crawl_title, wayback=False)
+        # self.lw_index, self.lw_meta = title_prepare(lw_crawl_title, wayback=False)
+        self.lw_common = title_common(random.sample(self.lw_titles.keys(), min(COMMON_TITLE_SIZE, len(self.lw_titles.keys())) ))
         end = time.time()
         tracer.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])}, init_time: {end-start:.2f}')
 
@@ -502,7 +517,8 @@ class Similar:
             self.wb_titles[title].add(norm(wb_url))
         # * Prepare data structures for title prefix/suffix filteration
         wb_crawl_title = [wb for wb in wb_crawl if 'title' in wb]
-        self.wb_index, self.wb_meta = title_prepare(wb_crawl_title, wayback=True)
+        # self.wb_index, self.wb_meta = title_prepare(wb_crawl_title, wayback=True)
+        self.wb_common = title_common(random.sample(self.wb_titles.keys(), min(COMMON_TITLE_SIZE, len(self.wb_titles.keys())) ))
         end = time.time()
         tracer.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n init_time: {end - start:.2f}')
 
