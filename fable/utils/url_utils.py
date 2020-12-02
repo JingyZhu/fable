@@ -154,7 +154,8 @@ def url_norm(url, wayback=False, case=False):
         us = us._replace(path='/')
     if query:
         qsl = sorted(parse_qsl(query), key=lambda kv: (kv[0], kv[1]))
-        us = us._replace(query='&'.join([f'{kv[0]}={kv[1]}' for kv in qsl]))
+        if len(qsl):
+            us = us._replace(query='&'.join([f'{kv[0]}={kv[1]}' for kv in qsl]))
     return urlunsplit(us)
 
 

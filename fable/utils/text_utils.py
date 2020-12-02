@@ -456,6 +456,8 @@ def newspaper_title_extract(html, lang=None):
 def mine_title_extract(html, lang=None):
     # TODO Inplement this func
     soup = BeautifulSoup(html, 'lxml')
+    if not soup.title:
+        return "" # ? Really should be None
     return soup.title.text
 
 
