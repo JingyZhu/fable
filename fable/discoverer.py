@@ -336,11 +336,12 @@ class Discoverer:
         
         return cands
 
-    def link_same_page(self, dst, title, content, backlinked_url, backlinked_html, cut=CUT):
+    def link_same_page(self, wayback_dst, title, content, backlinked_url, backlinked_html, cut=CUT):
         """
         See whether backedlinked_html contains links to the same page as html
         content: content file of the original url want to find copy
         backlinked_html: html which could be linking to the html
+        wayback_dst: In wayback form
         cut: Max number of outlinks to test on. If set to <=0, there is no limit
 
         Returns: (link, similarity), from_where which is a copy of html if exists. None otherwise
@@ -349,14 +350,14 @@ class Discoverer:
             return None, None
         backlinked_content = self.memo.extract_content(backlinked_html, version='domdistiller')
         backlinked_title = self.memo.extract_title(backlinked_html, version='domdistiller')
-        similars, fromm = self.similar.similar(dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})
+        similars, fromm = self.similar.similar(wayback_dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})
         if len(similars) > 0:
             return similars[0], fromm
 
         # outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
         global he
         outgoing_sigs = crawl.outgoing_links_sig(backlinked_url, backlinked_html, wayback=False)
-        outgoing_sigs = [osig for osig in outgoing_sigs if he.extract(osig[0]) == he.extract(dst)]
+        outgoing_sigs = [osig for osig in outgoing_sigs if he.extract(osig[0]) == he.extract(wayback_dst, wayback=True)]
         if cut <= 0:
             cut = len(outgoing_sigs)
         if len(outgoing_sigs) > cut:
@@ -374,14 +375,14 @@ class Discoverer:
 
         # outgoing_contents = {}
         for outgoing_link in outgoing_links:
-            if he.extract(dst) != he.extract(outgoing_link):
+            if he.extract(wayback_dst, wayback=True) != he.extract(outgoing_link):
                 continue
             html = self.memo.crawl(outgoing_link, proxies=self.PS.select())
             if html is None: continue
             tracer.info(f'Test if outgoing link same: {outgoing_link}')
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
             outgoing_title = self.memo.extract_title(html, version='domdistiller')
-            similars, fromm = self.similar.similar(dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
+            similars, fromm = self.similar.similar(wayback_dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
             if len(similars) > 0:
                 return similars[0], fromm
         return None, None
@@ -475,12 +476,14 @@ class Discoverer:
             """Verify whether new_url is valid alias by checking whether new_url is working 
             and whether there is no other url in the same form redirected to this url"""
             global tracer
+            
             # *If homepage to homepage redir, no soft-404 will be checked
             broken, _ = sic_transit.broken(new_url, html=True, ignore_soft_404=homepage_redir)
             if broken: return False
             if homepage_redir: return True
             if isinstance(ts, str): ts = dparser.parse(ts)
             ts_year = ts.year
+            
             # *If url ended with / (say /dir/), consider both /* and /dir/*
             url_prefix = urlsplit(url)
             url_dir = [os.path.dirname(url_prefix.path)]
@@ -494,6 +497,7 @@ class Discoverer:
                 'limit': 100
             }
             neighbor, _ = crawl.wayback_index(url_prefix, param_dict=param_dict, total_link=True)
+            
             # *Get closest crawled urls in the same dir, which is not target itself  
             lambda_func = lambda u: not url_utils.url_match(url, url_utils.filter_wayback(u) ) and not url_utils.filter_wayback(u)[-1] == '/'
             lambda_func2 = lambda u: os.path.dirname(urlsplit(url_utils.filter_wayback(u)).path) in url_dir
@@ -573,6 +577,8 @@ class Discoverer:
         """
         tracer.info(f'Backlinks: {src} {dst}')
         policy = 'closest' if dst_ts else 'latest-rep'
+        wayback_dst = url_utils.constr_wayback(dst, dst_ts) if dst else url_utils.constr_wayback(dst, '20201231')
+
         param_dict = {
             "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
             "collapse": "timestamp:8"
@@ -585,12 +591,13 @@ class Discoverer:
 
         # TODO(eff): Taking long time, due to crawl
         src_broken, reason = sic_transit.broken(src, html=True)
+        
         # *Directly check this outgoing page
         if not src_broken:
             src_html = self.memo.crawl(src)
             src_content = self.memo.extract_content(src_html, version='domdistiller')
             src_title = self.memo.extract_title(src_html, version='domdistiller')
-            similars, fromm = self.similar.similar(dst, dst_title, dst_content, {src: src_title}, {src: src_content})
+            similars, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, {src: src_title}, {src: src_content})
             if len(similars) > 0:
                 tracer.info(f'Discover: Directly found copy during looping')
                 top_similar = similars[0]
@@ -645,7 +652,7 @@ class Discoverer:
                     })
                     return r_dict
             elif dst_snapshot: # *Only consider the case for dst with snapshots
-                top_similar, fromm = self.link_same_page(dst, dst_title, dst_content, src, src_html)
+                top_similar, fromm = self.link_same_page(wayback_dst, dst_title, dst_content, src, src_html)
                 if top_similar is not None:
                     r_dict.update({
                         "status": "found",

@@ -48,6 +48,7 @@ class Searcher:
             content = self.memo.extract_content(html)
         except Exception as e:
             tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+            wayback_url = url_utils.constr_wayback(url, '20201231')
             return
         tracer.title(url, title)
         search_results, searched = [], set()
@@ -68,7 +69,7 @@ class Searcher:
                 if he.extract(url) == he.extract(searched_url) or site == he.extract(searched_url):
                     searched_titles[searched_url] = self.memo.extract_title(searched_html)
             # TODO: May move all comparison techniques to similar class
-            similars, fromm = self.similar.similar(url, title, content, searched_titles, searched_contents)
+            similars, fromm = self.similar.similar(wayback_url, title, content, searched_titles, searched_contents)
             if len(similars) > 0:
                 top_similar = similars[0]
                 return top_similar[0], {'type': fromm, 'value': top_similar[1]}

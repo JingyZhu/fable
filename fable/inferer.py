@@ -220,10 +220,11 @@ class Inferer:
                 content = self.memo.extract_content(html)
                 title = self.memo.extract_title(html)
             except:
+                # * No wayback archive of broken page, do no compare check
                 value = self.if_reorg(url, reorg_urls, compare=False, fp_urls=fp_urls)
                 return value
                 # return None, {"reason": "Fail to get wayback url, html or content/title"}
-            similars, fromm = self.similar.similar(url, title, content, reorg_title, reorg_content)
+            similars, fromm = self.similar.similar(wayback_url, title, content, reorg_title, reorg_content)
             if len(similars) > 0:
                 top_similar = similars[0]
                 return top_similar[0], {'type': fromm, 'value': top_similar[1]}

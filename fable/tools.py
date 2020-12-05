@@ -81,15 +81,185 @@ def title_prepare(crawls, wayback=False):
             idx += len(netloc_dir[k])
         return url_index, url_meta
 
+def token_intersect(title1_token, title2_token):
+    """Intersection on two titles' token. Return intersections if available"""
+    len1, len2 = len(title1_token), len(title2_token)
+    len_m = len1 * len2
+    if len_m > 1 and len_m in [len1, len2]: # * One don't have "-, |", the other have
+        return set()
+    elif len_m > 1: # *Both with "-, |"
+        return set(title1_token).intersection(title2_token)
+    else: # *Both without "-, |"
+        return set()
+        return set(title1_token[0].split()).intersection(title2_token[0].split())
 
-def unique_title(title, common):
-    """Eliminate common suffix/prefix of certain site"""
-    title_tokens = regex.split('_| \| |\|| - |-', title)
-    unique = []
-    for token in title_tokens:
-        if token not in common:
-            unique.append(token)
-    return ' '.join(unique)
+
+def unique_title_lw(url, title, site_index, site_url_meta, return_common_part=False):
+    """
+    Eliminate common suffix/prefix of certain site for liveweb
+    site_index: sorted urls
+    site_url_meta: [url with title] sorted in url
+    
+    Returns: prefix/suffix filtered title, prefix/suffix if return_common_part is True
+    """
+    title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
+    us = urlsplit(url)
+    close_idx = bisect.bisect_left(site_index, url)
+    if close_idx == len(site_index):
+        close_idx -= 1 # * In case close_idx is the out of bound
+    upidx, downidx = close_idx, close_idx + 1
+    diffs = set() # *{common_prefix_diff has seen, when -3 to 3 all seen, quit}
+    itsts = set()
+    striphost = lambda x: urlsplit(x).netloc.split(':')[0]
+
+    # * Find first candidate which is not url itself
+    while upidx >= 0 and url_utils.url_match(site_url_meta[upidx]['url'], url):
+        upidx -= 1
+    while downidx <= len(site_url_meta) - 1 and url_utils.url_match(site_url_meta[downidx]['url'], url):
+        downidx += 1
+    upgoing = not (upidx < 0 \
+                or striphost(site_url_meta[upidx]['url']) != us.netloc.split(':')[0])
+    downgoing = not (downidx > len(site_index) - 1 \
+                  or striphost(site_url_meta[downidx]['url']) != us.netloc.split(':')[0])
+    
+    while (upgoing or downgoing) and len(diffs) < 7:
+        tocheck = []
+        if upgoing:
+            upurl, uptitle = site_url_meta[upidx]['url'], site_url_meta[upidx]['title']
+            upurl = url_utils.url_norm(upurl)
+            uptd = url_utils.common_prefix_diff(url, upurl)
+            if abs(uptd) <= 3 and not url_utils.url_match(upurl, url):
+                tocheck.append((uptd, upurl, uptitle))
+        if downgoing:
+            downurl, downtitle = site_url_meta[downidx]['url'], site_url_meta[downidx]['title']
+            downurl = url_utils.url_norm(downurl)
+            downtd = url_utils.common_prefix_diff(url, downurl)
+            if abs(downtd) <= 3 and not url_utils.url_match(downurl, url):
+                tocheck.append(((downtd, downurl, downtitle)))
+
+        if len(tocheck) > 1: # *Put small in front
+            tocheck[0], tocheck[1] = min(tocheck, key=lambda x:x[0]), max(tocheck, key=lambda x:x[0])
+        for td, cand_url, cand_title in tocheck:
+            diffs.add(td)
+            itsts = token_intersect(title_tokens, \
+                        regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', cand_title))
+            if len(itsts) > 0:
+                break
+        if len(itsts) > 0:
+            break
+
+        upidx -= 1
+        downidx += 1
+        upgoing = upgoing and not (upidx < 0 \
+                        or striphost(site_url_meta[upidx]['url']) != us.netloc.split(':')[0])
+        downgoing = downgoing and not (downidx > len(site_index) - 1 \
+                        or striphost(site_url_meta[downidx]['url']) != us.netloc.split(':')[0])
+ 
+    if len(itsts) <= 0:
+        return title
+    if len(title_tokens) > 1:
+        return ' '.join([tt for tt in title_tokens if tt not in itsts])
+    else:
+        return ' '.join([tt for tt in title_tokens[0].split() if tt not in itsts])
+
+
+def unique_title_wb(url, title, site_index, site_url_meta, return_common_part=False):
+    """
+    Eliminate common suffix/prefix of certain site for wayback
+    Diff with lw version: 
+        site_urls/site_url_meta should be sorted in ((netloc,dirname), ts)
+        Look at neighbor in a granularity of netloc,dirname, then pick closest timestamp within it.
+    url: wayback version url
+    site_index: [(netloc, dir), start index]
+    Returns: prefix/suffix filtered title, prefix/suffix if return_common_part is True
+    """
+    title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
+    # TODO: Depend on url's format, may need to alter in the future
+    url, ts = url_utils.filter_wayback(url), url_utils.get_ts(url)
+    ts = dparser.parse(ts)
+    nd = url_utils.netloc_dir(url)
+    close_idx = bisect.bisect(site_index, (nd, 0))
+    if close_idx == len(site_index):
+        close_idx -= 1 # * In case close_idx is the out of bound
+    upidx, downidx = close_idx, close_idx + 1
+    diffs = set() # *{common_prefix_diff has seen, when -3 to 3 all seen, quit}
+    itsts = set()
+
+
+    def netdir_closest_ts(nd_idx):
+        """Return closest idx in ts to target url. If only same url in the area, return None"""
+        _, cur_idx = site_index[nd_idx]
+        next_idx = site_index[nd_idx + 1][1] if nd_idx < len(site_index) -1 else len(site_url_meta)
+        closest_ts_urls = [(site_url_meta[idx], idx) for idx in range(cur_idx, next_idx)]
+        closest_ts_urls = sorted(closest_ts_urls, key=lambda x: abs((dparser.parse(x[0]['ts']) - ts).total_seconds()))
+        for closest_url, idx in closest_ts_urls:
+            if not url_utils.url_match(closest_url['url'], url):
+                return idx
+
+    upgoing = not (upidx < 0 or nd[0] != site_index[upidx][0][0])
+    downgoing = not (downidx > len(site_index) - 1 \
+                    or nd[0] != site_index[downidx][0][0])
+
+    while (upgoing or downgoing) and len(diffs) < 7:
+        tocheck = []
+        while True: # *Dummy while True for jumping
+            if not upgoing:
+                break
+            upurlidx = netdir_closest_ts(upidx)
+            if not upurlidx:
+                break
+            upurl, uptitle = site_url_meta[upurlidx]['url'], site_url_meta[upurlidx]['title']
+            upurl = url_utils.url_norm(upurl)
+            uptd = url_utils.common_prefix_diff(url, upurl)
+            if abs(uptd) > 3:
+                break
+            tocheck.append((uptd, upurl, uptitle))
+            break
+        while True:
+            if not downgoing:
+                break
+            downurlidx = netdir_closest_ts(downidx)
+            if not downurlidx:
+                break
+            downurl, downtitle = site_url_meta[downurlidx]['url'], site_url_meta[downurlidx]['title']
+            downurl = url_utils.url_norm(downurl)
+            downtd = url_utils.common_prefix_diff(url, downurl)
+            if abs(downtd) > 3:
+                break
+            tocheck.append((downtd, downurl, downtitle))
+            break
+        
+        if len(tocheck) > 1: # *Put small in front
+            tocheck[0], tocheck[1] = min(tocheck, key=lambda x:x[0]), max(tocheck, key=lambda x:x[0])
+        for td, cand_url, cand_title in tocheck:
+            diffs.add(td)
+            # TODO: Currently exit whenever see one intersection. Maybe multiple intersections are required in the future
+            itsts = token_intersect(title_tokens, \
+                        regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', cand_title))
+            if len(itsts) > 0:
+                break
+        if len(itsts) > 0:
+            break
+
+        upidx -= 1
+        downidx += 1
+        upgoing = upgoing and not (upidx < 0 or nd[0] != site_index[upidx][0][0])
+        downgoing = downgoing and not (downidx > len(site_index) - 1 \
+                    or nd[0] != site_index[downidx][0][0])
+        
+    if len(itsts) <= 0:
+        return title
+    if len(title_tokens) > 1:
+        return ' '.join([tt for tt in title_tokens if tt not in itsts])
+    else:
+        return ' '.join([tt for tt in title_tokens[0].split() if tt not in itsts])
+
+def unique_title(url, title, site_index, site_url_meta, return_common_part=False, wayback=False):
+    if not wayback:
+        return unique_title_lw(url, title, site_index, site_url_meta, return_common_part)
+    else:
+        return unique_title_wb(url, title, site_index, site_url_meta, return_common_part)
+
 
 def norm(url):
     us = urlsplit(url)
@@ -364,8 +534,8 @@ class Similar:
         for lws in liveweb_sigs:
             link, anchor, sig = lws
             if len(anchor_count[anchor]) < 2: # UNIQUE anchor
-                simi = self.tfidf.similar(wayback_sig[1], anchor)
-                if simi >= self.short_threshold:
+                simi = self.shorttext_match(wayback_sig[1], anchor)
+                if simi:
                     return lws, simi, 'anchor'
             else:
                 if wayback_sig[1] != anchor:
@@ -468,8 +638,7 @@ class Similar:
             self.lw_titles[title].add(norm(lw['url']))
         # * Prepare data structures for title prefix/suffix filteration
         lw_crawl_title = [lw for lw in lw_crawl if 'title' in lw]
-        # self.lw_index, self.lw_meta = title_prepare(lw_crawl_title, wayback=False)
-        self.lw_common = title_common(random.sample(self.lw_titles.keys(), min(COMMON_TITLE_SIZE, len(self.lw_titles.keys())) ))
+        self.lw_index, self.lw_meta = title_prepare(lw_crawl_title, wayback=False)
         end = time.time()
         tracer.info(f'lw_titles: {sum([len(v) for v in self.lw_titles.values()])}, init_time: {end-start:.2f}')
 
@@ -517,14 +686,33 @@ class Similar:
             self.wb_titles[title].add(norm(wb_url))
         # * Prepare data structures for title prefix/suffix filteration
         wb_crawl_title = [wb for wb in wb_crawl if 'title' in wb]
-        # self.wb_index, self.wb_meta = title_prepare(wb_crawl_title, wayback=True)
-        self.wb_common = title_common(random.sample(self.wb_titles.keys(), min(COMMON_TITLE_SIZE, len(self.wb_titles.keys())) ))
+        self.wb_index, self.wb_meta = title_prepare(wb_crawl_title, wayback=True)
         end = time.time()
         tracer.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n init_time: {end - start:.2f}')
+
+    def shorttext_match(self, text1, text2):
+        """
+        Func should only be called when self.tfidf is properly prepared
+        Check whether one text is a subset of another + similar enough
+        # TODO: Currently use TF-IDF for comparison, but other way may also apply
+
+        Returns: 0 if not match. Actual similarity otherwise
+        """
+        text1_token, text2_token = text_utils.tokenize(text1), text_utils.tokenize(text2)
+        text1_token, text2_token = ' '.join(text1_token), ' '.join(text2_token)
+        # * To match, one text must be the subset of another
+        if text1_token not in text2_token and text2_token not in text1_token:
+            return 0
+        simi = self.tfidf.similar(text1, text2)
+        if simi >= (self.short_threshold + self.threshold) / 2
+            return simi
+        else:
+            return 0
 
     def title_similar(self, target_url, target_title, candidates_titles, fixed=True):
         """
         See whether there is UNIQUE title from candidates that is similar target
+        target_url: URL in the wayback form
         candidates: {url: title}, with url in the same host!
 
         Return a list with all candidate higher than threshold
@@ -543,9 +731,16 @@ class Similar:
         else:
             self.wb_titles[target_title].add(target_url)
         self.tfidf._clear_workingset()
-        self.tfidf.add_corpus([unique_title(target_title, self.wb_common)] + [unique_title(ct, self.lw_common) for ct in candidates_titles.values()])
+        
+        # * Extract Unique Titles for both wb urls and lw urls
+        tgt_uniq_title = unique_title(target_url, target_title, self.wb_index, self.wb_meta, wayback=True)
+        cand_uniq_titles = {url: unique_title(url, title, self.lw_index, self.lw_meta, wayback=False) \
+             for url, title in candidates_titles.items()}
+        self.tfidf.add_corpus([tgt_uniq_title] + [ct for ct in cand_uniq_titles.values()])
+
         simi_cand = []
-        for url, c in candidates_titles.items():
+        for url in cand_uniq_titles:
+            c, uniq_c = candidates_titles[url], cand_uniq_titles[url]
             site = he.extract(url)
             if site != self.site and not fixed:
                 self._init_titles(site)
@@ -556,17 +751,20 @@ class Similar:
                 elif norm(url) not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
                     tracer.debug(f'title of url: {url} none UNIQUE: {self.lw_titles[c]}')
                     continue
-            simi = self.tfidf.similar(unique_title(target_title, self.wb_common), unique_title(c, self.lw_common))
-            if simi >= (self.short_threshold + self.threshold) / 2:
+            simi = self.shorttext_match(ttgt_uniq_title, uniq_c)
+            if simi:
                 simi_cand.append((url, simi))
+
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def clear_titles(self):
         self.site = None
         self.lw_titles = None
         self.wb_titles = None
-        self.lw_common = None
-        self.wb_common = None
+        self.lw_index = None
+        self.lw_meta = None
+        self.wb_index = None
+        self.wb_meta = None
     
     def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, cand_htmls=None, fixed=True):
         """
