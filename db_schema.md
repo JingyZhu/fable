@@ -93,37 +93,21 @@ Set of already tried URLs with certain techniques
     "_id": "url",
     "url": "url",
     "hostname": "hostname",
+
     "search_1": "bool/true (First pass of search)",
     "search_2": "bool/true (Second pass of search)",
     "discover": "bool/true (discover)",
     "infer": "bool/true (used as check for inference test)",
-    "search_coverage": "bool/true (Test on coverage of search)",
-    "search_gt_10": "bool/true (Test on hit rate of search with more than 10 results)",
-    "discover_BFS": "bool/true",
-    "discover_DFS": "bool/true",
-    "strawman": "bool/true",
-    "strawman_adv": "bool/true",
-    "infer_efficiency": "bool/true",
-    "outlink_matter": "bool/true"
+    ("search_coverage"): "bool/true (Test on coverage of search)",
+    ("search_gt_10"): "bool/true (Test on hit rate of search with more than 10 results)",
+    ("discover_BFS"): "bool/true",
+    ("discover_DFS"): "bool/true",
+    ("strawman"): "bool/true",
+    ("strawman_adv"): "bool/true",
+    ("infer_efficiency"): "bool/true",
+    ("outlink_matter"): "bool/true"
 }
 ```
-
-### trace
-Traces of detailed execution events (how each urls' alternate links are frying to be found)
-```json
-{
-    "_id": "url",
-    "url": "url",
-    "hostname": "hostname",
-    "search_1": "list of traces for first search",
-    "search_2": "list of traces for second search",
-    "discover": "list of traces for discovery",
-    "backpath_earliest": "Path structure on earliest searched backpath",
-    "backpath_latest": "Path structure on latest searched backpath",
-    "discover_BFS": "list of traces for discovery",
-}
-```
-
 
 ### traces
 New traces document to trace all metadata gathered during running FABLE
@@ -156,6 +140,23 @@ New traces document to trace all metadata gathered during running FABLE
         }
 }
 ```
+
+### trace
+Traces of detailed execution events (how each urls' alternate links are frying to be found)
+```json
+{
+    "_id": "url",
+    "url": "url",
+    "hostname": "hostname",
+    "search_1": "list of traces for first search",
+    "search_2": "list of traces for second search",
+    "discover": "list of traces for discovery",
+    "backpath_earliest": "Path structure on earliest searched backpath",
+    "backpath_latest": "Path structure on latest searched backpath",
+    "discover_BFS": "list of traces for discovery",
+}
+```
+
 
 ### search_trace
 Record for performance of search

@@ -314,7 +314,7 @@ class ReorgPageFinder:
                 try:
                     self.db.reorg.update_one({'url': url}, {"$set": {self.logname: update_dict}} ) 
                 except Exception as e:
-                    self.tracer.warn(f'Second search update DB: {str(e)}')
+                    self.tracer.warn(f'Search update DB: {str(e)}')
             searched_checked.add(url)
             
             # ! TODO: temp

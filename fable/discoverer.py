@@ -253,9 +253,7 @@ class Backpath_Finder:
                 else:
                     matched = False
             o_pointer += not matched
-        return
-            
-
+        return  
 
 
 class Discoverer:
@@ -631,7 +629,7 @@ class Discoverer:
             if new_src:
                 src_broken = False
                 src = new_src 
-        if wayback_linked[0] and not src_broken: # src linking to dst and is working today
+        if wayback_linked[0] and not src_broken: # * src linking to dst and is working today
             src_html, src = self.memo.crawl(src, final_url=True, max_retry=2)
             rval = self.find_same_link(wayback_linked[1], src, src_html)
             if rval:
@@ -651,7 +649,7 @@ class Discoverer:
                         "reason": "Linked, matched url broken"
                     })
                     return r_dict
-            elif dst_snapshot: # *Only consider the case for dst with snapshots
+            elif dst_snapshot: # * Only consider the case for dst with snapshots
                 top_similar, fromm = self.link_same_page(wayback_dst, dst_title, dst_content, src, src_html)
                 if top_similar is not None:
                     r_dict.update({
@@ -758,6 +756,16 @@ class Discoverer:
             outgoing_queue.sort(key=lambda x: x[2])
             outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
 
+        ee_count = 2 * (not has_snapshot) # Early exit satisfy condition score
+        def early_exit(status, reason):
+            """Determine whether it is ok to early exit"""
+            nonlocal ee_count
+            if status != "notfound":
+                return False
+            if reason == "backlink no snapshot":
+                ee_count += 1
+            return ee_count > 2
+
         while len(guess_total) + len(outgoing_queue) > 0:
             # *Ops for guessed links
             two_src = []
@@ -773,6 +781,9 @@ class Discoverer:
                 seen.add(src)
                 r_dict = self.discover_backlinks(src, url, title, content, html, has_snapshot, url_ts)
                 status, reason = r_dict['status'], r_dict['reason']
+                if early_exit(status, reason):
+                    tracer.info(f'discoverer has met too many no snapshot pages, early exit.')
+                    break
                 tracer.discover(url, src, r_dict.get("wayback_src"), status, reason, r_dict.get("links"))
                 if status == 'found':
                     return r_dict['url(s)'], {'suffice': True, 'type': reason[0], 'value': reason[1]}

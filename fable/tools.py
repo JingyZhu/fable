@@ -392,7 +392,7 @@ class Memoizer:
         cps = self.db.wayback_index.find_one({'_id': url})
         if not cps or default_key[default_param] not in cps:
             cps, status = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
-            tracer.debug('Wayback Index (tools): Get wayback query response')
+            tracer.debug('Wayback Index (tools.py): Get wayback query response')
             if len(cps) == 0: # No snapshots
                 tracer.info(f"Wayback Index: No snapshots {status}")
                 return
@@ -404,7 +404,7 @@ class Memoizer:
                 }}, upsert=True)
             except: pass
         else:
-            tracer.debug('Wayback Index (tools): db has wayback_index')
+            tracer.debug('Wayback Index (tools.py): db has wayback_index')
             key = default_key[default_param]
             cps = [(c, url_utils.constr_wayback(url, c)) for c in cps[key]]
 
@@ -704,7 +704,7 @@ class Similar:
         if text1_token not in text2_token and text2_token not in text1_token:
             return 0
         simi = self.tfidf.similar(text1, text2)
-        if simi >= (self.short_threshold + self.threshold) / 2
+        if simi >= (self.short_threshold + self.threshold) / 2:
             return simi
         else:
             return 0
@@ -718,15 +718,15 @@ class Similar:
         Return a list with all candidate higher than threshold
         """
         global he
-        site = he.extract(target_url)
+        site = he.extract(target_url, wayback=True)
         if site != self.site:
             self._init_titles(site)
         if target_title in self.wb_titles:
             if len(self.wb_titles[target_title]) > 1:
-                tracer.debug(f'wayback title of url: {target_url} none UNIQUE: {self.wb_titles[target_title]}')
+                tracer.debug(f'wayback title of url: {target_url} us not UNIQUE: {self.wb_titles[target_title]}')
                 return []
             elif norm(target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
-                tracer.debug(f'wayback title of url: {target_url} none UNIQUE: {self.wb_titles[target_title]}')
+                tracer.debug(f'wayback title of url: {target_url} is not UNIQUE: {self.wb_titles[target_title]}')
                 return []
         else:
             self.wb_titles[target_title].add(target_url)
@@ -751,7 +751,7 @@ class Similar:
                 elif norm(url) not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
                     tracer.debug(f'title of url: {url} none UNIQUE: {self.lw_titles[c]}')
                     continue
-            simi = self.shorttext_match(ttgt_uniq_title, uniq_c)
+            simi = self.shorttext_match(tgt_uniq_title, uniq_c)
             if simi:
                 simi_cand.append((url, simi))
 
