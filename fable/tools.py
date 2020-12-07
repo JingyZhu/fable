@@ -13,6 +13,7 @@ import random
 import brotli
 from dateutil import parser as dparser
 from urllib.parse import urlsplit, urlparse
+import bisect
 
 from . import config, tracer
 from .utils import text_utils, crawl, url_utils, search
@@ -702,6 +703,7 @@ class Similar:
         text1_token, text2_token = ' '.join(text1_token), ' '.join(text2_token)
         # * To match, one text must be the subset of another
         if text1_token not in text2_token and text2_token not in text1_token:
+            tracer.debug(f'shorttext_match: one text not a subset of another: \n{ text1} {text2} \n {text1_token} {text2_token}')
             return 0
         simi = self.tfidf.similar(text1, text2)
         if simi >= (self.short_threshold + self.threshold) / 2:
@@ -719,17 +721,18 @@ class Similar:
         """
         global he
         site = he.extract(target_url, wayback=True)
+        lw_target_url = url_utils.filter_wayback(target_url)
         if site != self.site:
             self._init_titles(site)
         if target_title in self.wb_titles:
             if len(self.wb_titles[target_title]) > 1:
-                tracer.debug(f'wayback title of url: {target_url} us not UNIQUE: {self.wb_titles[target_title]}')
+                tracer.debug(f'wayback title of url: {lw_target_url} us not UNIQUE: {self.wb_titles[target_title]}')
                 return []
-            elif norm(target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
-                tracer.debug(f'wayback title of url: {target_url} is not UNIQUE: {self.wb_titles[target_title]}')
+            elif norm(lw_target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
+                tracer.debug(f'wayback title of url: {lw_target_url} is not UNIQUE: {self.wb_titles[target_title]}')
                 return []
         else:
-            self.wb_titles[target_title].add(target_url)
+            self.wb_titles[target_title].add(lw_target_url)
         self.tfidf._clear_workingset()
         
         # * Extract Unique Titles for both wb urls and lw urls

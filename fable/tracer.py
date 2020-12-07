@@ -34,7 +34,7 @@ class tracer(logging.Logger):
         """
         self.setLevel(loglevel)
         formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
-        file_handler = logging.FileHandler(self.attr_name + '.log')
+        file_handler = logging.FileHandler(self.logname + '.log')
         file_handler.setFormatter(formatter)
         std_handler = logging.StreamHandler(sys.stdout)
         std_handler.setFormatter(formatter)
@@ -43,8 +43,9 @@ class tracer(logging.Logger):
         self.addHandler(std_handler)
         # return logger
     
-    def _set_meta(self, attr_name, db=db, loglevel=logging.INFO):
+    def _set_meta(self, attr_name, logname=None, db=db, loglevel=logging.INFO):
         self.attr_name = attr_name
+        self.logname = logname if logname else self.attr_name
         self.db = db
         self._init_logger(loglevel=loglevel)
     
@@ -95,7 +96,7 @@ class tracer(logging.Logger):
         if f"search_{typee}" not in self.update_data[url]:
             self.update_data[url][f"search_{typee}"] = {'google': [], 'bing':[]}
         self.update_data[url][f"search_{typee}"][engine] = results
-        self.info(f'Search results: {typee} {engine}: \n {results}', level=3)
+        self.info(f'Search results ({typee} {engine}): \n {results}', level=3)
     
     def discover(self, url, backlink, backlink_wayback, status, reason, link=None):
         """
@@ -118,6 +119,14 @@ class tracer(logging.Logger):
         del(path_dict['url'])
         self.update_data[url]['backpath'] = path_dict
         self.info(f"Backpath: {path}", level=3)
+    
+    def early_exit(self, url):
+        self.update_data[url].setdefault('discover', [])
+        record = {
+            'status': "early exit"
+        }
+        self.update_data[url]['discover'].append(record)
+        self.info(f'discoverer has met too many no snapshot pages, early exit.', level=3)
 
     def flush(self):
         self.info(f'Flushing URL(s)')

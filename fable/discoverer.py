@@ -575,7 +575,7 @@ class Discoverer:
         """
         tracer.info(f'Backlinks: {src} {dst}')
         policy = 'closest' if dst_ts else 'latest-rep'
-        wayback_dst = url_utils.constr_wayback(dst, dst_ts) if dst else url_utils.constr_wayback(dst, '20201231')
+        wayback_dst = url_utils.constr_wayback(dst, dst_ts) if dst_ts else url_utils.constr_wayback(dst, '20201231')
 
         param_dict = {
             "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
@@ -781,10 +781,9 @@ class Discoverer:
                 seen.add(src)
                 r_dict = self.discover_backlinks(src, url, title, content, html, has_snapshot, url_ts)
                 status, reason = r_dict['status'], r_dict['reason']
-                if early_exit(status, reason):
-                    tracer.info(f'discoverer has met too many no snapshot pages, early exit.')
-                    break
                 tracer.discover(url, src, r_dict.get("wayback_src"), status, reason, r_dict.get("links"))
+                if early_exit(status, reason):
+                    break
                 if status == 'found':
                     return r_dict['url(s)'], {'suffice': True, 'type': reason[0], 'value': reason[1]}
                 elif status == 'loop':

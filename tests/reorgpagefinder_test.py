@@ -14,7 +14,7 @@ from fable import ReorgPageFinder
 
 
 urls = ['http://parkweb.vic.gov.au/safety/fire,-flood-and-other-closures']
-rpf = ReorgPageFinder(logname='coverage-imp')
+rpf = ReorgPageFinder(classname='coverage-imp')
 rpf.init_site('parkweb.vic.gov.au', urls)
 rpf.search(required_urls=urls)
 # rpf.discover(required_urls=urls)
