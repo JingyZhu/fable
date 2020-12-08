@@ -76,16 +76,9 @@ class ReorgPageFinder:
         self.pattern_dict = defaultdict(list)
         self.seen_reorg_pairs = set()
         for reorg_url in list(reorg_urls):
-            # Patch the no title urls
-            if 'title' not in reorg_url:
-                wayback_reorg_url = self.memo.wayback_index(reorg_url['url'])
-                reorg_html, wayback_reorg_url = self.memo.crawl(wayback_reorg_url, final_url=True)
-                reorg_title = self.memo.extract_title(reorg_html, version='domdistiller')
-                reorg_url['title'] = reorg_title
-                self.db.reorg.update_one({'url': reorg_url['url']}, {'$set': {'title': reorg_title}})
             # ? for k in set(reorg_url.keys()).intersection(reorg_keys):
             # ?    self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url[k])
-            self._add_url_to_patterns(reorg_url['url'], reorg_url['title'], reorg_url[self.classname]['reorg_url'])
+            self._add_url_to_patterns(reorg_url['url'], reorg_url.get('title', 'N/A'), reorg_url[self.classname]['reorg_url'])
         if len(self.tracer.handlers) > 2:
             self.tracer.handlers.pop()
         formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
@@ -245,8 +238,8 @@ class ReorgPageFinder:
 
     def search(self, infer=False, required_urls=None, title=True):
         """
-        infer: Infer every time found a new alias
-        Required urls: URLs that will be run on
+        infer: Infer every time when a new alias is found
+        Required urls: URLs that will be run on (no checked)
         title: Whether title comparison is taken into consideration
         """
         if not title:
@@ -283,14 +276,19 @@ class ReorgPageFinder:
                     title = self.memo.extract_title(html, version='domdistiller')
                 except: # No snapthost on wayback
                     self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
-                    try: self.db.na_urls.update_one({'_id': url}, {"$set": {
-                        'url': url,
-                        'hostname': self.site,
-                        'no_snapshot': True
-                    }}, upsert=True)
+                    try:
+                        self.db.checked.update_one({'_id': url}, {"$set": {
+                            "url": url,
+                            "hostname": self.site,
+                            f"{self.classname}.search": True
+                        }}, upsert=True)
+                        self.db.na_urls.update_one({'_id': url}, {"$set": {
+                            'url': url,
+                            'hostname': self.site,
+                            'no_snapshot': True
+                        }}, upsert=True)
                     except: pass
                     continue
-                update_dict = {'title': title}
             else:
                 title = has_title['title']
 
@@ -318,7 +316,7 @@ class ReorgPageFinder:
 
             if len(update_dict) > 0:
                 try:
-                    self.db.reorg.update_one({'url': url}, {"$set": {self.classname: update_dict}} ) 
+                    self.db.reorg.update_one({'url': url}, {"$set": {self.classname: update_dict, "title": title}} ) 
                 except Exception as e:
                     self.tracer.warn(f'Search update DB: {str(e)}')
             searched_checked.add(url)
@@ -353,7 +351,7 @@ class ReorgPageFinder:
     
     def discover(self, infer=False, required_urls=None):
         """
-        infer: Infer every time found a new alias
+        infer: Infer every time when a new alias is found
         Required urls: URLs that will be run on
         """
         if self.similar.site is None or self.similar.site != self.site:
@@ -419,7 +417,6 @@ class ReorgPageFinder:
                     }}, upsert=True)
                     except: pass
                     title = 'N/A'
-                update_dict = {'title': title}
             else:
                 title = has_title['title']
 
@@ -455,7 +452,7 @@ class ReorgPageFinder:
 
             if len(update_dict) > 0:
                 try:
-                    self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict}})
+                    self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict, 'title': title}})
                 except Exception as e:
                     self.tracer.warn(f'Discover update DB: {str(e)}')
             discovered_checked.add(url)
