@@ -159,8 +159,10 @@ def url_norm(url, wayback=False, case=False):
     return urlunsplit(us)
 
 
-def url_parent(url):
+def url_parent(url, exclude_digit=False):
     """
+    exclude_digit: When considering the parent. full digit tokens are filtered out
+        This is used because full digit token are usually id, which are likely to be unique
     Return parent of url
     """
     us = urlsplit(url)
@@ -171,8 +173,23 @@ def url_parent(url):
         return urlunsplit(us._replace(netloc='.'.join(hs[1:])))
     path = us.path
     if path and path [-1] == '/' and not us.query: path = path[:-1]
-    path = os.path.dirname(path)
+    if not exclude_digit:
+        path = os.path.dirname(path)
+    else:
+        path = nondigit_dirname(path)
     return urlunsplit(us._replace(path=path, query=''))
+
+def nondigit_dirname(path):
+    """
+    Return closest parent of URL where there is no digit token
+    """
+    if path not in ['', '/'] and path[-1] == '/':
+        path = path[:-1]
+    parts = path.split('/')
+    parts = parts[:-1]
+    while len(parts) and parts[-1].isdigit():
+        parts = parts[:-1]
+    return '/'.join(parts)
     
 
 def is_parent(parent, url):

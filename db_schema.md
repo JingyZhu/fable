@@ -10,7 +10,8 @@ Record all crawled pages and its html
     "final_url": "string",
     "content": "string (optional)",
     "title": "string (optional)",
-    "ttl": "int"
+    "ttl": "int",
+    "site": "Site of the URL"
 }
 ```
 

@@ -468,14 +468,18 @@ class Discoverer:
         url_match_count = 0
         it = len(wayback_ts_urls) - 1
         last_ts = wayback_ts_urls[-1][0] + datetime.timedelta(days=90)
-        seen_new_url = set()
+        seen_redir_url = set()
 
-        def verify_alias(url, new_url, ts, homepage_redir):
-            """Verify whether new_url is valid alias by checking whether new_url is working 
-            and whether there is no other url in the same form redirected to this url"""
-            global tracer
+
+        def verify_alias(url, new_urls, ts, homepage_redir):
+            """Verify whether new_url is valid alias by checking:
+             1. new_urls is working 
+             2. whether there is no other url in the same form redirected to this url
+            """
+            global tracer, seen_redir_url
             
             # *If homepage to homepage redir, no soft-404 will be checked
+            new_url = new_urls[-1]
             broken, _ = sic_transit.broken(new_url, html=True, ignore_soft_404=homepage_redir)
             if broken: return False
             if homepage_redir: return True
@@ -484,8 +488,8 @@ class Discoverer:
             
             # *If url ended with / (say /dir/), consider both /* and /dir/*
             url_prefix = urlsplit(url)
-            url_dir = [os.path.dirname(url_prefix.path)]
-            if url_prefix.path[-1] == '/': url_dir.append(os.path.dirname(url_dir[0]))
+            url_dir = [url_utils.nondigit_dirname(url_prefix.path)]
+            # // if url_prefix.path[-1] == '/': url_dir.append(os.path.dirname(url_dir[0]))
             url_prefix = url_prefix._replace(path=url_dir[-1] + '/*', query='')
             url_prefix = urlunsplit(url_prefix)
             param_dict = {
@@ -494,18 +498,24 @@ class Discoverer:
                 "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
                 'limit': 100
             }
+            tracer.debug(f'Search for neighbors with query & year: {url_prefix} {ts_year}')
             neighbor, _ = crawl.wayback_index(url_prefix, param_dict=param_dict, total_link=True)
-            
+
             # *Get closest crawled urls in the same dir, which is not target itself  
-            lambda_func = lambda u: not url_utils.url_match(url, url_utils.filter_wayback(u) ) and not url_utils.filter_wayback(u)[-1] == '/'
-            lambda_func2 = lambda u: os.path.dirname(urlsplit(url_utils.filter_wayback(u)).path) in url_dir
+            lambda_func = lambda u: not url_utils.url_match(url, url_utils.filter_wayback(u) ) # and not url_utils.filter_wayback(u)[-1] == '/'
+            lambda_func2 = lambda u: url_utils.nondigit_dirname(urlsplit(url_utils.filter_wayback(u)).path[:-1]) in url_dir
             neighbor = sorted([n for n in neighbor if lambda_func(n[1]) and lambda_func2(n[1])], key=lambda x: abs((dparser.parse(x[0]) - ts).total_seconds()))
+            tracer.debug(f'neightbor: {len(neighbor)}')
             try:
                 tracer.debug(f'Choose closest neighbor: {neighbor[0][1]}')
                 response = crawl.requests_crawl(neighbor[0][1], raw=True)
-                neighbor_url = response.url
-                match = url_utils.url_match(new_url, neighbor_url)
+                neighbor_urls = [r.url for r in response.history[1:]] + [response.url]
+                match = False
+                for neighbor_url in neighbor_urls:
+                    for new_url in new_urls:    
+                        match = match or url_utils.url_match(new_url, neighbor_url)
             except Exception as e:
+                tracer.debug(f'Cannot check neighbor on wayback_alias')
                 return True
             if match:
                 tracer.debug(f'url in same dir: {neighbor[0][1]} redirects to the same url')
@@ -528,10 +538,10 @@ class Discoverer:
             if not match:
                 last_ts = ts
                 new_url = url_utils.filter_wayback(wayback_url)
-                if new_url in seen_new_url:
+                if new_url in seen_redir_url:
                     continue
                 else:
-                    seen_new_url.add(new_url)
+                    seen_redir_url.add(new_url)
                 inter_urls = [url_utils.filter_wayback(wu.url) for wu in response.history] # Check for multiple redirections
                 inter_urls.append(new_url)
                 inter_uss = [urlsplit(inter_url) for inter_url in inter_urls]
@@ -543,7 +553,7 @@ class Discoverer:
                 # ?    continue
                 # //pass_check, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
                 # //ass_check = not pass_check
-                pass_check = verify_alias(url, new_url, ts, homepage_redir=is_homepage and new_is_homepage)
+                pass_check = verify_alias(url, inter_urls[1:], ts, homepage_redir=is_homepage and new_is_homepage)
                 if pass_check:
                     return new_url
             else:

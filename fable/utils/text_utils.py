@@ -223,6 +223,7 @@ def tokenize(texts):
     
     Returns: list of features in the original order
     """
+    texts = texts.replace('_', ' ')
     cv = CountVectorizer()
     analyze = cv.build_analyzer()
     return analyze(texts)
