@@ -25,7 +25,7 @@ requests_header = {'user-agent': config.config('user_agent')}
 headers = {"Ocp-Apim-Subscription-Key": config.BING_SEARCH_KEY}
 
 google_url = 'https://www.googleapis.com/customsearch/v1'
-bing_url = 'https://api.cognitive.microsoft.com/bing/v7.0/search'
+bing_url = 'https://api.bing.microsoft.com/v7.0/search'
 
 host_extractor = url_utils.HostExtractor()
 

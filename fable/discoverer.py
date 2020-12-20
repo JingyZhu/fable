@@ -465,7 +465,8 @@ class Discoverer:
             return
 
         wayback_ts_urls = [(dparser.parse(c[0]), c[1]) for c in wayback_ts_urls]
-        url_match_count = 0
+        # * Count for unmatched wayback final url, and wayback_alias to same redirected fake alias
+        url_match_count, same_redir = 0, 0
         it = len(wayback_ts_urls) - 1
         last_ts = wayback_ts_urls[-1][0] + datetime.timedelta(days=90)
         seen_redir_url = set()
@@ -476,7 +477,8 @@ class Discoverer:
              1. new_urls is working 
              2. whether there is no other url in the same form redirected to this url
             """
-            global tracer, seen_redir_url
+            global tracer
+            nonlocal seen_redir_url
             
             # *If homepage to homepage redir, no soft-404 will be checked
             new_url = new_urls[-1]
@@ -513,7 +515,10 @@ class Discoverer:
                 match = False
                 for neighbor_url in neighbor_urls:
                     for new_url in new_urls:    
-                        match = match or url_utils.url_match(new_url, neighbor_url)
+                        thismatch = url_utils.url_match(new_url, neighbor_url)
+                        if thismatch: 
+                            match = True
+                            seen_redir_url.add(new_url)
             except Exception as e:
                 tracer.debug(f'Cannot check neighbor on wayback_alias')
                 return True
@@ -521,7 +526,7 @@ class Discoverer:
                 tracer.debug(f'url in same dir: {neighbor[0][1]} redirects to the same url')
             return not match
 
-        while url_match_count < 3 and it >= 0:
+        while url_match_count < 3 and same_redir < 5 and it >= 0:
             ts, wayback_url = wayback_ts_urls[it]
             tracer.debug(f'wayback_alias iteration: ts: {ts} it: {it}')
             it -= 1
@@ -538,12 +543,17 @@ class Discoverer:
             if not match:
                 last_ts = ts
                 new_url = url_utils.filter_wayback(wayback_url)
-                if new_url in seen_redir_url:
+                inter_urls = [url_utils.filter_wayback(wu.url) for wu in response.history] # Check for multiple redirections
+                inter_urls.append(new_url)
+                inredir = False
+                for inter_url in inter_urls[1:]:
+                    if inter_url in seen_redir_url:
+                        inredir = True
+                if inredir:
+                    same_redir += 1
                     continue
                 else:
                     seen_redir_url.add(new_url)
-                inter_urls = [url_utils.filter_wayback(wu.url) for wu in response.history] # Check for multiple redirections
-                inter_urls.append(new_url)
                 inter_uss = [urlsplit(inter_url) for inter_url in inter_urls]
                 tracer.info(f'Wayback_alias: {ts}, {inter_urls}')
 
@@ -553,6 +563,8 @@ class Discoverer:
                 # ?    continue
                 # //pass_check, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
                 # //ass_check = not pass_check
+                if len(inter_urls) > 1:
+                    inter_urls = inter_urls[1:]
                 pass_check = verify_alias(url, inter_urls[1:], ts, homepage_redir=is_homepage and new_is_homepage)
                 if pass_check:
                     return new_url
