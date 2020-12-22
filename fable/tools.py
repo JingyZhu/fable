@@ -52,35 +52,71 @@ def title_common(titles):
     return common
 
 
+def different_page(url, meta, content, crawls, wayback=False):
+    """
+    Return pages with differnt content in crawls, that has closest title to it
+    meta: metadata to identify index, title if not wayback, ts otherwise
+    wayback: Whether to consider ts
+    """
+    if not wayback:
+        crawl_meta = [c['title'] for c in crawls]
+    else:
+        crawl_meta = [c['ts'] for c in crawls]
+    left_idx = bisect.bisect(crawl_meta, meta)
+    if left_idx >= len(crawls): left_idx -= 1
+    right_idx = left_idx + 1
+    left, right = left_idx >= 0, right_idx < len(crawls)
+    while left or right:
+        if left:
+            crawl_left = crawls[left_idx]
+            # TODO: Content comparison slows the process a lot
+            if not url_utils.url_match(url, crawl_left['url']) \
+              and text_utils.k_shingling(content, crawl_left.get('content', '')) < 0.95:
+                return crawl_left 
+            left_idx -= 1
+            left = left_idx >= 0
+        if right:
+            crawl_right = crawls[right_idx]
+            if not url_utils.url_match(url, crawl_right['url']) \
+              and text_utils.k_shingling(content, crawl_right.get('content', '')) < 0.95:
+                return crawl_right
+            right_idx += 1
+            right = right_idx < len(crawls)
+    
+
 def title_prepare(crawls, wayback=False):
     """
     Prepapre required data structures for unique_title
+    crawls: URLs' crawls with title, HTML, content (if applicable)
     wayback: whether the common prefix/suffix extraction is for wayback urls. If set to False, mean liveweb pages.
     
-    Returns: site_index, site_meta
-        liveweb: site_index is sorted urls
-        wayback: site_index is [((hostname, dir), start_idx) in site_meta]
+    Returns: site_meta
+        
     """
-    urls = [c['url'] for c in crawls]
-    urls_title = [{'url': c['url'], 'title': c['title']} for c in crawls]
-    if not wayback:
-        return sorted(urls), sorted(urls_title, key=lambda x: x['url'])
-    else:
-        netloc_dir = defaultdict(list)
-        for ut in urls_title:
+    netloc_dir = defaultdict(list)
+    for ut in crawls:
+        if 'content' not in ut:
+            try:
+                html = brotli.decompress(ut['html']).decode()
+                ut['content'] = memo.extract_content(html, version='boilerpipe')
+            except: pass
+        if wayback:
             ut.update({
                 'url': url_utils.filter_wayback(ut['url']),
                 'ts': url_utils.get_ts(ut['url'])
             })
-            nd = url_utils.netloc_dir(ut['url'])
-            netloc_dir[nd].append(ut)
-        idx = 0
-        url_index, url_meta = [], []
-        for k in sorted(netloc_dir):
-            url_index.append((k, idx))
-            url_meta += sorted(netloc_dir[k], key=lambda x: x['url'])
-            idx += len(netloc_dir[k])
-        return url_index, url_meta
+        nd = url_utils.netloc_dir(ut['url'])
+        netloc_dir[nd].append(ut)
+    url_meta = [[k, v] for k, v in netloc_dir.items()]
+    url_meta.sort(key=lambda x: x[0])
+    # * Sort the crawls in the same netloc_dir by title, so that same title are put together
+    for i in range(len(url_meta)):
+        if not wayback:
+            url_meta[i][1] = sorted(url_meta[i][1], key=lambda x: x['title'])
+        else:
+            url_meta[i][1] = sorted(url_meta[i][1], key=lambda x: int(x['ts']))
+    return url_meta
+
 
 def token_intersect(title1_token, title2_token):
     """Intersection on two titles' token. Return intersections if available"""
@@ -95,48 +131,56 @@ def token_intersect(title1_token, title2_token):
         return set(title1_token[0].split()).intersection(title2_token[0].split())
 
 
-def unique_title_lw(url, title, site_index, site_url_meta, return_common_part=False):
+def unique_title(url, title, content, site_url_meta, wayback=False, return_common_part=False):
     """
     Eliminate common suffix/prefix of certain site for liveweb
-    site_index: sorted urls
-    site_url_meta: [url with title] sorted in url
+    url: full url (if wayback, url including web.archive.org)
+    site_url_meta: [[netloc_dir, crawls]] sorted in netloc_dir
     
     Returns: prefix/suffix filtered title, prefix/suffix if return_common_part is True
     """
     title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
+    if wayback:
+        url, ts = url_utils.filter_wayback(url), url_utils.get_ts(url)
     us = urlsplit(url)
-    close_idx = bisect.bisect_left(site_index, url)
-    if close_idx == len(site_index):
+    nd = url_utils.netloc_dir(url)
+    close_idx = bisect.bisect_left(site_url_meta, [nd, []])
+    if close_idx == len(site_url_meta):
         close_idx -= 1 # * In case close_idx is the out of bound
     upidx, downidx = close_idx, close_idx + 1
     diffs = set() # *{common_prefix_diff has seen, when -3 to 3 all seen, quit}
     itsts = set()
-    striphost = lambda x: urlsplit(x).netloc.split(':')[0]
+    striphost = lambda nd: nd[0].split(':')[0]
 
     # * Find first candidate which is not url itself
-    while upidx >= 0 and url_utils.url_match(site_url_meta[upidx]['url'], url):
-        upidx -= 1
-    while downidx <= len(site_url_meta) - 1 and url_utils.url_match(site_url_meta[downidx]['url'], url):
-        downidx += 1
+    # while upidx >= 0 and url_utils.url_match(site_url_meta[upidx]['url'], url):
+    #     upidx -= 1
+    # while downidx <= len(site_url_meta) - 1 and url_utils.url_match(site_url_meta[downidx]['url'], url):
+    #     downidx += 1
     upgoing = not (upidx < 0 \
-                or striphost(site_url_meta[upidx]['url']) != us.netloc.split(':')[0])
-    downgoing = not (downidx > len(site_index) - 1 \
-                  or striphost(site_url_meta[downidx]['url']) != us.netloc.split(':')[0])
+                or striphost(site_url_meta[upidx][0]) != us.netloc.split(':')[0])
+    downgoing = not (downidx > len(site_url_meta) - 1 \
+                  or striphost(site_url_meta[downidx][0]) != us.netloc.split(':')[0])
     
+    meta = ts if wayback else title
     while (upgoing or downgoing) and len(diffs) < 7:
         tocheck = []
         if upgoing:
-            upurl, uptitle = site_url_meta[upidx]['url'], site_url_meta[upidx]['title']
-            upurl = url_utils.url_norm(upurl)
-            uptd = url_utils.common_prefix_diff(url, upurl)
-            if abs(uptd) <= 3 and not url_utils.url_match(upurl, url):
-                tocheck.append((uptd, upurl, uptitle))
+            upcrawl = different_page(url, meta, content, site_url_meta[upidx][1], wayback=wayback)
+            if upcrawl:
+                upurl, uptitle = upcrawl['url'], upcrawl['title']
+                upurl = url_utils.url_norm(upurl)
+                uptd = url_utils.common_prefix_diff(url, upurl)
+                if abs(uptd) <= 3 and not url_utils.url_match(upurl, url):
+                    tocheck.append((uptd, upurl, uptitle))
         if downgoing:
-            downurl, downtitle = site_url_meta[downidx]['url'], site_url_meta[downidx]['title']
-            downurl = url_utils.url_norm(downurl)
-            downtd = url_utils.common_prefix_diff(url, downurl)
-            if abs(downtd) <= 3 and not url_utils.url_match(downurl, url):
-                tocheck.append(((downtd, downurl, downtitle)))
+            downcrawl = different_page(url, meta, content, site_url_meta[downidx][1], wayback=wayback)
+            if downcrawl:
+                downurl, downtitle = downcrawl['url'], downcrawl['title']
+                downurl = url_utils.url_norm(downurl)
+                downtd = url_utils.common_prefix_diff(url, downurl)
+                if abs(downtd) <= 3 and not url_utils.url_match(downurl, url):
+                    tocheck.append(((downtd, downurl, downtitle)))
 
         if len(tocheck) > 1: # *Put small in front
             tocheck[0], tocheck[1] = min(tocheck, key=lambda x:x[0]), max(tocheck, key=lambda x:x[0])
@@ -152,114 +196,16 @@ def unique_title_lw(url, title, site_index, site_url_meta, return_common_part=Fa
         upidx -= 1
         downidx += 1
         upgoing = upgoing and not (upidx < 0 \
-                        or striphost(site_url_meta[upidx]['url']) != us.netloc.split(':')[0])
-        downgoing = downgoing and not (downidx > len(site_index) - 1 \
-                        or striphost(site_url_meta[downidx]['url']) != us.netloc.split(':')[0])
+                        or striphost(site_url_meta[upidx][0]) != us.netloc.split(':')[0])
+        downgoing = downgoing and not (downidx > len(site_url_meta) - 1 \
+                        or striphost(site_url_meta[downidx][0]) != us.netloc.split(':')[0])
  
     if len(itsts) <= 0:
         return title
     if len(title_tokens) > 1:
         return ' '.join([tt for tt in title_tokens if tt not in itsts])
     else:
-        return ' '.join([tt for tt in title_tokens[0].split() if tt not in itsts])
-
-
-def unique_title_wb(url, title, site_index, site_url_meta, return_common_part=False):
-    """
-    Eliminate common suffix/prefix of certain site for wayback
-    Diff with lw version: 
-        site_urls/site_url_meta should be sorted in ((netloc,dirname), ts)
-        Look at neighbor in a granularity of netloc,dirname, then pick closest timestamp within it.
-    url: wayback version url
-    site_index: [(netloc, dir), start index]
-    Returns: prefix/suffix filtered title, prefix/suffix if return_common_part is True
-    """
-    title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
-    # TODO: Depend on url's format, may need to alter in the future
-    url, ts = url_utils.filter_wayback(url), url_utils.get_ts(url)
-    ts = dparser.parse(ts)
-    nd = url_utils.netloc_dir(url)
-    close_idx = bisect.bisect(site_index, (nd, 0))
-    if close_idx == len(site_index):
-        close_idx -= 1 # * In case close_idx is the out of bound
-    upidx, downidx = close_idx, close_idx + 1
-    diffs = set() # *{common_prefix_diff has seen, when -3 to 3 all seen, quit}
-    itsts = set()
-
-
-    def netdir_closest_ts(nd_idx):
-        """Return closest idx in ts to target url. If only same url in the area, return None"""
-        _, cur_idx = site_index[nd_idx]
-        next_idx = site_index[nd_idx + 1][1] if nd_idx < len(site_index) -1 else len(site_url_meta)
-        closest_ts_urls = [(site_url_meta[idx], idx) for idx in range(cur_idx, next_idx)]
-        closest_ts_urls = sorted(closest_ts_urls, key=lambda x: abs((dparser.parse(x[0]['ts']) - ts).total_seconds()))
-        for closest_url, idx in closest_ts_urls:
-            if not url_utils.url_match(closest_url['url'], url):
-                return idx
-
-    upgoing = not (upidx < 0 or nd[0] != site_index[upidx][0][0])
-    downgoing = not (downidx > len(site_index) - 1 \
-                    or nd[0] != site_index[downidx][0][0])
-
-    while (upgoing or downgoing) and len(diffs) < 7:
-        tocheck = []
-        while True: # *Dummy while True for jumping
-            if not upgoing:
-                break
-            upurlidx = netdir_closest_ts(upidx)
-            if not upurlidx:
-                break
-            upurl, uptitle = site_url_meta[upurlidx]['url'], site_url_meta[upurlidx]['title']
-            upurl = url_utils.url_norm(upurl)
-            uptd = url_utils.common_prefix_diff(url, upurl)
-            if abs(uptd) > 3:
-                break
-            tocheck.append((uptd, upurl, uptitle))
-            break
-        while True:
-            if not downgoing:
-                break
-            downurlidx = netdir_closest_ts(downidx)
-            if not downurlidx:
-                break
-            downurl, downtitle = site_url_meta[downurlidx]['url'], site_url_meta[downurlidx]['title']
-            downurl = url_utils.url_norm(downurl)
-            downtd = url_utils.common_prefix_diff(url, downurl)
-            if abs(downtd) > 3:
-                break
-            tocheck.append((downtd, downurl, downtitle))
-            break
-        
-        if len(tocheck) > 1: # *Put small in front
-            tocheck[0], tocheck[1] = min(tocheck, key=lambda x:x[0]), max(tocheck, key=lambda x:x[0])
-        for td, cand_url, cand_title in tocheck:
-            diffs.add(td)
-            # TODO: Currently exit whenever see one intersection. Maybe multiple intersections are required in the future
-            itsts = token_intersect(title_tokens, \
-                        regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', cand_title))
-            if len(itsts) > 0:
-                break
-        if len(itsts) > 0:
-            break
-
-        upidx -= 1
-        downidx += 1
-        upgoing = upgoing and not (upidx < 0 or nd[0] != site_index[upidx][0][0])
-        downgoing = downgoing and not (downidx > len(site_index) - 1 \
-                    or nd[0] != site_index[downidx][0][0])
-        
-    if len(itsts) <= 0:
-        return title
-    if len(title_tokens) > 1:
-        return ' '.join([tt for tt in title_tokens if tt not in itsts])
-    else:
-        return ' '.join([tt for tt in title_tokens[0].split() if tt not in itsts])
-
-def unique_title(url, title, site_index, site_url_meta, return_common_part=False, wayback=False):
-    if not wayback:
-        return unique_title_lw(url, title, site_index, site_url_meta, return_common_part)
-    else:
-        return unique_title_wb(url, title, site_index, site_url_meta, return_common_part)
+        return ' '.join([tt for tt in title_tokens[0].split() if tt not in itsts])_title_wb(url, title, site_index, site_url_meta, return_common_part)
 
 
 def norm(url):

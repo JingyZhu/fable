@@ -565,7 +565,7 @@ class Discoverer:
                 # //ass_check = not pass_check
                 if len(inter_urls) > 1:
                     inter_urls = inter_urls[1:]
-                pass_check = verify_alias(url, inter_urls[1:], ts, homepage_redir=is_homepage and new_is_homepage)
+                pass_check = verify_alias(url, inter_urls, ts, homepage_redir=is_homepage and new_is_homepage)
                 if pass_check:
                     return new_url
             else:
