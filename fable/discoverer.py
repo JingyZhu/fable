@@ -611,7 +611,8 @@ class Discoverer:
 
         # TODO(eff): Taking long time, due to crawl
         src_broken, reason = sic_transit.broken(src, html=True)
-        
+        tracer.debug(f"Check breakage of src: {src}")
+
         # *Directly check this outgoing page
         if not src_broken:
             src_html = self.memo.crawl(src)

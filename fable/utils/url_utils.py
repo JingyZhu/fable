@@ -336,8 +336,9 @@ def common_prefix_diff(dest, src):
 
 
 def netloc_dir(url):
+    url = filter_wayback(url)
     us = urlsplit(url)
     p = us.path
     if len(p) > 1 and p[-1] == '/': p = p[:-1]
     if p == '':  p == '/'
-    return (us.netloc.split(':')[0], os.path.dirname(p))
+    return (us.netloc.split(':')[0], nondigit_dirname(p))

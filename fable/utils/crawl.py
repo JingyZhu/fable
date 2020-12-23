@@ -287,7 +287,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
     if r.status_code >= 400:
         if r.status_code in [401, 403, 404]: logger.debug(f'requests_crawl: Get status code {r.status_code}')
         return
-    logger.debug(f'requests_crawl: got response')
+    logger.debug(f'requests_crawl: got response {url}')
     headers = {k.lower(): v.lower() for k, v in r.headers.items()}
     content_type = headers['content-type'] if 'content-type' in headers else ''
     if html and 'html' not in content_type:

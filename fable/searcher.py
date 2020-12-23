@@ -75,28 +75,27 @@ class Searcher:
                 return top_similar[0], {'type': fromm, 'value': top_similar[1]}
             return
 
-        if title != '':
-            if search_engine == 'google':
-                search_results = search.google_search(f'{title}', site_spec_url=site)
+        if title != '' and site:
+            if search_engine == 'bing':
+                site_str = f'site:{site}'
+                search_results = search.bing_search(f'{title} {site_str}', use_db=self.use_db)
+                if len(search_results) > 20: search_results = search_results[:20]
                 similar = search_once(search_results, typee='title_site')
                 if similar is not None: 
                     return similar
                 if len(search_results) >= 8:
-                    search_results = search.google_search(f'"{title}"', use_db=self.use_db)
+                    search_results = search.bing_search(f'+"{title}" {site_str}', use_db=self.use_db)
+                    if len(search_results) > 20: search_results = search_results[:20]
                     similar = search_once(search_results, typee='title_exact')
                     if similar is not None: 
                         return similar
             else:
-                if site is not None:
-                    site_str = f'site:{site}'
-                else:
-                    site_str = ''
-                search_results = search.bing_search(f'{title} {site_str}', use_db=self.use_db)
+                search_results = search.google_search(f'{title}', site_spec_url=site, use_db=self.use_db)
                 similar = search_once(search_results, typee='title_site')
                 if similar is not None: 
                     return similar
                 if len(search_results) >= 8:
-                    search_results = search.bing_search(f'+"{title}"', use_db=self.use_db)
+                    search_results = search.google_search(f'"{title}"', site_spec_url=site, use_db=self.use_db)
                     similar = search_once(search_results, typee='title_exact')
                     if similar is not None: 
                         return similar
@@ -106,18 +105,19 @@ class Searcher:
         topN = ' '.join(topN)
         tracer.topN(url, topN)
         if len(topN) > 0:
-            if search_engine == 'google':
-                search_results = search.google_search(topN, site_spec_url=site, use_db=self.use_db)
-                similar = search_once(search_results, typee='topN')
-                if similar is not None:
-                    return similar
-            else:
+            if search_engine == 'bing':
                 if site is not None:
                     site_str = f'site:{site}'
                 else: 
                     site_str = ''
                 search_results = search.bing_search(f'{topN} {site_str}', use_db=self.use_db)
+                if len(search_results) > 20: search_results = search_results[:20]
                 similar = search_once(search_results, typee='topN')
                 if similar is not None: 
+                    return similar
+            else:
+                search_results = search.google_search(topN, site_spec_url=site, use_db=self.use_db)
+                similar = search_once(search_results, typee='topN')
+                if similar is not None:
                     return similar
         return

@@ -244,7 +244,7 @@ class ReorgPageFinder:
         """
         if not title:
             self.similar.clear_titles()
-        elif self.similar.site is None or self.similar.site != self.site:
+        elif self.similar.site is None or self.site not in self.similar.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # !_search
@@ -354,7 +354,7 @@ class ReorgPageFinder:
         infer: Infer every time when a new alias is found
         Required urls: URLs that will be run on
         """
-        if self.similar.site is None or self.similar.site != self.site:
+        if self.similar.site is None or self.site not in self.similar.site:
             self.similar.clear_titles()
             self.similar._init_titles(self.site)
         # ! discover

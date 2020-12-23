@@ -60,6 +60,8 @@ for dc, dc_value in DEFAULT_CONFIG.items():
         var_dict.update({dc: dc_value})
 
 if 'mongo_url' not in var_dict:
+    DB_CONN = eval(f"MongoClient(MONGO_HOSTNAME, username=MONGO_USER, password=MONGO_PWD, authSource='admin')")
     DB = eval(f"MongoClient(MONGO_HOSTNAME, username=MONGO_USER, password=MONGO_PWD, authSource='admin').{MONGO_DB}")
 else:
+    DB_CONN =  eval(f"MongoClient({MONGO_URL})")
     DB =  eval(f"MongoClient({MONGO_URL}).{MONGO_DB}")
