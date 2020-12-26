@@ -11,7 +11,7 @@ import time
 from collections import defaultdict
 import random
 import brotli
-from dateutil import parser as dparser
+import dateparser as dparser
 from urllib.parse import urlsplit, urlparse
 import bisect
 
@@ -99,7 +99,7 @@ def title_prepare(crawls, wayback=False):
         if 'content' not in ut:
             try:
                 html = brotli.decompress(ut['html']).decode()
-                ut['content'] = memo.extract_content(html, version='boilerpipe')
+                ut['content'] = memo.extract_content(html, version='boilerpipe', handle_exception=False)
             except: pass
         if wayback:
             ut.update({
@@ -400,7 +400,10 @@ class Memoizer:
     
     def extract_content(self, html, **kwargs):
         if html is None:
-            return ''
+            if kwargs.get('handle_exception', True):
+                return ''
+            else:
+                raise
         html_bin = brotli.compress(html.encode())
         try:
             content = self.db.crawl.find_one({'html': html_bin, 'content': {"$exists": True}})
@@ -416,7 +419,10 @@ class Memoizer:
     
     def extract_title(self, html, **kwargs):
         if html is None:
-            return ''
+            if kwargs.get('handle_exception', True):
+                return ''
+            else:
+                raise
         html_bin = brotli.compress(html.encode())
         try:
             title = self.db.crawl.find_one({'html': html_bin, 'title': {"$exists": True}})
@@ -458,10 +464,10 @@ class Memoizer:
                     continue
                 try:
                     out_html = self.crawl(outlink)
-                    out_title = self.extract_title(out_html),
-                    out_content = self.extract_content(out_html)
+                    out_title = self.extract_title(out_html, handle_exception=False)
+                    out_content = self.extract_content(out_html, handle_exception=False)
                 except: continue
-                tracer.debug(f"get_more_crawls: Got new sample from outlinks")
+                tracer.debug(f"get_more_crawls: Got new sample from outlinks {out_title} {out_html is None}")
                 new_crawl = {
                     'url': outlink,
                     'html': out_html,
@@ -498,8 +504,8 @@ class Memoizer:
                 continue
             try:
                 cand_html = self.crawl(cand_url)
-                cand_title = self.extract_title(cand_html),
-                cand_content = self.extract_content(cand_html)
+                cand_title = self.extract_title(cand_html, handle_exception=False)
+                cand_content = self.extract_content(cand_html, handle_exception=False)
             except: continue
             tracer.debug(f"get_more_crawls: Got new sample from wayback")
             new_crawl = {
@@ -617,11 +623,15 @@ class Similar:
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def _init_titles(self, site, version='domdistiller'):
-        # ! update_sites(self.db.crawl)
+        """
+        Return: Bool (whether init_title is succeed)
+        """
         if self.site and site in self.site:
-            return
+            return True
         memo = Memoizer()
         _, new_site = memo.crawl(f'http://{site}', final_url=True)
+        if new_site is None:
+            return False
         new_site = he.extract(new_site)
         self.site = (site, new_site)
         tracer.info(f'_init_titles {self.site}')
@@ -632,9 +642,7 @@ class Similar:
         lw_crawl = []
         for ssite in self.site:
             lw_crawl += list(self.db.crawl.find({'site': ssite, 'url': re.compile('^((?!web\.archive\.org).)*$')}))
-        wb_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('web.archive.org')}))
-        # lw_crawl = random.sample(lw_crawl, 1000) if len(lw_crawl) > 1000 else lw_crawl
-        # wb_crawl = random.sample(wb_crawl, 500) if len(wb_crawl) > 500 else wb_crawl
+        wb_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('\/\/web.archive.org')}))
         # lw_crawl = [lw for lw in lw_crawl if 'title' in lw] + [lw for lw in lw_crawl if 'title' not in lw]
         # wb_crawl = [wb for wb in wb_crawl if 'title' in wb] + [wb for wb in wb_crawl if 'title' not in wb]
         lw_crawl = [lw for lw in lw_crawl if 'title' in lw]
@@ -658,8 +666,8 @@ class Similar:
                     seen.add(new_url)
                 try:
                     html = memo.crawl(new_url)
-                    content = memo.extract_content(html)
-                    title = memo.extract_title(html)
+                    content = memo.extract_content(html, handle_exception=False)
+                    title = memo.extract_title(html, handle_exception=False)
                     lw_crawl.append({
                         'site': site, 
                         '_id': new_url, 
@@ -700,45 +708,11 @@ class Similar:
 
         start = time.time()
         self.wb_seen = set()
-        # # * Get more urls from wayback
-        # if len(wb_crawl) < LEAST_SITE_URLS:
-        #     param_dict = {
-        #         "filter": ['statuscode:200', 'mimetype:text/html'],
-        #         "collapse": "urlkey",
-        #         "limit": 300
-        #     }
-        #     new_urls, _ = crawl.wayback_index(f"*.{site}/*", param_dict=param_dict)
-        #     iterr = 0
-        #     in_wb = set([url_utils.filter_wayback(wb['url']) for wb in wb_crawl])
-        #     new_urls = [n for n in new_urls if n[1] not in in_wb]
-        #     new_urls = [url_utils.constr_wayback(n[1], n[0]) for n in random.sample(new_urls, min(LEAST_SITE_URLS, len(new_urls)))]
-        #     while len(wb_crawl) < LEAST_SITE_URLS and iterr < len(new_urls):
-        #         new_url = new_urls[iterr]
-        #         iterr += 1
-        #         if url_utils.filter_wayback(new_url) in in_wb:
-        #             continue
-        #         html = memo.crawl(new_url)
-        #         if html is None:
-        #             continue
-        #         in_wb.add(new_url)
-        #         wb_crawl.append({'site': site, '_id': new_url, 'url': new_url, 'html': brotli.compress(html.encode())})
         for wb in wb_crawl:
             url, wb_url = wb['url'], url_norm(url_utils.filter_wayback(wb['url']))
             if wb_url in self.wb_seen: continue
             else: self.wb_seen.add(wb_url)
             loc_dir = url_utils.netloc_dir(wb_url)
-            # if 'title' not in wb and wb_path[loc_dir] < 2:
-            #     html = brotli.decompress(wb['html']).decode()
-            #     title = text_utils.extract_title(html, version=version)
-            #     if title == '': continue
-            #     try:
-            #         self.db.crawl.update_one({'_id': wb['_id']}, {"$set": {'title': title}})
-            #     except: pass
-            # elif 'title' in wb:
-            #     title = wb['title']
-            # else: continue
-            # wb_path[loc_dir] += 1
-            # self.wb_titles[title].add(norm(wb_url))
             wb_title = wb.copy()
             wb_title.update({
                 'url': wb_url, 
@@ -747,10 +721,10 @@ class Similar:
             })
             self.wb_titles[wb_title['title']].append(wb_title)
         # * Prepare data structures for title prefix/suffix filteration
-        # wb_crawl_title = [wb for wb in wb_crawl if 'title' in wb]
         self.wb_meta = title_prepare(wb_crawl, wayback=True)
         end = time.time()
         tracer.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n init_time: {end - start:.2f}')
+        return True
 
     def _add_crawl(self, url, title, content, html=None):
         """Add new crawls into similar comparison"""
@@ -805,7 +779,7 @@ class Similar:
         text1_token, text2_token = ' '.join(text1_token), ' '.join(text2_token)
         # * To match, one text must be the subset of another
         if text1_token not in text2_token and text2_token not in text1_token:
-            tracer.debug(f'shorttext_match: one text not a subset of another: \n{ text1} {text2} \n {text1_token} {text2_token}')
+            tracer.debug(f'shorttext_match: one text not a subset of another: \n{ text1} vs. {text2} \n {text1_token} vs. {text2_token}')
             return 0
         simi = self.tfidf.similar(text1, text2)
         if simi >= (self.short_threshold + self.threshold) / 2:
@@ -821,6 +795,8 @@ class Similar:
 
         Return: Bool
         """
+        if not title:
+            return False
         lw_url = url_utils.filter_wayback(url)
         site_titles = self.wb_titles if wayback else self.lw_titles
         site_meta = self.wb_meta if wayback else self.lw_meta
@@ -832,13 +808,14 @@ class Similar:
                     if nd != site_crawl['netloc_dir'] and nd in site_crawl['netloc_dir']:
                         continue
                     # TODO: Can actually also compare content to not consider canonical here
-                    if not url_utils.url_match(lw_url, site_crawl['url']):
+                    if not url_utils.url_match(lw_url, site_crawl['url']) and \
+                            text_utils.k_shingling(content, site_crawl.get('content', '')) < 0.95:
                         tracer.debug(f"_is_title_unique: title {title} is not unique amoung site with {site_crawl['url']}")
                         return False
             return True
         unique = check_titles()
         if not unique: return unique
-        nd_idx = bisect.bisect(site_meta, [nd, []])
+        nd_idx = bisect.bisect_left(site_meta, [nd, []])
         # * Get more samples if nd's URL is not enough
         if wayback and len(site_meta[nd_idx][1]) < 2:
             memo = Memoizer()
@@ -875,8 +852,8 @@ class Similar:
             return []
 
         self.tfidf._clear_workingset()
-        print([[v[0], [vv['url'] for vv in v[1]] ] for v in self.wb_meta])
-        print({k: [vv['url'] for vv in v] for k, v in self.wb_titles.items()})
+        # print([[v[0], [vv['url'] for vv in v[1]] ] for v in self.wb_meta])
+        # print({k: [vv['url'] for vv in v] for k, v in self.wb_titles.items()})
         # * Extract Unique Titles for both wb urls and lw urls
         tgt_uniq_title = unique_title(target_url, target_title, target_content, self.wb_meta, wayback=True)
         cand_uniq_titles = {url: unique_title(url, title, candidates_contents.get(url, ''), self.lw_meta, wayback=False) \
@@ -933,7 +910,7 @@ class Similar:
         for cand_url in cand_titles:
             self._add_crawl(cand_url, cand_titles[cand_url], cand_contents.get(cand_url), \
                             cand_htmls.get(cand_url))
-        if self.site is not None:
+        if self.site is not None and tg_title:
             similars = self.title_similar(tg_url, tg_title, tg_content, cand_titles, cand_contents, fixed=fixed)
             if len(similars) > 0:
                 return similars, "title"

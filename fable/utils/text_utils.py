@@ -511,7 +511,7 @@ def domdistiller_title_extract(html, lang=None):
     return title
 
 
-def extract_title(html, version='mine'):
+def extract_title(html, version='mine', handle_exception=True):
     """
     Wrapper functions for different version of html body extraction
     """
@@ -533,7 +533,8 @@ def extract_title(html, version='mine'):
                 continue
     except Exception as e:
         print("extract body:", str(e))
-    return ""
+        if handle_exception: return ""
+        else: raise
 
 
 def k_shingling(text1, text2, k=5):

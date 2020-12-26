@@ -9,7 +9,7 @@ from queue import Queue
 from collections import defaultdict
 import re, json
 import random
-from dateutil import parser as dparser
+import dateparser as dparser
 import datetime
 
 from . import config, tools, tracer

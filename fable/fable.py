@@ -246,7 +246,9 @@ class ReorgPageFinder:
             self.similar.clear_titles()
         elif self.similar.site is None or self.site not in self.similar.site:
             self.similar.clear_titles()
-            self.similar._init_titles(self.site)
+            if not self.similar._init_titles(self.site):
+                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
+                return
         # !_search
         noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
         searched_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.search": True})
@@ -356,7 +358,9 @@ class ReorgPageFinder:
         """
         if self.similar.site is None or self.site not in self.similar.site:
             self.similar.clear_titles()
-            self.similar._init_titles(self.site)
+            if not self.similar._init_titles(self.site):
+                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
+                return
         # ! discover
         noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
         discovered_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.discover": True})
