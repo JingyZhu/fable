@@ -46,6 +46,7 @@ class Searcher:
             html = self.memo.crawl(wayback_url, proxies=self.PS.select())
             title = self.memo.extract_title(html, version='domdistiller')
             content = self.memo.extract_content(html)
+            tracer.wayback_url(url, wayback_url)
         except Exception as e:
             tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             wayback_url = url_utils.constr_wayback(url, '20201231')

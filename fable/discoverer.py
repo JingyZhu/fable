@@ -732,6 +732,7 @@ class Discoverer:
             title = self.memo.extract_title(html, version='domdistiller')
             url_ts = url_utils.get_ts(wayback_url)
             has_snapshot = True
+            tracer.wayback_url(url, wayback_url)
         except Exception as e:
             tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             html, title, content = '', '', ''
