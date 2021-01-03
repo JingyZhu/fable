@@ -875,7 +875,7 @@ class Similar:
             #         continue
             if not self._is_title_unique(url, c, candidates_contents.get(url, ''), wayback=False):
                 tracer.debug(f"title_similar: cand_url's title '{c}' is not unique")
-                return []
+                continue
             simi = self.shorttext_match(tgt_uniq_title, uniq_c)
             if simi:
                 simi_cand.append((url, simi))

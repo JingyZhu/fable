@@ -32,7 +32,7 @@ class FlashFillHandler:
                 idx = string.ascii_uppercase[col]
                 try:
                     r = ws.range(f'{idx}1')
-                    r.api.flashfill()
+                    r.api.FlashFill()
                     wb.save()
                 except Exception as e:
                     print('Flashfill:', str(e))
