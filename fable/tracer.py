@@ -112,6 +112,9 @@ class tracer(logging.Logger):
         if link: record.update({'link': link})
         self.update_data[url]['discover'].append(record)
         self.info(f"Backlink: {status} {reason} {link if link else ''}", level=3)
+    
+    def discover_len(self, url):
+        return len(self.update_data[url]['discover'])
 
     def backpath_findpath(self, url, path):
         self.update_data[url].setdefault('backpath', [])
@@ -128,6 +131,15 @@ class tracer(logging.Logger):
         self.update_data[url]['discover'].append(record)
         self.info(f'discoverer has met too many no snapshot pages, early exit.', level=3)
 
+    def inference(self, url, meta, inputs, reorg):
+        self.update_data[url].setdefault('inference', [])
+        self.update_data[url]['inference'].append({
+            'meta': meta,
+            'inputs': inputs,
+            'reorg_url': reorg
+        })
+        self.info(f'Inference: {url} --> {reorg}')
+    
     def flush(self):
         self.info(f'Flushing URL(s)')
         for url, d in self.update_data.items():

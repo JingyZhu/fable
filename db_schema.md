@@ -69,7 +69,11 @@ Set of URLs for trying to find copies on
     "hostname": "hostname (Ascending indexed)",
     "title": "title",
     "class (logname)": {
-        "by": "string (Found by which technique)",
+        "by": {
+            "method": "Found by what method",
+            "type": "matched by what type",
+            "value": "Matched type value"
+        }
         "reorg_url": "str (Reorganized URL)"
     }
 }

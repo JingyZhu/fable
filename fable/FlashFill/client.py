@@ -3,7 +3,7 @@ import pandas as pd
 import pickle
 import os
 
-proxy = ServerProxy('http://0.0.0.0:5678', allow_none=True)
+proxy = ServerProxy('http://52.146.88.170:8988', allow_none=True)
 files = ['sheet1.csv', 'sheet2.csv']
 
 inputs = []
@@ -18,7 +18,7 @@ for path in files:
     }
     inputs.append(pickle.dumps(d))
 
-outputs = proxy.handle(inputs, 'AHA')
+outputs = proxy.handle(inputs, 'AHA_' + str(os.getpid()))
 outputs = [pickle.loads(o.data) for o in outputs]
 print([o['sheet_name'] for o in outputs])
 print([pd.DataFrame(o['csv']) for o in outputs])

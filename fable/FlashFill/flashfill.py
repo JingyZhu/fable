@@ -4,6 +4,25 @@ import json, csv
 import os
 import pandas as pd
 import pickle
+from contextlib import contextmanager
+import threading
+import _thread
+
+class TimeoutException(Exception):
+    def __init__(self, msg=''):
+        self.msg = msg
+
+@contextmanager
+def time_limit(seconds, msg=''):
+    timer = threading.Timer(seconds, lambda: _thread.interrupt_main())
+    timer.start()
+    try:
+        yield
+    except KeyboardInterrupt:
+        raise TimeoutException("Timed out for operation {}".format(msg))
+    finally:
+        # if the action ends in specified time, timer is canceled
+        timer.cancel()
 
 class FlashFillHandler:
     def handle(self, inputs, identifier):
@@ -18,7 +37,7 @@ class FlashFillHandler:
         self.fill(xlsx_path, output_cols)
         outputs = self.xlsx_csv(xlsx_path)
         return [pickle.dumps(o) for o in outputs] 
-    
+        
     def fill(self, xlsx_path, output_cols, visible=False):
         """
         xlsx can have multiple sheet for higher throughput
@@ -26,16 +45,20 @@ class FlashFillHandler:
         """
         app = xw.App(visible=False)
         wb = app.books.open(xlsx_path)
-        for cols, ws in zip(output_cols, wb.sheets): 
-            assert(cols[-1] < 26)
-            for col in cols:
-                idx = string.ascii_uppercase[col]
-                try:
-                    r = ws.range(f'{idx}1')
-                    r.api.FlashFill()
-                    wb.save()
-                except Exception as e:
-                    print('Flashfill:', str(e))
+        try:
+            with time_limit(20):
+                for cols, ws in zip(output_cols, wb.sheets): 
+                    assert(cols[-1] < 26)
+                    for col in cols:
+                        idx = string.ascii_uppercase[col]
+                        try:
+                            r = ws.range(f'{idx}1')
+                            r.api.FlashFill()
+                            wb.save()
+                        except Exception as e:
+                            print('Flashfill:', str(e))
+        except: 
+            print('Flashfill: Timeout')
         app.kill()
 
     def csv_xlsx(self, csvs, sheet_names, identifier, output_name='Output'):

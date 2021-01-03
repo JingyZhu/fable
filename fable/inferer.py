@@ -5,6 +5,7 @@ from urllib.parse import urlsplit
 from collections import defaultdict
 import string
 import time
+import socket
 
 from . import config, tools, tracer
 from .utils import search, crawl, text_utils, url_utils, sic_transit
@@ -67,7 +68,7 @@ class Inferer:
         sheet2_csv = defaultdict(list) # Only meta
         sheet3_csv = defaultdict(list) # Only URL
 
-        # Input the known input-output pair
+        # * Input the known input-output pair
         for ex_input, reorg_url in examples:
             url, meta = ex_input
             us = urlsplit(url)
@@ -107,7 +108,8 @@ class Inferer:
                     sheet2_csv[f'Output_{i}'].append('')
                     sheet3_csv[f'Output_{i}'].append('')
         urls_idx = {}
-        # Input the inferring examples
+
+        # * Input the inferring examples
         for i, (url, meta) in enumerate(urls):
             us = urlsplit(url)
             urls_idx[url] = i + len(examples)
@@ -146,18 +148,23 @@ class Inferer:
         count = 0
         while count < 3:
             try:
+                # socket.setdefaulttimeout(20)
                 outputs = self.proxy.handle(sheets, site + str(time.time()))
+                # socket.setdefaulttimeout(None)
                 break
             except Exception as e:
                 tracer.error(f'infer: exception on RPC {str(e)}')
                 count += 1
                 time.sleep(2)
                 continue
+        if count == 3:
+            return {}
         outputs = [pickle.loads(o.data) for o in outputs]
         outputs = [pd.DataFrame(o['csv']) for o in outputs]
         poss_infer = defaultdict(set)
+        seen_reorg = set()
         for output in outputs:
-            for url, _ in urls:
+            for url, meta in urls:
                 idx = urls_idx[url]
                 reorg_url_lists = output.filter(regex='^Output', axis=1).iloc[idx]
                 num_outputs = len(reorg_url_lists)
@@ -174,6 +181,9 @@ class Inferer:
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
                 if output_query:
                     reorg_url += f'?{reorg_url_lists[f"Output_{num_outputs-1}"]}'
+                if reorg_url not in seen_reorg:
+                    tracer.inference(url, meta, examples, reorg_url)
+                    seen_reorg.add(reorg_url)
                 poss_infer[url].add(reorg_url)
         return {k: list(v) for k, v in poss_infer.items()}
     
@@ -199,7 +209,7 @@ class Inferer:
                 new_reorg = True
                 rval, _ = sic_transit.broken(reorg_url)
                 if rval == False:
-                    return reorg_url, {'type': "broken_check", "value": 'N/A'}
+                    return reorg_url, {'type': "nocomp_check", "value": 'N/A'}
             if not new_reorg:
                 return None, {'reason': 'No new reorg actually inferred'}
             else:
@@ -212,7 +222,8 @@ class Inferer:
                 reorg_content[reorg_url] = self.memo.extract_content(reorg_html)
                 reorg_title[reorg_url] = self.memo.extract_title(reorg_html)
             if len(reorg_content) + len(reorg_title) == 0:
-                return None, {"reason": "reorg pages not exists"}
+                value = self.if_reorg(url, reorg_urls, compare=False, fp_urls=fp_urls)
+                return value
             try:
                 wayback_url = self.memo.wayback_index(url)
                 html = self.memo.crawl(wayback_url)

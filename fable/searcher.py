@@ -5,7 +5,7 @@ import requests
 from urllib.parse import urlparse 
 from pymongo import MongoClient
 import pymongo
-import re
+import re, regex
 
 from . import config, tools, tracer
 from .utils import search, crawl, text_utils, url_utils
@@ -16,6 +16,7 @@ tracer = logging.getLogger('logger')
 logging.setLoggerClass(logging.Logger)
 
 he = url_utils.HostExtractor()
+VERTICAL_BAR_SET = '\u007C\u00A6\u2016\uFF5C\u2225\u01C0\u01C1\u2223\u2502\u0964\u0965'
 
 class Searcher:
     def __init__(self, use_db=True, proxies={}, memo=None, similar=None):
@@ -79,13 +80,16 @@ class Searcher:
         if title != '' and site:
             if search_engine == 'bing':
                 site_str = f'site:{site}'
-                search_results = search.bing_search(f'{title} {site_str}', use_db=self.use_db)
+                bing_title = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
+                bing_title = ' '.join(bing_title)
+                print(bing_title)
+                search_results = search.bing_search(f'{bing_title} {site_str}', use_db=self.use_db)
                 if len(search_results) > 20: search_results = search_results[:20]
                 similar = search_once(search_results, typee='title_site')
                 if similar is not None: 
                     return similar
                 if len(search_results) >= 8:
-                    search_results = search.bing_search(f'+"{title}" {site_str}', use_db=self.use_db)
+                    search_results = search.bing_search(f'+"{bing_title}" {site_str}', use_db=self.use_db)
                     if len(search_results) > 20: search_results = search_results[:20]
                     similar = search_once(search_results, typee='title_exact')
                     if similar is not None: 
