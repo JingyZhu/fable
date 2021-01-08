@@ -9,7 +9,7 @@ whois
 BeautifulSoup4
 brotli
 dateparser
-dateutils
+python-dateutil
 Unidecode
 reppy
 sklearn

@@ -11,7 +11,7 @@ import time
 from collections import defaultdict
 import random
 import brotli
-import dateparser as dparser
+from dateutil import parser as dparser
 from urllib.parse import urlsplit, urlparse
 import bisect
 

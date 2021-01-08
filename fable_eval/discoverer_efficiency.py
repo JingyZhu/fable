@@ -9,7 +9,7 @@ from queue import Queue
 from collections import defaultdict
 import re, json
 import random
-import dateparser as dparser
+from dateutil import parser as dparser
 import datetime
 
 from fable import config, tools, tracer
@@ -816,8 +816,8 @@ class Discoverer:
                     if not has_snapshot:
                         suffice = suffice or 'Linked' in reason
                 
-                if tracer.discover_len(url) > 60:
-                    break
+            if tracer.discover_len(url) > 60:
+                break
             
             # *Trim low-rank urls, and do deduplications
             dedup,uniq_q, uniq_c = set(), [], 0

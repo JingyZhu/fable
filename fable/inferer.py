@@ -1,7 +1,8 @@
 from xmlrpc.client import ServerProxy
 import pandas as pd
+import numpy as np
 import pickle
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qsl, parse_qs
 from collections import defaultdict
 import string
 import time
@@ -14,6 +15,8 @@ import logging
 logging.setLoggerClass(tracer.tracer)
 tracer = logging.getLogger('logger')
 logging.setLoggerClass(logging.Logger)
+
+ISNUMPY = lambda x: type(x).__module__ == np.__name__
 
 class Inferer:
     def __init__(self, proxies={}, memo=None, similar=None):
@@ -40,27 +43,28 @@ class Inferer:
                 else: rs += ' '
             return rs
         max_url, max_reorg_url = 0, 0
+        query_keys, reorg_query_keys = set(), set()
         output_query = False
-        # Aligh URL to same length
-        for ex_input, reorg_url in examples:
-            url, _ = ex_input
+        # * Aligh URL to same length
+        for url, _, reorg_url in examples:
             us = urlsplit(url)
             path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
             if us.query: 
                 output_query = True
-                path_len += 1
+                query_keys.update(parse_qs(us.query).keys())
             max_url = max(path_len, max_url)
             us_reorg = urlsplit(reorg_url)
             path_len = len(list(filter(lambda x: x != '', us_reorg.path.split('/')))) + 1
             if us_reorg.query:
                 output_query=True
-                path_len += 1
+                reorg_query_keys.update(parse_qs(us_reorg.query).keys())
             max_reorg_url = max(path_len, max_reorg_url)
 
         for url, _ in urls:
             us = urlsplit(url)
             path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
-            if us.query: path_len += 1
+            if us.query: 
+                query_keys.update(parse_qs(us.query).keys())
             max_url = max(path_len, max_url)
 
         sheets = []
@@ -69,13 +73,11 @@ class Inferer:
         sheet3_csv = defaultdict(list) # Only URL
 
         # * Input the known input-output pair
-        for ex_input, reorg_url in examples:
-            url, meta = ex_input
+        for url, meta, reorg_url in examples:
             us = urlsplit(url)
             path_list = list(filter(lambda x: x != '', us.path.split('/')))
             url_inputs = [us.netloc.split(':')[0]] + path_list
             sheet2_csv['Site'].append(us.netloc.split(':')[0])
-            if us.query: url_inputs.append(us.query)
             for i, url_piece in enumerate(url_inputs):
                 sheet1_csv[f'URL{i}'].append(url_piece)
                 sheet3_csv[f'URL{i}'].append(url_piece)
@@ -83,21 +85,23 @@ class Inferer:
                 for i in range(len(url_inputs), max_url):
                     sheet1_csv[f'URL{i}'].append('')
                     sheet3_csv[f'URL{i}'].append('')
-            if isinstance(meta, tuple):
-                for i, meta_piece in enumerate(meta):
-                    sheet1_csv[f'Meta{2*i}'].append(normal(meta_piece))
-                    sheet2_csv[f'Meta{2*i}'].append(normal(meta_piece))
-                    sheet1_csv[f'Meta{2*i+1}'].append(normal(meta_piece.lower()))
-                    sheet2_csv[f'Meta{2*i+1}'].append(normal(meta_piece.lower()))
-            elif isinstance(meta, str):
-                sheet1_csv[f'Meta0'].append(normal(meta))
-                sheet2_csv[f'Meta0'].append(normal(meta))
-                sheet1_csv[f'Meta1'].append(normal(meta.lower()))
-                sheet2_csv[f'Meta1'].append(normal(meta.lower()))
+            qs = parse_qs(us.query)
+            for key in query_keys:
+                sheet1_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
+                sheet3_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
+            
+            for i, meta_piece in enumerate(meta):
+                sheet1_csv[f'Meta{4*i}'].append(meta_piece)
+                sheet2_csv[f'Meta{4*i}'].append(meta_piece)
+                sheet1_csv[f'Meta{4*i+1}'].append(meta_piece.lower())
+                sheet2_csv[f'Meta{4*i+1}'].append(meta_piece.lower())
+                sheet1_csv[f'Meta{4*i+2}'].append(normal(meta_piece))
+                sheet2_csv[f'Meta{4*i+2}'].append(normal(meta_piece))
+                sheet1_csv[f'Meta{4*i+3}'].append(normal(meta_piece.lower()))
+                sheet2_csv[f'Meta{4*i+3}'].append(normal(meta_piece.lower()))
             us_reorg = urlsplit(reorg_url)
             path_reorg_list = list(filter(lambda x: x != '', us_reorg.path.split('/')))
             url_reorg_inputs = [f"{us_reorg.scheme}://{us_reorg.netloc.split(':')[0]}"] + path_reorg_list
-            if us_reorg.query: url_reorg_inputs.append(us_reorg.query)
             for i, reorg_url_piece in enumerate(url_reorg_inputs):
                 sheet1_csv[f'Output_{i}'].append(reorg_url_piece)
                 sheet2_csv[f'Output_{i}'].append(reorg_url_piece)
@@ -107,9 +111,14 @@ class Inferer:
                     sheet1_csv[f'Output_{i}'].append('')
                     sheet2_csv[f'Output_{i}'].append('')
                     sheet3_csv[f'Output_{i}'].append('')
+            qs_reorg = parse_qs(us_reorg.query)
+            for key in reorg_query_keys:
+                sheet1_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
+                sheet2_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
+                sheet3_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
         urls_idx = {}
 
-        # * Input the inferring examples
+        # * Input the to infer examples
         for i, (url, meta) in enumerate(urls):
             us = urlsplit(url)
             urls_idx[url] = i + len(examples)
@@ -117,7 +126,6 @@ class Inferer:
             path_list = list(filter(lambda x: x != '', us.path.split('/')))
             url_inputs = [us.netloc.split(':')[0]] + path_list
             sheet2_csv['Site'].append(us.netloc.split(':')[0])
-            if us.query: url_inputs.append(us.query)
             for i, url_piece in enumerate(url_inputs):
                 sheet1_csv[f'URL{i}'].append(url_piece)
                 sheet3_csv[f'URL{i}'].append(url_piece)
@@ -125,21 +133,27 @@ class Inferer:
                 for i in range(len(url_inputs), max_url):
                     sheet1_csv[f'URL{i}'].append('')
                     sheet3_csv[f'URL{i}'].append('')
-            if isinstance(meta, tuple):
-                for i, meta_piece in enumerate(meta):
-                    sheet1_csv[f'Meta{2*i}'].append(normal(meta_piece))
-                    sheet2_csv[f'Meta{2*i}'].append(normal(meta_piece))
-                    sheet1_csv[f'Meta{2*i+1}'].append(normal(meta_piece.lower()))
-                    sheet2_csv[f'Meta{2*i+1}'].append(normal(meta_piece.lower()))
-            elif isinstance(meta, str):
-                sheet1_csv[f'Meta0'].append(normal(meta))
-                sheet2_csv[f'Meta0'].append(normal(meta))
-                sheet1_csv[f'Meta1'].append(normal(meta.lower()))
-                sheet2_csv[f'Meta1'].append(normal(meta.lower()))
+            qs = parse_qs(us.query)
+            for key in query_keys:
+                sheet1_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
+                sheet3_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
+            for i, meta_piece in enumerate(meta):
+                sheet1_csv[f'Meta{4*i}'].append(meta_piece)
+                sheet2_csv[f'Meta{4*i}'].append(meta_piece)
+                sheet1_csv[f'Meta{4*i+1}'].append(meta_piece.lower())
+                sheet2_csv[f'Meta{4*i+1}'].append(meta_piece.lower())
+                sheet1_csv[f'Meta{4*i+2}'].append(normal(meta_piece))
+                sheet2_csv[f'Meta{4*i+2}'].append(normal(meta_piece))
+                sheet1_csv[f'Meta{4*i+3}'].append(normal(meta_piece.lower()))
+                sheet2_csv[f'Meta{4*i+3}'].append(normal(meta_piece.lower()))
             for i in range(max_reorg_url):
                 sheet1_csv[f'Output_{i}'].append('')
                 sheet2_csv[f'Output_{i}'].append('')
                 sheet3_csv[f'Output_{i}'].append('')
+            for key in reorg_query_keys:
+                sheet1_csv[f'Output_Q_{key}'].append('')
+                sheet2_csv[f'Output_Q_{key}'].append('')
+                sheet3_csv[f'Output_Q_{key}'].append('')
         sheets = [sheet1_csv, sheet2_csv, sheet3_csv]
         sheets = [pickle.dumps({
             'sheet_name': f'sheet{i+1}',
@@ -170,17 +184,27 @@ class Inferer:
                 num_outputs = len(reorg_url_lists)
                 scheme_netloc = reorg_url_lists['Output_0']
                 reorg_paths = []
-                for j in range(1, num_outputs - output_query):
+                for j in range(1, num_outputs - len(reorg_query_keys)):
                     reorg_part = reorg_url_lists[f'Output_{j}']
-                    if not isinstance(reorg_part, str) or reorg_part.lower() == 'nan':
+                    # TODO: How to deal with nan requires more thoughts
+                    if ISNUMPY(reorg_part): reorg_part = str(reorg_part)
+                    if reorg_part != reorg_part or reorg_part.lower() == 'nan': # * Check for NaN value (trick)
                         continue
                     reorg_paths.append(reorg_part)
                 # if len(reorg_paths) < num_outputs - output_query - 1:
                 #     continue
                 reorg_paths = '/'.join(reorg_paths)
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
-                if output_query:
-                    reorg_url += f'?{reorg_url_lists[f"Output_{num_outputs-1}"]}'
+                reorg_queries = []
+                for key in reorg_query_keys:
+                    reorg_kv = reorg_url_lists[f'Output_Q_{key}']
+                    if ISNUMPY(reorg_kv): reorg_kv = str(reorg_kv)
+                    if not reorg_kv != reorg_kv or reorg_kv.lower() == 'nan' or not reorg_kv.split('=')[1]:
+                        continue
+                    reorg_queries.append(reorg_kv)
+                if len(reorg_queries) > 0:
+                    reorg_url += f"?{'&'.join(reorg_queries)}"
+                
                 if reorg_url not in seen_reorg:
                     tracer.inference(url, meta, examples, reorg_url)
                     seen_reorg.add(reorg_url)
