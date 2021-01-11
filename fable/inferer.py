@@ -16,7 +16,7 @@ logging.setLoggerClass(tracer.tracer)
 tracer = logging.getLogger('logger')
 logging.setLoggerClass(logging.Logger)
 
-ISNUMPY = lambda x: type(x).__module__ == np.__name__
+ISNUM = lambda x: type(x).__module__ == np.__name__ or isinstance(x, int)
 
 class Inferer:
     def __init__(self, proxies={}, memo=None, similar=None):
@@ -24,6 +24,7 @@ class Inferer:
         self.proxy = ServerProxy(config.RPC_ADDRESS, allow_none=True)
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
+        self.not_workings = set() # Seen broken inferred URLs
 
     def infer(self, examples, urls, site='NA'):
         """
@@ -101,7 +102,7 @@ class Inferer:
                 sheet2_csv[f'Meta{4*i+3}'].append(normal(meta_piece.lower()))
             us_reorg = urlsplit(reorg_url)
             path_reorg_list = list(filter(lambda x: x != '', us_reorg.path.split('/')))
-            url_reorg_inputs = [f"{us_reorg.scheme}://{us_reorg.netloc.split(':')[0]}"] + path_reorg_list
+            url_reorg_inputs = [f"https://{us_reorg.netloc.split(':')[0]}"] + path_reorg_list
             for i, reorg_url_piece in enumerate(url_reorg_inputs):
                 sheet1_csv[f'Output_{i}'].append(reorg_url_piece)
                 sheet2_csv[f'Output_{i}'].append(reorg_url_piece)
@@ -187,7 +188,7 @@ class Inferer:
                 for j in range(1, num_outputs - len(reorg_query_keys)):
                     reorg_part = reorg_url_lists[f'Output_{j}']
                     # TODO: How to deal with nan requires more thoughts
-                    if ISNUMPY(reorg_part): reorg_part = str(reorg_part)
+                    if ISNUM(reorg_part): reorg_part = str(reorg_part)
                     if reorg_part != reorg_part or reorg_part.lower() == 'nan': # * Check for NaN value (trick)
                         continue
                     reorg_paths.append(reorg_part)
@@ -198,8 +199,8 @@ class Inferer:
                 reorg_queries = []
                 for key in reorg_query_keys:
                     reorg_kv = reorg_url_lists[f'Output_Q_{key}']
-                    if ISNUMPY(reorg_kv): reorg_kv = str(reorg_kv)
-                    if not reorg_kv != reorg_kv or reorg_kv.lower() == 'nan' or not reorg_kv.split('=')[1]:
+                    if ISNUM(reorg_kv): reorg_kv = str(reorg_kv)
+                    if reorg_kv != reorg_kv or reorg_kv.lower() == 'nan' or not reorg_kv.split('=')[1]:
                         continue
                     reorg_queries.append(reorg_kv)
                 if len(reorg_queries) > 0:
@@ -231,17 +232,25 @@ class Inferer:
                 # if True in match:
                 #     continue
                 new_reorg = True
+                if reorg_url in self.not_workings:
+                    tracer.debug('Inferred URL already checked broken')
                 rval, _ = sic_transit.broken(reorg_url)
                 if rval == False:
                     return reorg_url, {'type': "nocomp_check", "value": 'N/A'}
+                else:
+                    self.not_workings.add(reorg_url)
             if not new_reorg:
                 return None, {'reason': 'No new reorg actually inferred'}
             else:
                 return None, {'reason': 'Inferred urls broken'}
         else:
             for reorg_url in reorg_urls:
+                if reorg_url in self.not_workings:
+                    tracer.debug('Inferred URL already checked broken')
+                    continue
                 reorg_html = self.memo.crawl(reorg_url)
                 if reorg_html is None:
+                    self.not_workings.add(reorg_url)
                     continue
                 reorg_content[reorg_url] = self.memo.extract_content(reorg_html)
                 reorg_title[reorg_url] = self.memo.extract_title(reorg_html)

@@ -73,6 +73,10 @@ class tracer(logging.Logger):
     def error(self, s, level=2, **kwargs):
         filename, func, lineno = self._get_stackinfo(level=level)
         super().error(f'[{filename} {func}:{lineno}] \n {s}', **kwargs)
+    
+    def critical(self, s, level=2, **kwargs):
+        filename, func, lineno = self._get_stackinfo(level=level)
+        super().critical(f'[{filename} {func}:{lineno}] \n {s}', **kwargs)
 
     def wayback_url(self, url, wayback):
         self.update_data[url]['wayback_url'] = wayback

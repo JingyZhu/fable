@@ -629,7 +629,11 @@ class Similar:
         if self.site and site in self.site:
             return True
         memo = Memoizer()
-        _, new_site = memo.crawl(f'http://{site}', final_url=True)
+        site_urls = [f'http://{site}', f'http://www.{site}']
+        for site_url in site_urls:
+            _, new_site = memo.crawl(site_url, final_url=True)
+            if new_site:
+                break
         if new_site is None:
             return False
         new_site = he.extract(new_site)

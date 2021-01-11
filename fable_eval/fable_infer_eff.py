@@ -8,12 +8,14 @@ import time
 import json
 import logging
 
-from . import config
-from .tracer import tracer as tracing
-from .utils import text_utils, url_utils, crawl, sic_transit
+from fable import config
+from fable.tracer import tracer as tracing
+from fable.utils import text_utils, url_utils, crawl, sic_transit
 
 db = config.DB
 he = url_utils.HostExtractor()
+SEARCH_CLASS = 'wiki_search'
+DISCOVER_CLASS = 'wiki_discover'
 
 
 def unpack_ex(ex):
@@ -44,6 +46,7 @@ class ReorgPageFinder:
         self.logname = classname if logname is None else logname
         self.tracer = tracer if tracer is not None else self._init_tracer(loglevel=loglevel)
         self.inference_classes = [self.classname] # * Classes looking on reorg for aliases sets
+        self.aliases = set()
 
     def _init_tracer(self, loglevel):
         logging.setLoggerClass(tracing)
@@ -97,6 +100,7 @@ class ReorgPageFinder:
         self.pattern_dict = None
         self.seen_reorg_pairs = None
         self.tracer.handlers.pop()
+        self.aliases = set()
 
     def _add_url_to_patterns(self, url, meta, reorg):
         """
@@ -153,7 +157,9 @@ class ReorgPageFinder:
         patterns = list(patterns)
         broken_urls = self.db.reorg.find({'hostname': self.site})
         # infer
-        broken_urls = [reorg for reorg in broken_urls if len(set(reorg.keys()).intersection(self.inference_classes)) == 0]
+        broken_urls = [reorg for reorg in broken_urls if \
+            len(set(reorg.keys()).intersection(self.inference_classes)) == 0 \
+            and reorg['url'] not in self.aliases]
         # self.db.reorg.update_many({'hostname': self.site, "title": ""}, {"$unset": {"title": ""}})
         infer_urls = defaultdict(list) # * {Pattern: [(urls, (meta,))]}
         for toinfer_url in list(broken_urls):
@@ -255,12 +261,13 @@ class ReorgPageFinder:
         self.tracer.flush()
 
 
-    def search(self, infer=False, required_urls=None, title=True):
+    def interleave_infer(self, infer=True, required_urls=None, title=True):
         """
         infer: Infer every time when a new alias is found
         Required urls: URLs that will be run on (no checked)
         title: Whether title comparison is taken into consideration
         """
+        self.tracer.critical(f'Site: {self.site}')
         if not title:
             self.similar.clear_titles()
         elif self.similar.site is None or self.site not in self.similar.site:
@@ -268,259 +275,91 @@ class ReorgPageFinder:
             if not self.similar._init_titles(self.site):
                 self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
                 return
-        # !_search
         noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
-        searched_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.search": True})
-        searched_checked = set([sc['url'] for sc in searched_checked])
+        # searched_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.search": True})
+        # searched_checked = set([sc['url'] for sc in searched_checked])
         
         required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
 
-        urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
+        urls = [u for u in noreorg_urls if u['url'] in required_urls]
         broken_urls = set([u['url'] for u in urls])
         self.tracer.info(f'Search SITE: {self.site} #URLS: {len(broken_urls)}')
+        self.aliases = set()
         i = 0
         while len(broken_urls) > 0:
             url = broken_urls.pop()
             i += 1
-            self.tracer.info(f'URL: {i} {url}')
-            start = time.time()
-            searched = self.searcher.search(url, search_engine='bing')
-            if searched is None:
-                searched = self.searcher.search(url, search_engine='google')
-            end = time.time()
-            self.tracer.info(f'Runtime (Search): {end - start}')
-            update_dict = {}
-            has_title = self.db.reorg.find_one({'url': url})
-            # if has_title is None: # No longer in reorg (already deleted)
-            #     continue
-            if 'title' not in has_title or has_title['title'] == 'N/A':
-                try:
-                    wayback_url = self.memo.wayback_index(url)
-                    html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(html, version='domdistiller')
-                except: # No snapthost on wayback
-                    self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
-                    try:
-                        self.db.checked.update_one({'_id': url}, {"$set": {
-                            "url": url,
-                            "hostname": self.site,
-                            f"{self.classname}.search": True
-                        }}, upsert=True)
-                        self.db.na_urls.update_one({'_id': url}, {"$set": {
-                            'url': url,
-                            'hostname': self.site,
-                            'no_snapshot': True
-                        }}, upsert=True)
-                    except: pass
-                    continue
-            else:
-                title = has_title['title']
+            self.tracer.info(f'URL: {i} Search {url}')
+            reorg = self.db.reorg.find_one({'url': url})
+            title = reorg.get('title', '')
 
-            self.tracer.flush()
-
-            if searched is not None:
-                searched, trace = searched
+            searched = None
+            if SEARCH_CLASS in reorg:
+                searched = reorg[SEARCH_CLASS]['reorg_url']
                 self.tracer.info(f"HIT: {searched}")
                 fp = self.fp_check(url, searched)
-                if not fp: # False positive test
-                    # ! search
-                    update_dict.update({'reorg_url': searched, 'by':{
-                        "method": "search"
-                    }})
-                    update_dict['by'].update(trace)
-                else:
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'url': url,
-                            'false_positive_search': True, 
-                            'hostname': self.site
-                        }}, upsert=True)
-                    except: pass
+                if fp: # False positive test
                     searched = None
 
-
-            if len(update_dict) > 0:
-                try:
-                    self.db.reorg.update_one({'url': url}, {"$set": {self.classname: update_dict, "title": title}} ) 
-                except Exception as e:
-                    self.tracer.warn(f'Search update DB: {str(e)}')
-            else:
-                try:
-                    self.db.reorg.update_one({'url': url}, {"$set": {"title": title}} ) 
-                except Exception as e:
-                    self.tracer.warn(f'Search (not found) update DB: {str(e)}')
-            searched_checked.add(url)
-            
-            try:
-                self.db.checked.update_one({'_id': url}, {"$set": {
-                    "url": url,
-                    "hostname": self.site,
-                    f"{self.classname}.search": True
-                }}, upsert=True)
-            except: pass
-
-            if not infer:
-                continue
-
             if searched is not None:
+                self.aliases.add(url)
+            if searched is not None and infer:
                 example = (url, (title,), searched)
                 added = self._add_url_to_patterns(*unpack_ex(example))
-                if not added: 
-                    continue
-                success = self.query_inferer([example])
-                while len(success) > 0:
-                    added = False
-                    for suc in success:
-                        broken_urls.discard(unpack_ex(suc)[0])
-                        a = self._add_url_to_patterns(*unpack_ex(suc))
-                        added = added or a
-                    if not added: 
-                        break
-                    examples = success
-                    success = self.query_inferer(examples)
-    
-    def discover(self, infer=False, required_urls=None):
-        """
-        infer: Infer every time when a new alias is found
-        Required urls: URLs that will be run on
-        """
-        if self.similar.site is None or self.site not in self.similar.site:
-            self.similar.clear_titles()
-            if not self.similar._init_titles(self.site):
-                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
-                return
-        # ! discover
-        noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
-        discovered_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.discover": True})
-        discovered_checked = set([sc['url'] for sc in discovered_checked])
-        
-        required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
-        
-        urls = [u for u in noreorg_urls if u['url'] not in discovered_checked and u['url'] in required_urls]
-        broken_urls = set([bu['url'] for bu in urls])
-        self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
-        i = 0
-        while len(broken_urls) > 0:
-            url = broken_urls.pop()
-            i += 1
-            self.tracer.info(f'URL: {i} {url}')
-            method, suffice = 'discover', False
-            while True: # Dummy while lloop served as goto
-                self.tracer.info("Start wayback alias")
-                start = time.time()
-                discovered = self.discoverer.wayback_alias(url)
-                if discovered:
-                    fp = self.fp_check(url, discovered)
-                    if fp:
-                        discovered = None
-                    else:
-                        trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
-                        break
-                
-                self.tracer.info("Start backpath (latest)")
-                discovered, trace = self.discoverer.bf_find(url, policy='latest')
-                if discovered:
-                    method = 'backpath_latest'
-                    break
-                
-                self.tracer.info("Start discover")
-                discovered, trace = self.discoverer.discover(url)
-                if discovered:
-                    break
-                suffice = trace['suffice']
-
-                break
-            
-            end = time.time()
-            self.tracer.info(f'Runtime (discover): {end - start}')
-            self.tracer.flush()
-            update_dict = {}
-            has_title = self.db.reorg.find_one({'url': url})
-            # if has_title is None: # No longer in reorg (already deleted)
-            #     continue
-            if 'title' not in has_title:
-                try:
-                    wayback_url = self.memo.wayback_index(url)
-                    html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(html, version='domdistiller')
-                except: # No snapthost on wayback
-                    self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
-                    try: self.db.na_urls.update_one({'_id': url}, {"$set": {
-                        'url': url,
-                        'hostname': self.site,
-                        'no_snapshot': True
-                    }}, upsert=True)
-                    except: pass
-                    title = 'N/A'
-            else:
-                title = has_title['title']
-
-
-            if discovered is not None:
-                self.tracer.info(f'Found reorg: {discovered}')
-                fp = self.fp_check(url, discovered)
-                if not fp: # False positive test
-                    # ! discover
-                    update_dict.update({'reorg_url': discovered, 'by':{
-                        "method": method
-                    }})
-                    by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath', 'suffice']}
-                    # ! discover
-                    update_dict['by'].update(by_discover)
-                else:
-                    # discover
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'url': url,
-                            'false_positive_discover_test': True, 
-                            'hostname': self.site
-                        }}, upsert=True)
-                    except: pass
-                    discovered = None
-            elif not suffice:
-                try:
-                    self.db.na_urls.update_one({'_id': url}, {'$set': {
-                        'no_working_parent': True, 
-                        'hostname': self.site
-                    }}, upsert=True)
-                except:pass
-
-
-            if len(update_dict) > 0:
-                try:
-                    self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict, 'title': title}})
-                except Exception as e:
-                    self.tracer.warn(f'Discover update DB: {str(e)}')
-            else:
-                try:
-                    self.db.reorg.update_one({'url': url}, {"$set": {"title": title}} ) 
-                except Exception as e:
-                    self.tracer.warn(f'Discover (not found) update DB: {str(e)}')
-            discovered_checked.add(url)
-            try:
-                self.db.checked.update_one({'_id': url}, {"$set": {
-                    "url": url,
-                    "hostname": self.site,
-                    f"{self.classname}.discover": True
-                }}, upsert=True)
-            except Exception as e:
-                self.tracer.warn(f'Discover update checked: {str(e)}')
-            
-            if not infer:
+                if added:
+                    success = self.query_inferer([example])
+                    while len(success) > 0:
+                        added = False
+                        for suc in success:
+                            broken_urls.discard(unpack_ex(suc)[0])
+                            self.aliases.add(unpack_ex(suc)[0])
+                            a = self._add_url_to_patterns(*unpack_ex(suc))
+                            added = added or a
+                        if not added: 
+                            break
+                        examples = success
+                        success = self.query_inferer(examples)
+                self.tracer.flush()
+            if searched is not None:
                 continue
+            
+            self.tracer.info(f'URL: {i} Discover {url}')
+            reorg = self.db.reorg.find_one({'url': url})
+            title = reorg.get('title', '')
+            
+            discovered = None
+            if DISCOVER_CLASS in reorg:
+                discovered = reorg[DISCOVER_CLASS]['reorg_url']
+                self.tracer.info(f"HIT: {discovered}")
+                fp = self.fp_check(url, discovered)
+                if fp: # False positive test
+                    discovered = None
+                # * Filter out non-homepage --> homepage alias (highly likely FPs)
 
-            # TEMP
+                def is_homepage(url):
+                    us = urlsplit(url)
+                    return us.path in ['', '/'] and not us.query
+
+                if not is_homepage(url) and is_homepage(discovered):
+                    discovered = None
+            
             if discovered is not None:
+                self.aliases.add(url)
+            if discovered is not None and infer:
                 example = (url, (title,), discovered)
                 added = self._add_url_to_patterns(*unpack_ex(example))
-                if not added:
-                    continue
-                success = self.query_inferer([example])
-                while len(success) > 0:
-                    added = False
-                    for suc in success:
-                        broken_urls.discard(unpack_ex(suc)[0])
-                        a = self._add_url_to_patterns(*unpack_ex(suc))
-                        added = added or a
-                    if not added:
-                        break
-                    examples = success
-                    success = self.query_inferer(examples)
+                if added:
+                    success = self.query_inferer([example])
+                    while len(success) > 0:
+                        added = False
+                        for suc in success:
+                            broken_urls.discard(unpack_ex(suc)[0])
+                            self.aliases.add(unpack_ex(suc)[0])
+                            a = self._add_url_to_patterns(*unpack_ex(suc))
+                            added = added or a
+                        if not added: 
+                            break
+                        examples = success
+                        success = self.query_inferer(examples)
+                self.tracer.flush()
+            
