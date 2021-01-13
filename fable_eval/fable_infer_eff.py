@@ -102,6 +102,28 @@ class ReorgPageFinder:
         self.tracer.handlers.pop()
         self.aliases = set()
 
+    # def _add_url_to_patterns(self, url, meta, reorg):
+    #     """
+    #     Only applies to same domain currently
+    #     Return bool on whether success
+    #     """
+    #     # if he.extract(reorg) != he.extract(url):
+    #     #     return False
+    #     patterns = url_utils.gen_path_pattern(url)
+    #     if (url, reorg) in self.seen_reorg_pairs:
+    #         return True
+    #     else:
+    #         self.seen_reorg_pairs.add((url, reorg))
+        
+    #     if len(patterns) <= 0: return False
+    #     if meta[0] == 'N/A':
+    #         meta = list(meta)
+    #         meta[0] = ''
+    #         meta = tuple(meta)
+    #     for pat in patterns:
+    #         self.pattern_dict[pat].append((url, meta, reorg))
+    #     return True
+
     def _add_url_to_patterns(self, url, meta, reorg):
         """
         Only applies to same domain currently
@@ -109,20 +131,37 @@ class ReorgPageFinder:
         """
         # if he.extract(reorg) != he.extract(url):
         #     return False
-        patterns = url_utils.gen_path_pattern(url)
+        netloc_dir = url_utils.netloc_dir(url)
         if (url, reorg) in self.seen_reorg_pairs:
             return True
         else:
             self.seen_reorg_pairs.add((url, reorg))
         
-        if len(patterns) <= 0: return False
+        # if len(patterns) <= 0: return False
         if meta[0] == 'N/A':
             meta = list(meta)
             meta[0] = ''
             meta = tuple(meta)
-        for pat in patterns:
-            self.pattern_dict[pat].append((url, meta, reorg))
+        # for pat in patterns:
+        self.pattern_dict[netloc_dir].append((url, meta, reorg))
         return True
+
+    # def _most_common_output(self, examples):
+    #     """
+    #     Given a list of examples, return ones with highest # common pattern
+
+    #     Return: List of examples in highest common pattern
+    #     """
+    #     output_patterns = defaultdict(list)
+    #     for ex in examples:
+    #         reorg_url = ex[2]
+    #         reorg_pats = url_utils.gen_path_pattern(reorg_url)
+    #         for reorg_pat in reorg_pats:
+    #             output_patterns[reorg_pat].append(ex)
+    #     output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
+    #     output_pattern, output_ex = output_patterns[0]
+    #     self.tracer.debug(f"_most_common_output: {output_pattern}, {len(output_ex)}")
+    #     return output_ex
 
     def _most_common_output(self, examples):
         """
@@ -133,13 +172,13 @@ class ReorgPageFinder:
         output_patterns = defaultdict(list)
         for ex in examples:
             reorg_url = ex[2]
-            reorg_pats = url_utils.gen_path_pattern(reorg_url)
-            for reorg_pat in reorg_pats:
-                output_patterns[reorg_pat].append(ex)
-            output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
-            output_pattern, output_ex = output_patterns[0]
-            self.tracer.debug(output_pattern, len(output_ex))
-            return output_ex
+            netloc_dir = url_utils.netloc_dir(reorg_url)
+            # for reorg_pat in reorg_pats:
+            output_patterns[netloc_dir].append(ex)
+        output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
+        output_pattern, output_ex = output_patterns[0]
+        self.tracer.debug(f"_most_common_output: {output_pattern}, {len(output_ex)}")
+        return output_ex
 
     def query_inferer(self, examples):
         """
@@ -152,8 +191,12 @@ class ReorgPageFinder:
             return []
         patterns = set() # All patterns in example
         for url, (title), reorg_url in examples:
-            pats = url_utils.gen_path_pattern(url)
-            patterns.update(pats)
+             # ! Temp
+            # pats = url_utils.gen_path_pattern(url)
+            # patterns.update(pats)
+             # ! End of Temp
+            pat = url_utils.netloc_dir(url)
+            patterns.add(pat)
         patterns = list(patterns)
         broken_urls = self.db.reorg.find({'hostname': self.site})
         # infer
@@ -164,8 +207,13 @@ class ReorgPageFinder:
         infer_urls = defaultdict(list) # * {Pattern: [(urls, (meta,))]}
         for toinfer_url in list(broken_urls):
             for pat in patterns:
-                if not url_utils.pattern_match(pat, toinfer_url['url']):
+                # ! Temp
+                # if not url_utils.pattern_match(pat, toinfer_url['url']):
+                #     continue
+                # ! End of temp
+                if url_utils.netloc_dir(toinfer_url['url']) != pat:
                     continue
+
                 # if 'title' not in infer_url:
                 #     try:
                 #         wayback_infer_url = self.memo.wayback_index(infer_url['url'])

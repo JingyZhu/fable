@@ -93,7 +93,7 @@ class FlashFillHandler:
         """ 
         outputs = []
         with open(xlsx_path, 'rb') as xlsx_file:
-            excel = pd.read_excel(xlsx_file, header=None, sheet_name=None, engine='openpyxl')
+            excel = pd.read_excel(xlsx_file, header=None, sheet_name=None, engine='openpyxl', dtype=str)
             for sheet_name, csv in excel.items():
                 csv.columns = self.headers[sheet_name]
                 outputs.append({

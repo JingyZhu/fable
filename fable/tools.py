@@ -560,6 +560,7 @@ class Similar:
         anchor_count = defaultdict(set)
         corpus = [wayback_sig[1]] + [s for s in wayback_sig[2] if s != '']
         # TODO (new or not?): Not consider if the liveweb still have this link (only if exact match?)
+        simis = []
         for link, anchor, sig in liveweb_sigs:
             anchor_count[anchor].add(link)
             corpus.append(anchor)
@@ -571,7 +572,7 @@ class Similar:
             if len(anchor_count[anchor]) < 2: # UNIQUE anchor
                 simi = self.tfidf.similar(wayback_sig[1], anchor)
                 if simi >= self.short_threshold:
-                    return lws, simi, 'anchor'
+                    simis.append((lws, simi, 'anchor'))
             else:
                 if wayback_sig[1] != anchor:
                     continue
@@ -582,8 +583,11 @@ class Similar:
                         if ls == '': continue
                         simi = max(simi, self.tfidf.similar(ws, ls))
                 if simi >= self.short_threshold:
-                    return lws, simi, 'sig'
-        return None
+                    simis.append((lws, simi, 'sig'))
+        if len(simis) == 0:
+            return None
+        else:
+            return max(simis, key=lambda x: x[1])
     
     def max_similar(self, target_content, candidates_contents, init=True):
         """

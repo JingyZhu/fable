@@ -76,13 +76,14 @@ class ReorgPageFinder:
         site_reorg_urls = self.db.reorg.find({'hostname': site})
         # ? Whether to infer on all classes, all only one? 
         # ? reorg_urls = [reorg for reorg in reorg_urls if len(set(reorg.keys()).intersection(reorg_keys)) > 0]
+        confidence = {'content': 1, 'link_anchor': 2, 'title': 3, 'link_sig': 4, 'wayback_alias': 5}
         self.pattern_dict = defaultdict(list)
         self.seen_reorg_pairs = set()
         for reorg_url in list(site_reorg_urls):
+            reorg_tech = []
             for iclass in self.inference_classes:
                 if iclass in reorg_url:
                     self._add_url_to_patterns(reorg_url['url'], (reorg_url.get('title', ''),), reorg_url[iclass]['reorg_url'])
-        
         if len(self.tracer.handlers) > 2:
             self.tracer.handlers.pop()
         formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
@@ -132,10 +133,10 @@ class ReorgPageFinder:
             reorg_pats = url_utils.gen_path_pattern(reorg_url)
             for reorg_pat in reorg_pats:
                 output_patterns[reorg_pat].append(ex)
-            output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
-            output_pattern, output_ex = output_patterns[0]
-            self.tracer.debug(output_pattern, len(output_ex))
-            return output_ex
+        output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
+        output_pattern, output_ex = output_patterns[0]
+        self.tracer.debug(f"_most_common_output: {output_pattern} {len(output_ex)} {len(examples)}")
+        return output_ex
 
     def query_inferer(self, examples):
         """

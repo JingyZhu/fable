@@ -52,6 +52,26 @@ def localserver(PORT):
 
 localserver(PORT)
 
+from contextlib import contextmanager
+import threading
+import _thread
+
+class TimeoutException(Exception):
+    def __init__(self, msg=''):
+        self.msg = msg
+
+@contextmanager
+def time_limit(seconds, msg=''):
+    timer = threading.Timer(seconds, lambda: _thread.interrupt_main())
+    timer.start()
+    try:
+        yield
+    except KeyboardInterrupt:
+        raise TimeoutException("Timed out for operation {}".format(msg))
+    finally:
+        # if the action ends in specified time, timer is canceled
+        timer.cancel()
+
 class TFidfDynamic:
     def re_init(self):
         """
@@ -229,28 +249,32 @@ def tokenize(texts):
     return analyze(texts)
 
 
-def article_date(html):
+def article_date(html, url=""):
     """
     Get the publish date of a webpage using article library
     Return datetime.datetime
     """
-    article = Article(url='')
-    article.set_html(html)
+    article = Article(url=url)
+    article.download(input_html=html)
     article.parse()
     return article.publish_date
 
 
-def mine_date(html):
+def mine_date(html, url=""):
     """
     Mine way of trying to get date
     """
     soup = BeautifulSoup(html, 'lxml')
+    wm_ipp = soup.find_all('div', id='wm-ipp-base')
+    if len(wm_ipp) > 0: wm_ipp[0].decompose()
+    donato = soup.find_all('div', id='donato')
+    if len(donato) > 0: donato[0].decompose()
     dates = set()
     filter_tags = ['script', 'a', 'style']
     for tag in filter_tags:
         for certain_tag in soup.findAll(tag):
             certain_tag.decompose()
-    tag_list = ['div', 'p', 'span', 'b'] + ['h{}'.format(i) for i in range(1, 7)]
+    tag_list = ['div', 'p', 'span', 'b'] + ['h{}'.format(i) for i in range(1, 4)]
     for tag in tag_list:
         for piece in soup.find_all(tag):
             if len(piece.find_all()) > 1 : # Not leaf node
@@ -271,27 +295,38 @@ def mine_date(html):
                 continue
             if dt is None:
                 continue
-            dt = dt.strftime("%Y %m %d")
+            # dt = dt.strftime("%Y %m %d")
             dates.add((dt, len(piece.text.split())))
     for time_tag in soup.find_all('time'):
         if 'datetime' in time_tag.attrs:
             dt = time_tag.attrs['datetime']
-            dt = dparser.parse(dt, fuzzy=True).strftime("%Y %m %d")
+            dt = dparser.parse(dt, fuzzy=True)
             dates.add((dt, 0))
     dates = sorted([o for o in dates], key=lambda x: x[1])
     # print(dates)
     return dates[0][0] if len(dates) > 0 else None
 
 
-def extract_date(html, version="article"):
+def extract_date(html, version="article", url=""):
     """
     Wrapper function for different version of date extraction
     """
+    backup_versions = ['article', 'mine']
+    backup_versions = [v for v in backup_versions if v != version]
+    if html == '': return ''
     func_dict = {
         "mine": mine_date,
         "article": article_date
     }
-    return func_dict[version](html)
+    for v in [version] + backup_versions:
+        try:
+            with time_limit(10):
+                date = func_dict[v](html, url=url)
+                print(v, date)
+                if date: return date
+        except:
+            continue
+    return date
 
 def brotli_compress(html):
     """

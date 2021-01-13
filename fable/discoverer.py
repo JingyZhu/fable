@@ -302,7 +302,8 @@ class Discoverer:
             'from': 1997,
             'to': 2020,
             'filter': ['mimetype:text/html', 'statuscode:200'],
-            'collapse': 'urlkey'
+            'collapse': 'urlkey',
+            'limit': 10000
         }
         cands = []
         site = he.extract(url)
