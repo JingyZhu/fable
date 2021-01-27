@@ -20,6 +20,24 @@ logging.setLoggerClass(logging.Logger)
 
 ISNUM = lambda x: type(x).__module__ == np.__name__ or isinstance(x, int)
 VERTICAL_BAR_SET = '\u007C\u00A6\u2016\uFF5C\u2225\u01C0\u01C1\u2223\u2502\u0964\u0965'
+
+def my_parse_qs(query):
+    if not query:
+        return {}
+    pq = parse_qs(query)
+    if len(pq) > 0:
+        return pq
+    else:
+        return {'NoKey': [query]}
+
+
+def normal_hostname(hostname):
+    hostname = hostname.split(':')[0]
+    hostname = hostname.split('.')
+    if hostname[0] == 'www': hostname = hostname[1:]
+    return '.'.join(hostname)
+
+
 class Inferer:
     def __init__(self, proxies={}, memo=None, similar=None):
         self.PS = crawl.ProxySelector(proxies)
@@ -59,12 +77,12 @@ class Inferer:
             if os.path.splitext(us.path)[1]:
                 input_ext = True
             if us.query: 
-                query_keys.update(parse_qs(us.query).keys())
+                query_keys.update(my_parse_qs(us.query).keys())
             max_url = max(path_len + input_ext, max_url)
             us_reorg = urlsplit(reorg_url)
             path_len = len(list(filter(lambda x: x != '', us_reorg.path.split('/')))) + 1
             if us_reorg.query:
-                reorg_query_keys.update(parse_qs(us_reorg.query).keys())
+                reorg_query_keys.update(my_parse_qs(us_reorg.query).keys())
             max_reorg_url = max(path_len, max_reorg_url)
 
         for url, _ in urls:
@@ -73,7 +91,7 @@ class Inferer:
             if os.path.splitext(us.path)[1]:
                 input_ext = True
             if us.query: 
-                query_keys.update(parse_qs(us.query).keys())
+                query_keys.update(my_parse_qs(us.query).keys())
             max_url = max(path_len + input_ext, max_url)
 
         sheets = []
@@ -102,8 +120,8 @@ class Inferer:
                 filename, ext = os.path.splitext(path_list[-1])
                 path_list[-1] = filename
                 path_list.append(ext)
-            url_inputs = [us.netloc.split(':')[0]] + path_list
-            sheet2_csv['Site'].append(us.netloc.split(':')[0])
+            url_inputs = [normal_hostname(us.netloc)] + path_list
+            sheet2_csv['Site'].append(normal_hostname(us.netloc))
             for i, url_piece in enumerate(url_inputs):
                 sheet1_csv[f'URL{i}'].append(url_piece)
                 sheet3_csv[f'URL{i}'].append(url_piece)
@@ -111,10 +129,14 @@ class Inferer:
                 for i in range(len(url_inputs), max_url):
                     sheet1_csv[f'URL{i}'].append('')
                     sheet3_csv[f'URL{i}'].append('')
-            qs = parse_qs(us.query)
+            qs = my_parse_qs(us.query)
             for key in query_keys:
-                sheet1_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
-                sheet3_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
+                if key == 'NoKey':
+                    sheet1_csv[f'Query_{key}'].append(f"{qs.get(key, [''])[0]}")
+                    sheet3_csv[f'Query_{key}'].append(f"{qs.get(key, [''])[0]}")
+                else:
+                    sheet1_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
+                    sheet3_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
             count = [0, 0]
             for i, meta_piece in enumerate(meta):
                 if i == 0:
@@ -125,7 +147,7 @@ class Inferer:
                     sheet2_csv, count[1] = insert_metadata(sheet2_csv, count[1], meta_piece, False)
             us_reorg = urlsplit(reorg_url)
             path_reorg_list = list(filter(lambda x: x != '', us_reorg.path.split('/')))
-            url_reorg_inputs = [f"https://{us_reorg.netloc.split(':')[0]}"] + path_reorg_list
+            url_reorg_inputs = [f"https://{normal_hostname(us_reorg.netloc)}"] + path_reorg_list
             for i, reorg_url_piece in enumerate(url_reorg_inputs):
                 sheet1_csv[f'Output_{i}'].append(reorg_url_piece)
                 sheet2_csv[f'Output_{i}'].append(reorg_url_piece)
@@ -135,11 +157,16 @@ class Inferer:
                     sheet1_csv[f'Output_{i}'].append('')
                     sheet2_csv[f'Output_{i}'].append('')
                     sheet3_csv[f'Output_{i}'].append('')
-            qs_reorg = parse_qs(us_reorg.query)
+            qs_reorg = my_parse_qs(us_reorg.query)
             for key in reorg_query_keys:
-                sheet1_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
-                sheet2_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
-                sheet3_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
+                if key == 'NoKey':
+                    sheet1_csv[f'Output_Q_{key}'].append(f"{qs_reorg.get(key, [''])[0]}")
+                    sheet2_csv[f'Output_Q_{key}'].append(f"{qs_reorg.get(key, [''])[0]}")
+                    sheet3_csv[f'Output_Q_{key}'].append(f"{qs_reorg.get(key, [''])[0]}")
+                else:
+                    sheet1_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
+                    sheet2_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
+                    sheet3_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
         urls_idx = {}
 
         # * Input the to infer examples
@@ -152,8 +179,8 @@ class Inferer:
                 filename, ext = os.path.splitext(path_list[-1])
                 path_list[-1] = filename
                 path_list.append(ext)
-            url_inputs = [us.netloc.split(':')[0]] + path_list
-            sheet2_csv['Site'].append(us.netloc.split(':')[0])
+            url_inputs = [normal_hostname(us.netloc)] + path_list
+            sheet2_csv['Site'].append(normal_hostname(us.netloc))
             for i, url_piece in enumerate(url_inputs):
                 sheet1_csv[f'URL{i}'].append(url_piece)
                 sheet3_csv[f'URL{i}'].append(url_piece)
@@ -161,10 +188,14 @@ class Inferer:
                 for i in range(len(url_inputs), max_url):
                     sheet1_csv[f'URL{i}'].append('')
                     sheet3_csv[f'URL{i}'].append('')
-            qs = parse_qs(us.query)
+            qs = my_parse_qs(us.query)
             for key in query_keys:
-                sheet1_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
-                sheet3_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
+                if key == 'NoKey':
+                    sheet1_csv[f'Query_{key}'].append(f"{qs.get(key, [''])[0]}")
+                    sheet3_csv[f'Query_{key}'].append(f"{qs.get(key, [''])[0]}")
+                else:
+                    sheet1_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
+                    sheet3_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
             count = [0, 0]
             for i, meta_piece in enumerate(meta):
                 if i == 0:
@@ -225,7 +256,7 @@ class Inferer:
                 reorg_queries = []
                 for key in reorg_query_keys:
                     reorg_kv = reorg_url_lists[f'Output_Q_{key}']
-                    if reorg_kv != reorg_kv or not reorg_kv.split('=')[1]:
+                    if reorg_kv != reorg_kv or (key != "NoKey" and not reorg_kv.split('=')[1]):
                         continue
                     if ISNUM(reorg_kv): reorg_kv = str(int(reorg_kv))
                     reorg_queries.append(reorg_kv)

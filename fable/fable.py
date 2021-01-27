@@ -324,7 +324,6 @@ class ReorgPageFinder:
                 self.tracer.info(f"HIT: {searched}")
                 fp = self.fp_check(url, searched)
                 if not fp: # False positive test
-                    # ! search
                     update_dict.update({'reorg_url': searched, 'by':{
                         "method": "search"
                     }})
@@ -389,7 +388,7 @@ class ReorgPageFinder:
             if not self.similar._init_titles(self.site):
                 self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
                 return
-        # ! discover
+
         noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
         discovered_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.discover": True})
         discovered_checked = set([sc['url'] for sc in discovered_checked])
@@ -411,12 +410,11 @@ class ReorgPageFinder:
                 discovered = self.discoverer.wayback_alias(url)
                 if discovered:
                     fp = self.fp_check(url, discovered)
-                    if fp:
-                        discovered = None
+                    if fp: discovered = None
                     else:
                         trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
                         break
-                
+
                 self.tracer.info("Start backpath (latest)")
                 discovered, trace = self.discoverer.bf_find(url, policy='latest')
                 if discovered:
@@ -460,12 +458,10 @@ class ReorgPageFinder:
                 self.tracer.info(f'Found reorg: {discovered}')
                 fp = self.fp_check(url, discovered)
                 if not fp: # False positive test
-                    # ! discover
                     update_dict.update({'reorg_url': discovered, 'by':{
                         "method": method
                     }})
                     by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath', 'suffice']}
-                    # ! discover
                     update_dict['by'].update(by_discover)
                 else:
                     # discover

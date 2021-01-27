@@ -269,7 +269,10 @@ class StrawmanFinder:
             if searched is not None:
                 searched, trace = searched
                 self.tracer.info(f"HIT: {searched}")
+                # ! Temp
                 fp = self.fp_check(url, searched)
+                fp = False
+                # ! Temp
                 if not fp: # False positive test
                     # ! search
                     update_dict.update({'reorg_url': searched, 'by':{

@@ -72,14 +72,14 @@ def different_page(url, meta, content, crawls, wayback=False):
             crawl_left = crawls[left_idx]
             # TODO: Content comparison slows the process a lot
             if not url_utils.url_match(url, crawl_left['url']) \
-              and text_utils.k_shingling(content, crawl_left.get('content', '')) < 0.95:
+              and text_utils.k_shingling(content, crawl_left.get('content', '')) < 0.9:
                 return crawl_left 
             left_idx -= 1
             left = left_idx >= 0
         if right:
             crawl_right = crawls[right_idx]
             if not url_utils.url_match(url, crawl_right['url']) \
-              and text_utils.k_shingling(content, crawl_right.get('content', '')) < 0.95:
+              and text_utils.k_shingling(content, crawl_right.get('content', '')) < 0.9:
                 return crawl_right
             right_idx += 1
             right = right_idx < len(crawls)
@@ -182,6 +182,7 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
         if len(tocheck) > 1: # *Put small in front
             tocheck[0], tocheck[1] = min(tocheck, key=lambda x:x[0]), max(tocheck, key=lambda x:x[0])
         for td, cand_url, cand_title in tocheck:
+            tracer.debug(f'unique_title: compare with {cand_url} {cand_title}')
             diffs.add(td)
             itsts = token_intersect(title_tokens, \
                         regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', cand_title))
@@ -789,6 +790,7 @@ class Similar:
         if text1_token not in text2_token and text2_token not in text1_token:
             tracer.debug(f'shorttext_match: one text not a subset of another: \n{ text1} vs. {text2} \n {text1_token} vs. {text2_token}')
             return 0
+        tracer.debug(f'shorttext_match: simi between {text1} \n {text2}')
         simi = self.tfidf.similar(text1, text2)
         if simi >= (self.short_threshold + self.threshold) / 2:
             return simi
@@ -817,7 +819,7 @@ class Similar:
                         continue
                     # TODO: Can actually also compare content to not consider canonical here
                     if not url_utils.url_match(lw_url, site_crawl['url']) and \
-                            text_utils.k_shingling(content, site_crawl.get('content', '')) < 0.95:
+                            text_utils.k_shingling(content, site_crawl.get('content', '')) < 0.9:
                         tracer.debug(f"_is_title_unique: title {title} is not unique amoung site with {site_crawl['url']}")
                         return False
             return True
