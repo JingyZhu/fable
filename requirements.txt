@@ -2,7 +2,7 @@ pymongo
 langdetect
 langcodes
 justext
-publicsuffix
+publicsuffixlist
 newspaper3k
 goose3
 whois

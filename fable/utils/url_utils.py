@@ -1,5 +1,5 @@
 
-from publicsuffix import fetch, PublicSuffixList
+from publicsuffixlist import PublicSuffixList
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qsl, parse_qs, urlsplit, urlunsplit
 import re
@@ -42,7 +42,7 @@ class urlset:
 
 class HostExtractor:
     def __init__(self):
-        self.psl = PublicSuffixList(fetch())
+        self.psl = PublicSuffixList()
     
     def extract(self, url, wayback=False):
         """
@@ -53,7 +53,7 @@ class HostExtractor:
         if 'http://' not in url and 'https://' not in url:
             url = 'http://' + url
         hostname = urlparse(url).netloc.split(':')[0]
-        return self.psl.get_public_suffix(hostname)
+        return self.psl.privatesuffix(hostname)
 
 he = HostExtractor()
 
