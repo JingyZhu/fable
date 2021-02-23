@@ -38,18 +38,19 @@ def back_default():
 
 var_dict = {}
 default_var_dict = {}
-if not os.path.exists(os.path.join(os.path.dirname(__file__), 'config.yml')):
-    print("No config yaml file find")
-else:
-    config_yml = yaml.load(open(os.path.join(os.path.dirname(__file__), 'config.yml'), 'r'), Loader=yaml.FullLoader)
-    var_dict.update(config_yml)
-    locals().update({k.upper(): v for k, v in var_dict.items()})
-    if config_yml.get('proxies') is not None:
-        PROXIES = [{'http': ip, 'https': ip } for ip in \
-                    config_yml.get('proxies')]
-    else: PROXIES = []
-    PROXIES = PROXIES + [{}]  # One host do not have to use proxy
-    var_dict['proxies'] = PROXIES
+CONFIG_PATH = os.environ['FABLE_CONFIG'] if 'FABLE_CONFIG' in os.environ else os.path.dirname(__file__)
+# if not os.path.exists(os.path.join(CONFIG_PATH, 'config.yml')):
+#     raise Exception("No config yaml file find at:", CONFIG_PATH)
+# else:
+config_yml = yaml.load(open(os.path.join(CONFIG_PATH, 'config.yml'), 'r'), Loader=yaml.FullLoader)
+var_dict.update(config_yml)
+locals().update({k.upper(): v for k, v in var_dict.items()})
+if config_yml.get('proxies') is not None:
+    PROXIES = [{'http': ip, 'https': ip } for ip in \
+            config_yml.get('proxies')]
+else: PROXIES = []
+PROXIES = PROXIES + [{}]  # One host do not have to use proxy
+var_dict['proxies'] = PROXIES
 
 default_var_dict = var_dict.copy()
 
