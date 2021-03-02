@@ -18,6 +18,7 @@ import bisect
 from . import config, tracer
 from .utils import text_utils, crawl, url_utils, search
 from .utils.url_utils import url_norm
+from .utils.sic_transit import text_norm
 
 import logging
 logging.setLoggerClass(tracer.tracer)
@@ -926,3 +927,61 @@ class Similar:
                 return similars, "title"
         similars = self.content_similar(tg_content, cand_contents, cand_htmls)
         return similars, "content"
+
+
+def is_canonical(url1, url2, resp1=None, resp2=None, use_resp=False):
+    """
+    Decide whether two URLs are canonical of each other
+    Both url1 and url2 should be good pages
+    Check with metrics:
+    1. URLs' final urls are the same
+    2. URLs' response canonical are the same
+    3. Responses are indifferentiable
+
+    Return: (currently) boolean on if is canonical
+    """
+    if url_match(url1, url2):
+        return True
+    if not use_resp:
+        resp1 = crawl.requests_crawl(url1, raw=True)
+        resp2 = crawl.requests_crawl(url2, raw=True)
+        if isinstance(resp1, tuple) or not resp1:
+            return False
+        if isinstance(resp2, tuple) or not resp2:
+            return False
+    # * Check final url
+    if url_match(resp1.url, resp2.url):
+        return True
+    # * Check canonical
+    try:
+        soup1 = BeautifulSoup(resp1.text, 'lxml')
+        soup2 = BeautifulSoup(resp2.text, 'lxml')
+        cans1 = soup1.find_all('link', {'rel': 'canonical'})
+        cans2 = soup2.find_all('link', {'rel': 'canonical'})
+        can1, can2 = '', ''
+        if len(cans1) > 0:
+            if urlsplit(resp1.url).path not in ['', '/']:
+                can1 = cans1[0]['href']
+        if len(cans1) > 0:
+            if urlsplit(resp2.url).path not in ['', '/']:
+                can2 = cans2[0]['href']
+        # * Check for potential match
+        if can1 and can2 and url_match(can1, can2):
+            return True
+        if can1 and url_match(can1, resp2.url):
+            return True
+        if can2 and url_match(can2, resp1.url):
+            return True
+    except:
+        pass
+    try:
+        content1 = soup1.get_text(separator=' ')
+    except:
+        content1 = resp1.text
+    try:
+        content2 = soup2.get_text(separator=' ')
+    except:
+        content2 = resp2.text
+    if text_utils.k_shingling(text_norm(content1), text_norm(content2)) >= 0.95:
+        return True
+    return False

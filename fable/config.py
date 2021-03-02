@@ -5,6 +5,9 @@ config for global variable in this project
 import yaml
 import os
 from pymongo import MongoClient
+import sys
+import re
+from subprocess import Popen, call, check_output
 
 # Default values if key is not specified in the yaml
 DEFAULT_CONFIG = {
@@ -64,5 +67,24 @@ if 'mongo_url' not in var_dict:
     DB_CONN = eval(f"MongoClient(MONGO_HOSTNAME, username=MONGO_USER, password=MONGO_PWD, authSource='admin')")
     DB = eval(f"MongoClient(MONGO_HOSTNAME, username=MONGO_USER, password=MONGO_PWD, authSource='admin').{MONGO_DB}")
 else:
-    DB_CONN =  eval(f"MongoClient({MONGO_URL})")
-    DB =  eval(f"MongoClient({MONGO_URL}).{MONGO_DB}")
+    DB_CONN =  eval(f"MongoClient('{MONGO_URL}')")
+    DB =  eval(f"MongoClient('{MONGO_URL}').{MONGO_DB}")
+
+
+NULL = open('/dev/null', 'w')
+def localserver(PORT):
+    """
+    Create tmp dir at $PROJ_HOME, copy domdistiller.js into the repo
+    Serve a local server at port if it not occupied by any others
+    """
+    cur_path = os.path.dirname(__file__)
+    call(['mkdir', '-p', TMP_PATH])
+    if not os.path.exists(os.path.join(TMP_PATH, 'utils', 'domdistiller.js')):
+        call(['cp', os.path.join(cur_path, 'utils', 'domdistiller.js'), TMP_PATH])
+    port_occupied = re.compile(":{}".format(LOCALSERVER_PORT)).findall(check_output(['netstat', '-nlt']).decode())
+    if len(port_occupied) <= 0:
+        Popen(['http-server', '-a', 'localhost', '-p', str(PORT), TMP_PATH], stdout=NULL, stderr=NULL)
+    else:
+        print(f"Port {LOCALSERVER_PORT} occupied by other process", file=sys.stderr)
+
+localserver(LOCALSERVER_PORT)

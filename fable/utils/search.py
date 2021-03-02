@@ -11,15 +11,6 @@ from pymongo import MongoClient
 from fable import config
 from . import text_utils, crawl, url_utils
 
-google_query_dict = {
-    "q": None,
-    "key" : config.GOOGLE_SEARCH_KEY,
-    "cx" : config.GOOGLE_SEARCH_CX
-}
-
-bing_query_dict = {
-    "q": None
-}
 
 requests_header = {'user-agent': config.config('user_agent')}
 headers = {"Ocp-Apim-Subscription-Key": config.BING_SEARCH_KEY}
@@ -69,6 +60,11 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
     site_spec_url: If set, will only search within the site
     use_db: If set, will query db before calling API, and update results to db
     """
+    google_query_dict = {
+        "q": None,
+        "key" : config.GOOGLE_SEARCH_KEY,
+        "cx" : config.GOOGLE_SEARCH_CX
+    }
     google_query_dict['q'] = query
     if site_spec_url:
         try:
@@ -120,6 +116,9 @@ def bing_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False):
     """
     Search using bing
     """
+    bing_query_dict = {
+        "q": None
+    }
     bing_query_dict["q"] = query
     bing_query_dict.update(param_dict)
     count = 0
