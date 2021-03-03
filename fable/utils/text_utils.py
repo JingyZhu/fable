@@ -33,6 +33,26 @@ except:
 sys.setrecursionlimit(1500)
 # Need to be modified
 tmp_path = config.TMP_PATH
+port = config.LOCALSERVER_PORT
+
+NULL = open('/dev/null', 'w')
+
+def localserver(PORT):
+    """
+    Create tmp dir at $PROJ_HOME, copy domdistiller.js into the repo
+    Serve a local server at port if it not occupied by any others
+    """
+    cur_path = os.path.dirname(__file__)
+    call(['mkdir', '-p', tmp_path])
+    if not os.path.exists(os.path.join(tmp_path, 'utils', 'domdistiller.js')):
+        call(['cp', os.path.join(cur_path, 'domdistiller.js'), tmp_path])
+    port_occupied = re.compile(":{}".format(port)).findall(check_output(['netstat', '-nlt']).decode())
+    if len(port_occupied) <= 0:
+        Popen(['http-server', '-a', 'localhost', '-p', str(port), tmp_path], stdout=NULL, stderr=NULL)
+    else:
+        print(f"Port {port} occupied by other process", file=sys.stderr)
+
+localserver(port)
 
 from contextlib import contextmanager
 import threading

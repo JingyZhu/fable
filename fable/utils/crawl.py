@@ -324,55 +324,49 @@ def get_sitemaps(hostname):
     except: return None
 
 
-def wappalyzer_analyze(url, proxy=None, timeout=None):
+def wappalyzer_analyze(url, timeout=None):
     """
     Use wappalyzer to analyze the tech used by this website
     Timeout: Time for pages to load resources, in ms
     """
     agent_string = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
     focus_categories = {
-        "1": "CMS", 
-        "18": "Web frameworks",
-        "22": "Web servers", 
-        "27": "Programming Languages", 
-        # "28": "Operating Systems",
-        "34": "Databases", 
-        "62": "Paas",
-        "64": "Reverse proxies"
+        1: "CMS", 
+        18: "Web frameworks",
+        22: "Web servers", 
+        27: "Programming Languages", 
+        # 28: "Operating Systems",
+        34: "Databases", 
+        62: "Paas",
+        # 64: "Reverse proxies"
     }
     count = 0
-    while True:
-        try:
-            r = requests.get(url, timeout=timeout, headers=requests_header)
-            if (r.status_code == 429 or r.status_code == 504) and count < 3:  # Requests limit
-                print('requests_crawl:', 'get status code', str(r.status_code))
-                count += 1
-                time.sleep(10)
-                continue
-            break
-        except Exception as e:
-            print("There is an exception with requests crawl:",str(e))
-            return
-    url = r.url if r.status_code / 100 < 4 else url
+    # while True:
+    #     try:
+    #         r = requests.get(url, timeout=timeout, headers=requests_header)
+    #         if (r.status_code == 429 or r.status_code == 504) and count < 3:  # Requests limit
+    #             print('requests_crawl:', 'get status code', str(r.status_code))
+    #             count += 1
+    #             time.sleep(10)
+    #             continue
+    #         break
+    #     except Exception as e:
+    #         print("There is an exception with requests crawl:",str(e))
+    #         return
+    # url = r.url if r.status_code / 100 < 4 else url
     tech = defaultdict(list)
     flags = {'-a': agent_string}
-    if proxy: flags.update({'--proxy': proxy})
     if timeout: flags.update({'-w': timeout*1000})
     flags_cmd = sum([[k, str(v)] for k, v in flags.items()], [])
-    browsers = ['zombie', 'puppeteer']
-    for browser in browsers:
-        try:
-            cmd = ['wappalyzer', '-b', browser] + flags_cmd + [url]
-            output = check_output(cmd, timeout=20)
-            result = json.loads(output.decode())
-        except Exception as e:
-            print('Wappalyzer in crawl:', str(e))
-            continue
-        if len(result['applications']) > 0: break
-        print('continue', browser, url)
-    for obj in result['applications']:
+    try:
+        cmd = ['wappalyzer'] + flags_cmd + [url]
+        output = check_output(cmd, timeout=20)
+        result = json.loads(output.decode())
+    except Exception as e:
+        print('Wappalyzer in crawl:', str(e))
+    for obj in result['technologies']:
         for cate in obj['categories']:
-            key = list(cate.keys())[0]
+            key = cate['id']
             if key in focus_categories:
                 tech[focus_categories[key]].append(obj['name'])
     return tech
