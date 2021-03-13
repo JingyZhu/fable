@@ -26,6 +26,9 @@ RUN npm install -g http-server
 RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
 RUN apt install -y ./google-chrome-stable_current_amd64.deb && rm google-chrome-stable_current_amd64.deb
 
+# Install python dependencies
+RUN pip install -r requirements.txt
+
 ENTRYPOINT /bin/sh -c /bin/bash
 
 # # To run: sudo docker run --rm -it --mount type=bind,src=/mnt/fable-files,target=/mnt/fable-files --name fable fable 
