@@ -32,4 +32,5 @@ RUN pip install -r requirements.txt
 ENTRYPOINT /bin/sh -c /bin/bash
 
 # # To run: sudo docker run --rm -it --mount type=bind,src=/mnt/fable-files,target=/mnt/fable-files --name fable fable 
+# # Copy config.yml: sudo docker cp config.yml CONTAINER:/home/fable/fable/
 # ENTRYPOINT ["python3", "rw.py"]
