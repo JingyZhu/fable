@@ -2,12 +2,12 @@
 """
 config for global variable in this project
 """
-import yaml
 import os
 from pymongo import MongoClient
 import sys
 import re
 from subprocess import Popen, call, check_output
+import json
 
 # Default values if key is not specified in the yaml
 DEFAULT_CONFIG = {
@@ -39,18 +39,36 @@ def back_default():
     var_dict = default_var_dict.copy()
     # TODO Update defined variables
 
+
+def azure_kv(vault_name, secret_name):
+    # * Details: https://docs.microsoft.com/en-us/azure/key-vault/secrets/quick-create-python?tabs=cmd
+    KVUri = f"https://{vault_name}.vault.azure.net"
+
+    credential = DefaultAzureCredential()
+    client = SecretClient(vault_url=KVUri, credential=credential)
+    retrieved_secret = client.get_secret(secret_name)
+    return retrieved_secret
+
+
 var_dict = {}
 default_var_dict = {}
-CONFIG_PATH = os.environ['FABLE_CONFIG'] if 'FABLE_CONFIG' in os.environ else os.path.dirname(__file__)
-# if not os.path.exists(os.path.join(CONFIG_PATH, 'config.yml')):
-#     raise Exception("No config yaml file find at:", CONFIG_PATH)
-# else:
-config_yml = yaml.load(open(os.path.join(CONFIG_PATH, 'config.yml'), 'r'), Loader=yaml.FullLoader)
-var_dict.update(config_yml)
+if os.getenv('FABLE_CONFIG_KEYVAULT', ''):
+    # * Use Azure's Key vault service to get the yaml string. VaultName and KeyName required
+    from azure.keyvault.secrets import SecretClient
+    from azure.identity import DefaultAzureCredential
+    vault_name = os.getenv('FABLE_CONFIG_VAULTNAME')
+    secret_name = os.getenv('FABLE_CONFIG_SECRETNAME')
+    secret = azure_kv(vault_name, secret_name)
+    config_json = json.loads(secret) 
+else:
+    CONFIG_PATH = os.getenv('FABLE_CONFIG_PATH', os.path.dirname(__file__))
+    config_json = json.load(open(os.path.join(CONFIG_PATH, 'config.json'), 'r'))
+
+var_dict.update(config_json)
 locals().update({k.upper(): v for k, v in var_dict.items()})
-if config_yml.get('proxies') is not None:
+if config_json.get('proxies') is not None:
     PROXIES = [{'http': ip, 'https': ip } for ip in \
-            config_yml.get('proxies')]
+            config_json.get('proxies')]
 else: PROXIES = []
 PROXIES = PROXIES + [{}]  # One host do not have to use proxy
 var_dict['proxies'] = PROXIES
