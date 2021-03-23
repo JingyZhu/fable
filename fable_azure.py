@@ -27,7 +27,7 @@ class AzureClient:
         vault_name = os.getenv('FABLE_CONFIG_VAULTNAME')
         self.connect_str = azure_kv(vault_name, "storage-connection-str").value
         self.queue_name = azure_kv(vault_name, "queue-name").value
-        self.fileshare_name = os.getenv("fileshare-name").value
+        self.fileshare_name = azure_kv(vault_name, "fileshare-name").value
         self.queue_client = QueueClient.from_connection_string(self.connect_str, self.queue_name)
 
     def get_length(self) -> int:
@@ -56,7 +56,7 @@ class AzureClient:
 
 rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.DEBUG)
 
-# TODO: Write to logs
+# TODO: Write to azure files
 def fable_api(urlInfo: dict):
     hostname = urlInfo['hostname']
     urls = urlInfo['urls']
@@ -64,14 +64,9 @@ def fable_api(urlInfo: dict):
     rpf.search(required_urls=urls)
     rpf.discover(required_urls=urls)
 
-def main():
-    numToProcess = None
-    if len(sys.argv) > 1:
-        numToProcess = int(sys.argv[1])
-    
+def main():   
     azureClient = AzureClient()
-    count = 0
-    while (numToProcess is None or count < numToProcess) and azureClient.get_length() > 0:
+    while azureClient.get_length() > 0:
         urlInfo = azureClient.poll_message()
         fable_api(urlInfo)
 

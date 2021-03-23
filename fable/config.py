@@ -59,7 +59,7 @@ if os.getenv('FABLE_CONFIG_KEYVAULT', ''):
     vault_name = os.getenv('FABLE_CONFIG_VAULTNAME')
     secret_name = os.getenv('FABLE_CONFIG_SECRETNAME')
     secret = azure_kv(vault_name, secret_name)
-    config_json = json.loads(secret) 
+    config_json = json.loads(secret.value) 
 else:
     CONFIG_PATH = os.getenv('FABLE_CONFIG_PATH', os.path.dirname(__file__))
     config_json = json.load(open(os.path.join(CONFIG_PATH, 'config.json'), 'r'))
