@@ -31,6 +31,4 @@ RUN pip install -r requirements.txt
 
 ENTRYPOINT /bin/sh -c /bin/bash
 
-# # To run: sudo docker run --rm -it --mount type=bind,src=/mnt/fable-files,target=/mnt/fable-files --name fable fable 
-# # Copy config.yml: sudo docker cp config.yml CONTAINER:/home/fable/fable/
-# ENTRYPOINT ["python3", "rw.py"]
+# To run: sudo docker run -e FABLE_CONFIG_KEYVAULT=1 -e FABLE_CONFIG_VAULTNAME=fabletestdockerkeyvault -e FABLE_CONFIG_SECRETNAME=fable-config --rm -it --name fable $IMAGE_NAME
