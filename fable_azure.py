@@ -30,7 +30,7 @@ class AzureClient:
         self.fileshare_name = azure_kv(vault_name, "fileshare-name").value
         self.queue_client = QueueClient.from_connection_string(self.connect_str, self.queue_name)
 
-    def get_length(self) -> int:
+    def get_queue_length(self) -> int:
         """Get queue length"""
         return self.queue_client.get_queue_properties().approximate_message_count
 
@@ -55,18 +55,23 @@ class AzureClient:
         file_client.close()
 
 rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.DEBUG)
+azureClient = AzureClient()
 
-# TODO: Write to azure files
 def fable_api(urlInfo: dict):
     hostname = urlInfo['hostname']
     urls = urlInfo['urls']
-    rpf.init_site(hostname, urls)
-    rpf.search(required_urls=urls)
-    rpf.discover(required_urls=urls)
-
-def main():   
-    azureClient = AzureClient()
-    while azureClient.get_length() > 0:
+    try:
+        rpf.init_site(hostname, urls)
+        rpf.search(required_urls=urls)
+        rpf.discover(required_urls=urls)
+    except:
+        pass
+    srcLogPath = f"logs/{hostname}.log"
+    dstLogPath = f"logs/{hostname}.log"
+    azureClient.upload_file(srcLogPath, dstLogPath)
+    
+def main():
+    while azureClient.get_queue_length() > 0:
         urlInfo = azureClient.poll_message()
         fable_api(urlInfo)
 
