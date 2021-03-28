@@ -20,7 +20,7 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
 RUN apt install -y nodejs
 
 # Install npm packages
-RUN npm install chrome-remote-interface chrome-launcher
+RUN npm install chrome-remote-interface chrome-launcher yargs
 RUN npm install -g http-server
 
 # Install Chrome
