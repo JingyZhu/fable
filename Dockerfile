@@ -1,6 +1,7 @@
 FROM continuumio/anaconda3
 
 RUN mkdir /home/fable
+RUN mkdir /home/fable/deps
 COPY . /home/fable
 WORKDIR /home/fable
 
@@ -28,6 +29,9 @@ RUN apt install -y ./google-chrome-stable_current_amd64.deb && rm google-chrome-
 
 # Install python dependencies
 RUN pip install -r requirements.txt
+# Install boilerpipe
+RUN git clone https://github.com/misja/python-boilerpipe.git deps/python-boilerpipe
+RUN pip install -e deps/python-boilerpipe
 
 ENTRYPOINT /bin/sh -c /bin/bash
 
