@@ -378,7 +378,10 @@ def newspaper_extract(html, lang=None):
 
 def boilerpipe_extract(html, lang=None):
     extractor = Extractor(extractor="ArticleExtractor", html=html)
-    return extractor.getText()
+    text = extractor.getText()
+    if not isinstance(text, str):
+        text = str(text)
+    return text
 
 
 def domdistiller_extract(html, lang=None):
@@ -548,6 +551,14 @@ def domdistiller_title_extract(html, lang=None):
     return title
 
 
+def boilerpipe_title_extract(html, lang=None):
+    extractor = Extractor(extractor="ArticleExtractor", html=html)
+    text = extractor.source.getTitle()
+    if not isinstance(text, str):
+        text = str(text)
+    return text
+
+
 def extract_title(html, version='mine', handle_exception=True):
     """
     Wrapper functions for different version of html body extraction
@@ -559,7 +570,8 @@ def extract_title(html, version='mine', handle_exception=True):
     func_dict = {
         "newspaper": newspaper_title_extract,
         "mine": mine_title_extract,
-        "domdistiller": domdistiller_title_extract
+        "domdistiller": domdistiller_title_extract,
+        "boilerpipe": boilerpipe_title_extract
     }
     title = func_dict[version](html, lang=lang)
     try:
