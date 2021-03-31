@@ -433,7 +433,6 @@ def domdistiller_extract(html, lang=None):
         os.remove(html_file)
         return ""
     content = open(html_file, 'r').read()
-    print('content:', content)
     os.remove(html_file)
     soup = BeautifulSoup(content, 'lxml')
 
