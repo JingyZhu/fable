@@ -452,7 +452,7 @@ def domdistiller_extract(html, lang=None):
         string_list = list(filter(lambda x: x != s, string_list))
         content = s.join(string_list)
     if content == '':
-        print("Domdistiller: Empty")
+        print("Domdistiller empty")
     return content
 
 
