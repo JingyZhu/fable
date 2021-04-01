@@ -159,7 +159,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     count = 0
     while True:
         try:
-            r = requests.get('http://web.archive.org/cdx/search/cdx', headers=requests_header, params=params, proxies=proxies, timeout=60)
+            r = requests.get('http://web.archive.org/cdx/search/cdx', headers=requests_header, params=params, proxies=proxies, timeout=30)
             r = r.json()
             break
         except Exception as e:
