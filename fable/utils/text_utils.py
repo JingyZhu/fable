@@ -548,7 +548,7 @@ def domdistiller_title_extract(html, lang=None):
         return ''
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
-        call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)])
+        call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=20)
     except:
         print('DomDistiller Failed')
         os.remove(html_file)
