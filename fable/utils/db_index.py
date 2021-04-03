@@ -17,6 +17,6 @@ db.searched.create_index([('query', pymongo.ASCENDING), ('engine', pymongo.ASCEN
 
 db.wayback_rep.create_index([('site', pymongo.ASCENDING), ('url', pymongo.ASCENDING)], unique=True)
 
-db.wayback_index.create_index([('site', pymongo.ASCENDING), ('url', pymongo.ASCENDING)], unique=True)
+db.wayback_index.create_index([('url', pymongo.ASCENDING)], unique=True)
 
 db.traces.create_index([('url', pymongo.ASCENDING)], unique=True)

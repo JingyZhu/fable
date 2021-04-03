@@ -1,10 +1,16 @@
 FROM continuumio/anaconda3
 
-RUN mkdir /home/fable
-RUN mkdir /home/fable/deps
-COPY . /home/fable
+RUN useradd --system --create-home -d /home/fable --shell /bin/bash -g root -G sudo -u 1001 fable
+# RUN chown -R root:fable /home/fable
+
+USER fable
 WORKDIR /home/fable
 
+# RUN mkdir /home/fable
+RUN mkdir -p /home/fable/deps
+COPY . /home/fable
+
+USER root
 # Prepare
 RUN mkdir /usr/share/man/man1
 RUN conda config --set changeps1 false 
@@ -13,7 +19,7 @@ RUN apt update && apt install -y wget \
     curl \
     openjdk-11-jdk \
     gcc g++ \
-    net-tools
+    net-tools sudo
 
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
@@ -33,6 +39,7 @@ RUN pip install -r requirements.txt
 RUN git clone https://github.com/misja/python-boilerpipe.git deps/python-boilerpipe
 RUN pip install -e deps/python-boilerpipe
 
+USER fable
 ENTRYPOINT /bin/sh -c /bin/bash
 
 # To run: sudo docker run -e FABLE_CONFIG_KEYVAULT=1 -e FABLE_CONFIG_VAULTNAME=fabletestdockerkeyvault -e FABLE_CONFIG_SECRETNAME=fable-config --rm -it --name fable $IMAGE_NAME

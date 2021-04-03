@@ -1,6 +1,7 @@
 pymongo
 langdetect
 langcodes
+language_data
 justext
 publicsuffixlist
 newspaper3k

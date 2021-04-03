@@ -47,9 +47,14 @@ def localserver(PORT):
     if not os.path.exists(os.path.join(tmp_path, 'utils', 'domdistiller.js')):
         call(['cp', os.path.join(cur_path, 'domdistiller.js'), tmp_path])
     port_occupied = re.compile(":{}".format(port)).findall(check_output(['netstat', '-nlt']).decode())
+    if len(port_occupied) > 0:
+        # * Try kill http-server once 
+        call(['pkill', 'http-server'])
+    port_occupied = re.compile(":{}".format(port)).findall(check_output(['netstat', '-nlt']).decode())
     if len(port_occupied) <= 0:
         Popen(['http-server', '-a', 'localhost', '-p', str(port), tmp_path], stdout=NULL, stderr=NULL)
     else:
+        # * Port is not occupied by http-server 
         print(f"Port {port} occupied by other process", file=sys.stderr)
 
 localserver(port)
@@ -445,6 +450,8 @@ def domdistiller_extract(html, lang=None):
         string_list = content.split(s)
         string_list = list(filter(lambda x: x != s, string_list))
         content = s.join(string_list)
+    if content == '':
+        print("Domdistiller empty")
     return content
 
 
@@ -541,7 +548,7 @@ def domdistiller_title_extract(html, lang=None):
         return ''
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
     try:
-        call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)])
+        call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=20)
     except:
         print('DomDistiller Failed')
         os.remove(html_file)

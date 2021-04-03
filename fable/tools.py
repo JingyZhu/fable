@@ -96,6 +96,7 @@ def title_prepare(crawls, wayback=False):
         
     """
     netloc_dir = defaultdict(list)
+    memo = Memoizer()
     for ut in crawls:
         if 'content' not in ut:
             try:
