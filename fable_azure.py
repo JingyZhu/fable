@@ -71,9 +71,16 @@ def fable_api(urlInfo: dict):
     azureClient.upload_file(srcLogPath, dstLogPath)
     
 def main():
-    while azureClient.get_queue_length() > 0:
-        urlInfo = azureClient.poll_message()
-        fable_api(urlInfo)
+    count = 0
+    with open('progress.txt', 'a') as progress_file:
+        while azureClient.get_queue_length() > 0:
+            try:
+                urlInfo = azureClient.poll_message()
+                progress_file.write("Processing number {}\tHostname: {}\n".format(count, urlInfo['hostname']))
+                fable_api(urlInfo)
+                count += 1
+            except:
+                pass
 
 if __name__ == "__main__":
     main()
