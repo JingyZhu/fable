@@ -34,6 +34,10 @@ async function startChrome(){
         '-disable-features=IsolateOrigins,site-per-process',
     ];
     
+    if (process.env.ROOT_USER) {
+        chromeFlags.push('--no-sandbox');
+    }
+
     if (os == 'linux') chromeFlags.push('--headless')
     const chrome = await chromeLauncher.launch({
         chromeFlags: chromeFlags,
