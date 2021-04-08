@@ -33,6 +33,10 @@ async function startChrome(){
         '--disk-cache-size=1', 
         '-disable-features=IsolateOrigins,site-per-process',
     ];
+
+    if (process.env.ROOT_USER) {
+        chromeFlags.push('--no-sandbox');
+    }
     
     if (os == 'linux') chromeFlags.push('--headless')
     const chrome = await chromeLauncher.launch({
