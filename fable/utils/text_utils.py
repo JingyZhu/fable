@@ -34,6 +34,7 @@ sys.setrecursionlimit(1500)
 # Need to be modified
 tmp_path = config.TMP_PATH
 port = config.LOCALSERVER_PORT
+vectorizer_kwargs = {'stop_words': 'english'}
 
 NULL = open('/dev/null', 'w')
 
@@ -93,7 +94,7 @@ class TFidfDynamic:
         corpus = list(set(corpus))
         self.idx = {c: i for i, c in enumerate(corpus)}
         self.corpus = corpus
-        self.vectorizer = TfidfVectorizer()
+        self.vectorizer = TfidfVectorizer(**vectorizer_kwargs)
         self.tfidf = self.vectorizer.fit_transform(corpus)
 
     def similar(self, text1, text2):
@@ -146,7 +147,7 @@ class TFidfStatic:
     def __init__(self, corpus):
         corpus = list(set(corpus))
         self.corpus = corpus
-        self.vectorizer = TfidfVectorizer()
+        self.vectorizer = TfidfVectorizer(**vectorizer_kwargs)
         self.vectorizer.fit(corpus)
         self.tfidf = self.vectorizer.transform(corpus)
         self.workingset_vec = None
@@ -166,7 +167,7 @@ class TFidfStatic:
         vocab = self.vectorizer.vocabulary_.copy()
         vsize = len(vocab)
         # vocab.default_factory = vocab.__len__
-        inputs_tfidf = TfidfVectorizer()
+        inputs_tfidf = TfidfVectorizer(**vectorizer_kwargs)
         inputs_matrix = inputs_tfidf.fit_transform(inputs)
         # Add unseen vocab to existed corpus
         num_docs = inputs_matrix.shape[0]
@@ -181,7 +182,7 @@ class TFidfStatic:
                 df = np.log((self.tfidf.shape[0] + 1) / (df + 1)) + 1
                 idf = np.append(idf, [df])
         # Construct workingset
-        self.workingset_vec = TfidfVectorizer(vocabulary=vocab)
+        self.workingset_vec = TfidfVectorizer(vocabulary=vocab, **vectorizer_kwargs)
         def my_validate_vocab(self):
             self.vocabulary_ = self.vocabulary
         self.workingset_vec._validate_vocabulary = functools.partial(my_validate_vocab, self.workingset_vec)
@@ -200,7 +201,7 @@ class TFidfStatic:
     
     def similar(self, text1, text2):
         if self.workingset_vec is None:
-            inputs_tfidf = TfidfVectorizer()
+            inputs_tfidf = TfidfVectorizer(**vectorizer_kwargs)
             try:
                 _ = inputs_tfidf.fit_transform([text1, text2])
             except: return 0
@@ -210,7 +211,7 @@ class TFidfStatic:
     
     def topN(self, text, N=7):
         if self.workingset_vec is None:
-            inputs_tfidf = TfidfVectorizer()
+            inputs_tfidf = TfidfVectorizer(**vectorizer_kwargs)
             try:
                 _ = inputs_tfidf.fit_transform([text])
             except: return ''
@@ -223,7 +224,7 @@ class TFidfStatic:
     def add_corpus(self, inputs):
         if self.workingset_vec is not None:
             self._clear_workingset()
-        inputs_tfidf = TfidfVectorizer()
+        inputs_tfidf = TfidfVectorizer(**vectorizer_kwargs)
         try:
             _ = inputs_tfidf.fit_transform(inputs)
         except: return
@@ -251,7 +252,7 @@ def tokenize(texts):
     Returns: list of features in the original order
     """
     texts = texts.replace('_', ' ')
-    cv = CountVectorizer()
+    cv = CountVectorizer(**kwargs) # TODO: Not necessary english
     analyze = cv.build_analyzer()
     return analyze(texts)
 

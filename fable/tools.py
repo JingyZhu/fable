@@ -14,6 +14,7 @@ import brotli
 from dateutil import parser as dparser
 from urllib.parse import urlsplit, urlparse
 import bisect
+from bs4 import BeautifulSoup
 
 from . import config, tracer
 from .utils import text_utils, crawl, url_utils, search
@@ -967,11 +968,11 @@ def is_canonical(url1, url2, resp1=None, resp2=None, use_resp=False):
             if urlsplit(resp2.url).path not in ['', '/']:
                 can2 = cans2[0]['href']
         # * Check for potential match
-        if can1 and can2 and url_match(can1, can2):
+        if can1 and can2 and url_utils.url_match(can1, can2):
             return True
-        if can1 and url_match(can1, resp2.url):
+        if can1 and url_utils.url_match(can1, resp2.url):
             return True
-        if can2 and url_match(can2, resp1.url):
+        if can2 and url_utils.url_match(can2, resp1.url):
             return True
     except:
         pass
