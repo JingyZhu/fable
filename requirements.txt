@@ -23,3 +23,5 @@ azure-identity
 azure-keyvault-secrets
 azure-storage-queue
 azure-storage-file-share
+
+subprocess.run

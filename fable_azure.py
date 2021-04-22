@@ -57,6 +57,9 @@ class AzureClient:
 rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.DEBUG)
 azureClient = AzureClient()
 
+def pkill(pattern):
+    subprocess.run(["pkill", "-f", pattern], check=False)
+
 def fable_api(urlInfo: dict):
     hostname = urlInfo['hostname']
     urls = urlInfo['urls']
@@ -75,6 +78,7 @@ def main():
     with open('progress.txt', 'a') as progress_file:
         while azureClient.get_queue_length() > 0:
             try:
+                pkill('chrome')
                 urlInfo = azureClient.poll_message()
                 progress_file.write("Processing number {}\tHostname: {}\n".format(count, urlInfo['hostname']))
                 fable_api(urlInfo)
