@@ -10,6 +10,7 @@ from goose3 import Goose
 from newspaper import Article
 from boilerpipe.extract import Extractor
 import brotli
+import bs4
 from bs4 import BeautifulSoup
 from dateutil import parser as dparser
 from dateparser.search import search_dates
@@ -122,6 +123,7 @@ class TFidfDynamic:
         Get the highest weighted N words in a text
         If text is not in the corpus, it'll be added, and tfidf'll be recalculated
         """
+        if text == "": return []
         need_reinit = False
         if text not in self.idx:
             self.idx[text] = len(self.corpus)
@@ -252,7 +254,7 @@ def tokenize(texts):
     Returns: list of features in the original order
     """
     texts = texts.replace('_', ' ')
-    cv = CountVectorizer(**kwargs) # TODO: Not necessary english
+    cv = CountVectorizer(**vectorizer_kwargs) # TODO: Not necessary english
     analyze = cv.build_analyzer()
     return analyze(texts)
 
@@ -376,7 +378,7 @@ def justext_extract(html, lang=None):
 
 def newspaper_extract(html, lang=None):
     lang_code = detect_langs(html)[0].lang if not lang else lang
-    article = Article('https://google.com', language=lang_code) # Dummy urls to initialize the obj Can be anything able to wget
+    article = Article(url='', language=lang_code) # Dummy urls to initialize the obj Can be anything able to wget
     article.download(input_html=html)
     article.parse()
     return article.text
@@ -389,6 +391,22 @@ def boilerpipe_extract(html, lang=None):
         text = str(text)
     return text
 
+def unwrap_tags(soup):
+    has_content = lambda x: x and len(re.sub('[ \n]', '', x)) > 0
+    
+    for tag in soup.findAll():
+        if (isinstance(tag.previous_sibling, bs4.element.NavigableString) and has_content(tag.previous_sibling)) \
+           or (isinstance(tag.next_sibling, bs4.element.NavigableString) and has_content(tag.next_sibling)):
+            tag.unwrap()
+    for tag in soup.findAll():
+        allNavi = True
+        for element in tag.contents:
+            if not isinstance(element, bs4.element.NavigableString):
+                allNavi = False
+                break
+        if allNavi:
+            tag.string = ' '.join(tag.contents)
+    return soup
 
 def domdistiller_extract(html, lang=None):
     """
@@ -442,15 +460,20 @@ def domdistiller_extract(html, lang=None):
         for element in soup.findAll(tag):
             element.decompose()
 
+    soup = unwrap_tags(soup)
     try:
-        content = soup.get_text(separator=' ')
+        content = soup.get_text(separator='||', strip=True)
     except:
         return ''
-    filter_str = ['\n', ' ']
+    # print(soup, content)
+    filter_str = ['\n']
     for s in filter_str:
         string_list = content.split(s)
         string_list = list(filter(lambda x: x != s, string_list))
-        content = s.join(string_list)
+        content = ' '.join(string_list)
+    string_list = content.split('||')
+    string_list = list(filter(lambda x: x != '||' and x.replace(' ', ''), string_list))
+    content = '\n'.join(string_list)
     if content == '':
         print("Domdistiller empty")
     return content
@@ -490,8 +513,8 @@ def extract_body(html, version='domdistiller', handle_exception=True):
         return content
     except Exception as e:
         print("extract body:", str(e))
-        if handle_exception: return ""
-        else: raise
+        # if handle_exception: return ""
+        raise
 
 
 def newspaper_title_extract(html, lang=None):

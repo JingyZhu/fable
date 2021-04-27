@@ -51,10 +51,17 @@ class ProxySelector:
         self.len = len(proxies)
         self.idx = 0
 
-    def select(self):
-        """ Currently RR """
-        self.idx = self.idx + 1 if self.idx < self.len -1 else 0
-        return self.proxies[self.idx]
+    def select(self, policy='RR'):
+        """
+        Policy:
+         - RR: Round Robin
+         - idx(int): Fix proxy on idx
+        """
+        if policy == 'RR':
+            self.idx = self.idx + 1 if self.idx < self.len -1 else 0
+            return self.proxies[self.idx]
+        elif isinstance(policy, int):
+            return self.proxies[idx1]
     
     def select_url(self, scheme='http'):
         """ Directly return url instead of dict """
@@ -281,6 +288,12 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
                 time.sleep(10)
                 continue
             break
+        except requests.exceptions.ConnectionError as exc:
+            if len(proxies):
+                logger.warn(f'Connection Error with Proxies: {str(exc)},\n Retry without proxy')
+                proxies = {}
+            else:
+                logger.warn(f"There is an exception with requests_crawl: {str(e)}")
         except Exception as e:
             logger.warn(f"There is an exception with requests_crawl: {str(e)}")
             return

@@ -142,7 +142,7 @@ def url_match(url1, url2, wayback=True, case=False):
     return len(qsl1) > 0 and qsl1 == qsl2
 
 
-def url_norm(url, wayback=False, case=False):
+def url_norm(url, wayback=False, case=False, sort_query=True):
     """
     Perform URL normalization
     Namely, sort query by keys, and eliminate port number
@@ -156,7 +156,7 @@ def url_norm(url, wayback=False, case=False):
     us = us._replace(netloc=us.netloc.split(':')[0], fragment='')
     if path == '': 
         us = us._replace(path='/')
-    if query:
+    if query and sort_query:
         qsl = sorted(parse_qsl(query), key=lambda kv: (kv[0], kv[1]))
         if len(qsl):
             us = us._replace(query='&'.join([f'{kv[0]}={kv[1]}' for kv in qsl]))

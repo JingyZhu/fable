@@ -952,7 +952,7 @@ def is_canonical(url1, url2, resp1=None, resp2=None, use_resp=False):
         if isinstance(resp2, tuple) or not resp2:
             return False
     # * Check final url
-    if url_match(resp1.url, resp2.url):
+    if url_utils.url_match(resp1.url, resp2.url):
         return True
     # * Check canonical
     try:
