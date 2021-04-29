@@ -69,8 +69,8 @@ locals().update({k.upper(): v for k, v in var_dict.items()})
 if config_json.get('proxies') is not None:
     PROXIES = [{'http': ip, 'https': ip } for ip in \
             config_json.get('proxies')]
-else: PROXIES = []
-PROXIES = PROXIES + [{}]  # One host do not have to use proxy
+else: PROXIES = [{}]
+# PROXIES = PROXIES + [{}]  # One host do not have to use proxy
 var_dict['proxies'] = PROXIES
 
 default_var_dict = var_dict.copy()
