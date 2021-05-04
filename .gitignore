@@ -13,3 +13,4 @@ temp.py
 test.py
 
 *.log
+env/
