@@ -7,7 +7,10 @@ rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.D
 azureClient = AzureClient()
 
 def pkill(pattern):
-    subprocess.run(["pkill", "-f", pattern], check=False)
+    try:
+        subprocess.run(["pkill", "-f", pattern], check=False)
+    except:
+        pass
 
 # Run Fable and upload logs on success to Azure files
 def fable_api(urlInfo: dict):

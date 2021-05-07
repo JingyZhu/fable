@@ -42,6 +42,9 @@ RUN pip install -e deps/python-boilerpipe
 # Install vim 
 RUN apt install -y vim
 
+# Install tmux
+RUN apt install -y tmux
+
 # Install azure cli 
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 

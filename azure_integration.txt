@@ -5,7 +5,7 @@ Note: May need virtual environment
 1. Set env variable FABLE_CONFIG_VAULTNAME: `export FABLE_CONFIG_VAULTNAME=fabletestdockerkeyvault`
 2. Authenticate with Azure: `az login`
 3. Run program: `python3 azure_send_messages.py`
-    - Relies on cluster.json file which should be structured like
+    - Relies on cluster.json file (sent via Google Drive/Gmail) which should be structured like
         {
             "uoregon.edu": [
                 "http://comm.uoregon.edu/newsreleases/2004/20040430B.html",
@@ -30,7 +30,7 @@ Deploying Container Instance
 4. Tag container: `docker tag fable fabletestdocker.azurecr.io/fable:v1`
 5. Push container to Azure repository: `docker push fabletestdocker.azurecr.io/fable:v1`
 
-Note: Container repository permissions should be set up to allow for running instances
+Note: Container repository permissions should already be set up to allow for running instances
 
 6. Set environment variables:
 ```
@@ -59,3 +59,9 @@ az container create \
 ```
 
 8. Once deployed (takes a few minutes), launch Bash shell: `az container exec --resource-group achitta-broken-detection_group --name fable --exec-command "/bin/bash"`
+9. Launch tmux: `tmux`
+10. Authenticate with Azure: `az login` and follow prompts
+11. Run python program: `python3 fable_azure.py`
+12. Once running (sometimes takes a few tries), detach from tmux: `ctrl+b d`
+13. Exit from terminal
+14. Re-attach to tmux: `tmux a -t 0` (or whatever the session number is)
