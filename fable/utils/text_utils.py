@@ -496,7 +496,7 @@ def extract_body(html, version='domdistiller', handle_exception=True):
     Wrapper functions for different version of html body extraction
     """
     lang = lang_meta(html)
-    backup_versions = ['domdistiller', 'boilerpipe', 'justext']
+    backup_versions = ['domdistiller', 'boilerpipe']
     backup_versions = [v for v in backup_versions if v != version]
     if html == '': return ''
     func_dict = {
