@@ -443,6 +443,28 @@ class Memoizer:
         except Exception as e: tracer.warn(f'extract title: {str(e)}')
         return title
     
+    def extract_title_content(self, html, **kwargs):
+        if html is None:
+            if kwargs.get('handle_exception', True):
+                return ''
+            else:
+                raise
+        html_bin = brotli.compress(html.encode())
+        try:
+            title_content = self.db.crawl.find_one({'html': html_bin, 'title': {"$exists": True}, 'content': {'$exists': True}})
+        except: 
+            title_content = None
+        if title_content:
+            return title_content['title'], title_content['content']
+        # Require to be extracted next time
+        title, content = text_utils.extract_title_body(html, **kwargs)
+        if title == "" or content == "":
+            return title, content
+        try:
+            self.db.crawl.update_one({'html': html_bin}, {"$set": {'title': title, 'content': content}})
+        except Exception as e: tracer.warn(f'extract title content: {str(e)}')
+        return title, content
+    
     def get_more_crawls(self, url, wayback=False):
         """
         Getting more samples from the same netloc_dir with url

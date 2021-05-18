@@ -592,7 +592,7 @@ def boilerpipe_title_extract(html, lang=None):
 
 def extract_title(html, version='mine', handle_exception=True):
     """
-    Wrapper functions for different version of html body extraction
+    Wrapper functions for different version of html title extraction
     """
     lang = lang_meta(html)
     if html == '': return ''
@@ -615,6 +615,96 @@ def extract_title(html, version='mine', handle_exception=True):
         print("extract body:", str(e))
         if handle_exception: return ""
         else: raise
+
+
+def domdistiller_title_body_extract(html, lang=None):
+    """
+    Insert domdistiller js into the html
+    Filter out all src / href except for css
+    Write Page into $PROJ_HOME/tmp with pid+ts
+    Run chrome to load the page
+    Call org.chromium.distiller to get the title
+    """
+    soup = BeautifulSoup(html, 'lxml')
+    for tag in soup.find_all('', {'src': True}):
+        del(tag.attrs['src'])
+    for tag in soup.find_all('img', {'style': True}):
+        del(tag.attrs['style'])
+    filter_tags = ['script', 'link']
+    for tag in filter_tags:
+        for element in soup.find_all(tag):
+            element.decompose()
+
+    new_script = soup.new_tag('script')
+    new_script.attrs.update({
+        'src': "http://localhost:{}/domdistiller.js".format(config.LOCALSERVER_PORT),
+        'type': 'text/javascript',
+        'language': 'javascript'
+    })
+    if soup.head:
+        soup.head.append(new_script)
+    else:
+        soup.insert(1, new_script)
+    
+    html_id = "{}_{}.html".format(time.time(), os.getpid())
+    html_file = join(tmp_path, html_id)
+    file = open(html_file, 'w+')
+    try:
+        file.write(str(soup))
+        file.close()
+    except:
+        return '', ''
+    url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
+    try:
+        call(['node', join(dirname(abspath(__file__)), 'run_title_content.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=20)
+    except:
+        print('DomDistiller Failed')
+        os.remove(html_file)
+        return "", ""
+    title_content = open(html_file, 'r').read()
+    title_content = title_content.split('\n')
+    title, content = title_content[0], '\n'.join(title_content[1:])
+    # * Process title
+    if "Wayback Machine" in title: title = ""
+    # * Process content
+    soup = BeautifulSoup(content, 'lxml')
+
+    filter_tags = ['style', 'script', 'link', 'meta']
+    for tag in filter_tags:
+        for element in soup.findAll(tag):
+            element.decompose()
+
+    soup = unwrap_tags(soup)
+    try:
+        content = soup.get_text(separator='||', strip=True)
+    except:
+        return ''
+    # print(soup, content)
+    filter_str = ['\n']
+    for s in filter_str:
+        string_list = content.split(s)
+        string_list = list(filter(lambda x: x != s, string_list))
+        content = ' '.join(string_list)
+    string_list = content.split('||')
+    string_list = list(filter(lambda x: x != '||' and x.replace(' ', ''), string_list))
+    content = '\n'.join(string_list)
+    os.remove(html_file)
+    return title, content
+
+
+def extract_title_body(html, handle_exception=True):
+    """
+    Wrapper functions for different version of html title & body extraction
+    """
+    lang = lang_meta(html)
+    if html == '': return '', ''
+    title, content = domdistiller_title_body_extract(html, lang=lang)
+    if content != "":
+        return title, content
+    else:
+        title = extract_title(html)
+        content = extract_body(html)
+        return title, content
 
 
 def k_shingling(text1, text2, k=5):

@@ -14,14 +14,20 @@ const assert = require('assert');
 const argv = require('yargs').argv;
 
 
-async function writeTitle(Runtime, filename) {
-    const result = await Runtime.evaluate({
+async function writeTitleContent(Runtime, filename) {      
+    const resultContent = await Runtime.evaluate({
+        expression: 'org.chromium.distiller.DomDistiller.apply()[2][1]'
+    });
+    let content = resultContent.result.value;
+    if (content == undefined) content = ''
+    const resultTitle = await Runtime.evaluate({
         expression: 'org.chromium.distiller.DomDistiller.apply()[1]'
     });
-    let title = result.result.value;
-    title = title.trim();
-    if (title == undefined) title = '';
-    fs.writeFileSync(filename, title);
+    let title = resultTitle.result.value;
+    if (title == undefined) title = ''
+    title = title.trim().split('\n')[0];
+    
+    fs.writeFileSync(filename, title + '\n' + content);
 }
 
 async function startChrome(){
@@ -33,11 +39,11 @@ async function startChrome(){
         '--disk-cache-size=1', 
         '-disable-features=IsolateOrigins,site-per-process',
     ];
-    
+
     if (process.env.ROOT_USER) {
         chromeFlags.push('--no-sandbox');
     }
-
+    
     if (os == 'linux') chromeFlags.push('--headless')
     const chrome = await chromeLauncher.launch({
         chromeFlags: chromeFlags,
@@ -78,9 +84,19 @@ async function startChrome(){
             }),
         ]).catch(function(err){
             console.log(err.message)
-        })      
-    
-        await writeTitle(Runtime, filename);
+        })
+
+        await Promise.race([
+            writeTitleContent(Runtime, filename),
+            new Promise(function(_, reject) {
+                setTimeout(function() {
+                    reject(new Error(`run_content.js: Got content timeout`));
+                }, 3000);
+            }),
+        ]).catch(function(err){
+            console.log(err.message)
+            fs.writeFileSync(filename, '');
+        })
 
     } catch (err) {
         console.error(err);
