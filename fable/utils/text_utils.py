@@ -513,7 +513,7 @@ def extract_body(html, version='domdistiller', handle_exception=True):
         return content
     except Exception as e:
         print("extract body:", str(e))
-        # if handle_exception: return ""
+        if handle_exception: return ""
         raise
 
 
