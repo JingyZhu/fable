@@ -61,7 +61,7 @@ class ProxySelector:
             self.idx = self.idx + 1 if self.idx < self.len -1 else 0
             return self.proxies[self.idx]
         elif isinstance(policy, int):
-            return self.proxies[policy]
+            return self.proxies[policy % len(self.proxies)]
     
     def select_url(self, scheme='http'):
         """ Directly return url instead of dict """

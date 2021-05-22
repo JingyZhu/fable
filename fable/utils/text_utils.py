@@ -678,7 +678,7 @@ def domdistiller_title_body_extract(html, lang=None):
     try:
         content = soup.get_text(separator='||', strip=True)
     except:
-        return ''
+        return '', ''
     # print(soup, content)
     filter_str = ['\n']
     for s in filter_str:
@@ -702,8 +702,9 @@ def extract_title_body(html, handle_exception=True):
     if content != "":
         return title, content
     else:
-        title = extract_title(html)
-        content = extract_body(html)
+        if title == "":
+            title = extract_title(html)
+        content = extract_body(html, version='boilerpipe')
         return title, content
 
 
