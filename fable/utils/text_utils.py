@@ -494,10 +494,15 @@ def lang_meta(html):
 def extract_body(html, version='domdistiller', handle_exception=True):
     """
     Wrapper functions for different version of html body extraction
+    if version is list, no backup applied
     """
     lang = lang_meta(html)
     backup_versions = ['domdistiller', 'boilerpipe']
-    backup_versions = [v for v in backup_versions if v != version]
+    if isinstance(version, str):
+        backup_versions = [v for v in backup_versions if v != version]
+    elif isinstance(version, list):
+        version = version[0]
+        backup_versions = []
     if html == '': return ''
     func_dict = {
         "justext": justext_extract,
@@ -704,7 +709,7 @@ def extract_title_body(html, handle_exception=True):
     else:
         if title == "":
             title = extract_title(html)
-        content = extract_body(html, version='boilerpipe')
+        content = extract_body(html, version=['boilerpipe'])
         return title, content
 
 
