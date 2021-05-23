@@ -1,15 +1,12 @@
 """ Azure client wrapper to access queue service, file shares, and secrets"""
 
 from azure.storage.queue import (
-        QueueClient,
-        BinaryBase64EncodePolicy,
-        BinaryBase64DecodePolicy
+        QueueClient
 )
 from azure.storage.fileshare import ShareFileClient
 from azure.keyvault.secrets import SecretClient
 from azure.identity import DefaultAzureCredential
-import base64
-import os, uuid
+import os
 import json
 
 class AzureClient:
