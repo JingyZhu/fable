@@ -89,6 +89,7 @@ class TFidfDynamic:
         print("re_init")
         # self.vectorizer = TfidfVectorizer()
         self.tfidf = self.vectorizer.fit_transform(self.corpus)
+        self.pairwise_simi = None
         # print(f"Takes {(time.time()-begin):.2f}s")
 
     def __init__(self, corpus):
@@ -97,24 +98,13 @@ class TFidfDynamic:
         self.corpus = corpus
         self.vectorizer = TfidfVectorizer(**vectorizer_kwargs)
         self.tfidf = self.vectorizer.fit_transform(corpus)
+        self.pairwise_simi = None
 
     def similar(self, text1, text2):
         """
         Get similarity of 2 text
         If any of the text is not in the corpus, TFIDF matrix will be recalculated
         """
-        if text1 == "" or text2 == "":
-            return 0
-        need_reinit = False
-        if text1 not in self.idx:
-            self.idx[text1] = len(self.corpus)
-            self.corpus.append(text1)
-            need_reinit = True
-        if text2 not in self.idx:
-            self.idx[text2] = len(self.corpus)
-            self.corpus.append(text2)
-            need_reinit = True
-        if need_reinit: self.re_init()
         idx1, idx2 = self.idx[text1], self.idx[text2]
         return cosine_similarity(self.tfidf[idx1], self.tfidf[idx2])[0,0]
     
@@ -123,13 +113,6 @@ class TFidfDynamic:
         Get the highest weighted N words in a text
         If text is not in the corpus, it'll be added, and tfidf'll be recalculated
         """
-        if text == "": return []
-        need_reinit = False
-        if text not in self.idx:
-            self.idx[text] = len(self.corpus)
-            self.corpus.append(text)
-            need_reinit = True
-        if need_reinit: self.re_init()
         array = self.tfidf[self.idx[text]].toarray()[0]
         idxes = array.argsort()[-N:]
         words = self.vectorizer.get_feature_names()
@@ -143,7 +126,22 @@ class TFidfDynamic:
             self.idx[c] = len(self.corpus)
             self.corpus.append(c)
         if need_reinit: self.re_init()
+    
+    def _gen_pair_simi(self):
+        """Generate all pairwise documents' similarity"""
+        if self.pairwise_simi is not None: return
+        self.pairwise_simi = cosine_similarity(self.tfidf)
 
+    def top_similar(self, text, N=10):
+        """
+        N: Number of documents returned
+        Return: [(document, similarity)] for top similar documents to text.
+        """
+        self._gen_pair_simi()
+        idx = self.idx[text]
+        array = self.pairwise_simi[idx]
+        idxes = array.argsort()[-N-1:]
+        return [(self.corpus[i], array[i]) for i in reversed(idxes) if i != idx]
 
 class TFidfStatic:
     def __init__(self, corpus):
