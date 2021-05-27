@@ -137,9 +137,10 @@ class TFidfDynamic:
         N: Number of documents returned
         Return: [(document, similarity)] for top similar documents to text.
         """
-        self._gen_pair_simi()
+        # self._gen_pair_simi()
         idx = self.idx[text]
-        array = self.pairwise_simi[idx]
+        array = cosine_similarity(self.tfidf[idx], self.tfidf)[0]
+        # array = self.pairwise_simi[idx]
         idxes = array.argsort()[-N-1:]
         return [(self.corpus[i], array[i]) for i in reversed(idxes) if i != idx]
 
