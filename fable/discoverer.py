@@ -444,11 +444,12 @@ class Discoverer:
                 return new_url
         return
 
-    def wayback_alias(self, url):
+    def wayback_alias(self, url, require_neighbor=False):
         """
         Utilize wayback's archived redirections to find the alias/reorg of the page
         Not consider non-homepage to homepage
         If latest redirection is invalid, iterate towards earlier ones (separate by every month)
+        require_neighbor: Whether a redirection neighbor is required to do the comparison
 
         Returns: reorg_url is latest archive is an redirection to working page, else None
         """
@@ -479,7 +480,7 @@ class Discoverer:
              2. whether there is no other url in the same form redirected to this url
             """
             global tracer
-            nonlocal seen_redir_url
+            nonlocal seen_redir_url, require_neighbor
             
             # *If homepage to homepage redir, no soft-404 will be checked
             new_url = new_urls[-1]
@@ -509,20 +510,25 @@ class Discoverer:
             lambda_func2 = lambda u: url_utils.nondigit_dirname(urlsplit(url_utils.filter_wayback(u)).path[:-1]) in url_dir
             neighbor = sorted([n for n in neighbor if lambda_func(n[1]) and lambda_func2(n[1])], key=lambda x: abs((dparser.parse(x[0]) - ts).total_seconds()))
             tracer.debug(f'neightbor: {len(neighbor)}')
-            try:
-                tracer.debug(f'Choose closest neighbor: {neighbor[0][1]}')
-                response = crawl.requests_crawl(neighbor[0][1], raw=True)
-                neighbor_urls = [r.url for r in response.history[1:]] + [response.url]
-                match = False
-                for neighbor_url in neighbor_urls:
-                    for new_url in new_urls:    
-                        thismatch = url_utils.url_match(new_url, neighbor_url)
-                        if thismatch: 
-                            match = True
-                            seen_redir_url.add(new_url)
-            except Exception as e:
-                tracer.debug(f'Cannot check neighbor on wayback_alias')
-                return True
+            match = require_neighbor
+            if len(neighbor) <= 0:
+                return not match  # * If there is no neighbor, return result depend on whether require_neighbor is necessary
+            for i in range(min(5, len(neighbor))):
+                try:
+                    tracer.debug(f'Choose closest neighbor: {neighbor[i][1]}')
+                    response = crawl.requests_crawl(neighbor[0][1], raw=True)
+                    neighbor_urls = [r.url for r in response.history[1:]] + [response.url]
+                    match = False
+                    for neighbor_url in neighbor_urls:
+                        for new_url in new_urls:    
+                            thismatch = url_utils.url_match(new_url, neighbor_url)
+                            if thismatch: 
+                                match = True
+                                seen_redir_url.add(new_url)
+                    break
+                except Exception as e:
+                    tracer.debug(f'Cannot check neighbor on wayback_alias')
+                    continue
             if match:
                 tracer.debug(f'url in same dir: {neighbor[0][1]} redirects to the same url')
             return not match
