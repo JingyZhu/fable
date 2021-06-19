@@ -293,7 +293,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
                 logger.warn(f'Connection Error with Proxies: {str(exc)},\n Retry without proxy')
                 proxies = {}
             else:
-                logger.warn(f"There is an exception with requests_crawl: {str(e)}")
+                logger.warn(f"There is an ConnectionError exception with requests_crawl")
         except Exception as e:
             logger.warn(f"There is an exception with requests_crawl: {str(e)}")
             return
