@@ -294,6 +294,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
                 proxies = {}
             else:
                 logger.warn(f"There is an ConnectionError exception with requests_crawl")
+                return
         except Exception as e:
             logger.warn(f"There is an exception with requests_crawl: {str(e)}")
             return
