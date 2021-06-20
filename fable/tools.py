@@ -551,14 +551,14 @@ class Memoizer:
 
 
 class Similar:
-    def __init__(self, use_db=True, db=db, corpus=[], short_threshold=None, corpus_size=10000):
+    def __init__(self, use_db=True, db=db, corpus=[], threshold=0.8, short_threshold=None, corpus_size=10000):
         """
         corpus_size: size of corpus to sample on: (0-250k)
         """
         if not use_db and len(corpus) == 0:
             raise Exception("Corpus is requred for tfidf if db is not set")
         self.use_db = use_db
-        self.threshold = 0.8
+        self.threshold = threshold
         self.short_threshold = short_threshold if short_threshold else self.threshold - 0.1
         if use_db:
             self.db =  db
@@ -861,7 +861,7 @@ class Similar:
         return True
         
 
-    def title_similar(self, target_url, target_title, target_content, candidates_titles, candidates_contents, fixed=True):
+    def title_similar(self, target_url, target_title, target_content, candidates_titles, candidates_contents, check_unique=True, fixed=True):
         """
         See whether there is UNIQUE title from candidates that is similar target
         target_url: URL in the wayback form
@@ -882,7 +882,7 @@ class Similar:
         #         return []
         # else:
         #     self.wb_titles[target_title].add(lw_target_url)
-        if not self._is_title_unique(target_url, target_title, target_content, wayback=True):
+        if check_unique and not self._is_title_unique(target_url, target_title, target_content, wayback=True):
             tracer.debug(f"title_similar: target_url's title '{target_title}' is not unique")
             return []
 
@@ -908,7 +908,7 @@ class Similar:
             #     elif norm(url) not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
             #         tracer.debug(f'title of url: {url} none UNIQUE: {self.lw_titles[c]}')
             #         continue
-            if not self._is_title_unique(url, c, candidates_contents.get(url, ''), wayback=False):
+            if check_unique and not self._is_title_unique(url, c, candidates_contents.get(url, ''), wayback=False):
                 tracer.debug(f"title_similar: cand_url's title '{c}' is not unique")
                 continue
             simi = self.shorttext_match(tgt_uniq_title, uniq_c)
