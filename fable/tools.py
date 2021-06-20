@@ -861,11 +861,13 @@ class Similar:
         return True
         
 
-    def title_similar(self, target_url, target_title, target_content, candidates_titles, candidates_contents, check_unique=True, fixed=True):
+    def title_similar(self, target_url, target_title, target_content, candidates_titles, candidates_contents, check_unique=True, shorttext=True, fixed=True):
         """
         See whether there is UNIQUE title from candidates that is similar target
         target_url: URL in the wayback form
         candidates_x: {url: x}, with url in the same host!
+        check_unique: whether title's uniqueness is checked before comparison
+        shorttext: Whether shorttext match is used
 
         Return a list with all candidate higher than threshold
         """
@@ -911,7 +913,10 @@ class Similar:
             if check_unique and not self._is_title_unique(url, c, candidates_contents.get(url, ''), wayback=False):
                 tracer.debug(f"title_similar: cand_url's title '{c}' is not unique")
                 continue
-            simi = self.shorttext_match(tgt_uniq_title, uniq_c)
+            if shorttext:
+                simi = self.shorttext_match(tgt_uniq_title, uniq_c)
+            else:
+                simi = self.tfidf.similar(tgt_uniq_title, uniq_c)
             if simi:
                 simi_cand.append((url, simi))
 
