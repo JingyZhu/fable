@@ -142,20 +142,28 @@ def url_match(url1, url2, wayback=True, case=False):
     return len(qsl1) > 0 and qsl1 == qsl2
 
 
-def url_norm(url, wayback=False, case=False, sort_query=True):
+def url_norm(url, wayback=False, case=False, trim_www=False, trim_slash=False, sort_query=True):
     """
     Perform URL normalization
-    Namely, sort query by keys, and eliminate port number
+    common: Eliminate port number, fragment
+    trim_slash: For non homepage path ending with slash, trim if off
+    trim_www: For hostname start with www, trim if off
+    sort_query: Sort query by keys
     """
     if wayback:
         url = filter_wayback(url)
     us = urlsplit(url)
-    path, query = us.path, us.query
+    netloc, path, query = us.netloc, us.path, us.query
+    netloc = netloc.split(':')[0]
+    if trim_www and netloc.split('.')[0] == 'www':
+        netloc = '.'.join(netloc.split('.')[1:])
+    us = us._replace(netloc=netloc, fragment='')
     if not case:
         path, query = path.lower(), query.lower()
-    us = us._replace(netloc=us.netloc.split(':')[0], fragment='')
     if path == '': 
         us = us._replace(path='/')
+    elif trim_slash and path[-1] == '/':
+        us = us._replace(path=path[:-1])
     if query and sort_query:
         qsl = sorted(parse_qsl(query), key=lambda kv: (kv[0], kv[1]))
         if len(qsl):
