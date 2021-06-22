@@ -444,12 +444,13 @@ class Discoverer:
                 return new_url
         return
 
-    def wayback_alias(self, url, require_neighbor=False):
+    def wayback_alias(self, url, require_neighbor=False, homepage_redir=True):
         """
         Utilize wayback's archived redirections to find the alias/reorg of the page
         Not consider non-homepage to homepage
         If latest redirection is invalid, iterate towards earlier ones (separate by every month)
         require_neighbor: Whether a redirection neighbor is required to do the comparison
+        homepage_redir: Whether redirection to homepage (from non-homepage) is considered valid
 
         Returns: reorg_url is latest archive is an redirection to working page, else None
         """
@@ -566,8 +567,8 @@ class Discoverer:
 
                 # *If non-home URL is redirected to homepage, it should not be a valid redirection
                 new_is_homepage = True in [inter_us.path in ['/', ''] and not inter_us.query for inter_us in inter_uss]
-                # ? if new_is_homepage and (not is_homepage): 
-                # ?    continue
+                if not homepage_redir and new_is_homepage and (not is_homepage): 
+                   continue
                 # //pass_check, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
                 # //ass_check = not pass_check
                 if len(inter_urls) > 1:
