@@ -347,13 +347,23 @@ def common_prefix_diff(dest, src):
     return len(p1s) - i if i < len(p1s) else i - len(p2s)
 
 
-def netloc_dir(url):
-    """Get host, nondigit_dirname for a URL"""
+def netloc_dir(url, exclude_index=False):
+    """
+    Get host, nondigit_dirname for a URL
+    exclude_index: If set True, any filename with index (e.g. index.php)
+                    will be considered directory with 1 more level up
+    """
     url = filter_wayback(url)
     us = urlsplit(url)
     p = us.path
     if len(p) > 1 and p[-1] == '/': p = p[:-1]
     if p == '':  p == '/'
+    if exclude_index:
+        p = p.split('/')
+        filename = os.path.splitext(p[-1])[0]
+        if 'index' == filename or 'default' == filename:
+            p = p[:-1]
+        p = '/'.join(p)
     hosts = us.netloc.split(':')[0].split('.')
     if 'www' in hosts[0]: hosts = hosts[1:]
     return ('.'.join(hosts), nondigit_dirname(p))
