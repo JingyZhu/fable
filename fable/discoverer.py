@@ -444,13 +444,14 @@ class Discoverer:
                 return new_url
         return
 
-    def wayback_alias(self, url, require_neighbor=False, homepage_redir=True):
+    def wayback_alias(self, url, require_neighbor=False, homepage_redir=True, strict_filter=False):
         """
         Utilize wayback's archived redirections to find the alias/reorg of the page
         Not consider non-homepage to homepage
         If latest redirection is invalid, iterate towards earlier ones (separate by every month)
         require_neighbor: Whether a redirection neighbor is required to do the comparison
         homepage_redir: Whether redirection to homepage (from non-homepage) is considered valid
+        strict_filter: Not consider case where: redirected URL's path is a substring of the original one
 
         Returns: reorg_url is latest archive is an redirection to working page, else None
         """
@@ -475,8 +476,9 @@ class Discoverer:
         seen_redir_url = set()
 
 
-        def verify_alias(url, new_urls, ts, homepage_redir):
-            """Verify whether new_url is valid alias by checking:
+        def verify_alias(url, new_urls, ts, homepage_redir, strict_filter):
+            """
+            Verify whether new_url is valid alias by checking:
              1. new_urls is working 
              2. whether there is no other url in the same form redirected to this url
             """
@@ -490,6 +492,13 @@ class Discoverer:
             if homepage_redir: return True
             if isinstance(ts, str): ts = dparser.parse(ts)
             ts_year = ts.year
+
+            # * Perform strict filter if set to true
+            if strict_filter:
+                new_us = urlsplit(new_url)
+                us = urlsplit(url)
+                if not new_us.query and not us.query and new_us.path in us.path:
+                    return False
             
             # *If url ended with / (say /dir/), consider both /* and /dir/*
             url_prefix = urlsplit(url)
@@ -573,7 +582,7 @@ class Discoverer:
                 # //ass_check = not pass_check
                 if len(inter_urls) > 1:
                     inter_urls = inter_urls[1:]
-                pass_check = verify_alias(url, inter_urls, ts, homepage_redir=is_homepage and new_is_homepage)
+                pass_check = verify_alias(url, inter_urls, ts, homepage_redir=is_homepage and new_is_homepage, strict_filter=strict_filter)
                 if pass_check:
                     return new_url
             else:
