@@ -354,7 +354,10 @@ class Memoizer:
             cps = update_dict
         else:
             tracer.debug('Wayback Index (tools.py): db has wayback_index')
+        
         cps = [(c, url_utils.constr_wayback(url, c)) for c in cps[nb_map[all_none_400]]]
+        if len(cps) == 0:
+            return None if policy not in ['all'] else []
 
         if policy == 'closest':
             sec_diff = lambda x: (dparser.parse(str(x)) - dparser.parse(str(ts))).total_seconds()
