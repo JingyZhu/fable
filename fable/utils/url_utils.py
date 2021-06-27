@@ -30,6 +30,8 @@ def constr_wayback(url, ts):
     return f"http://web.archive.org/web/{ts}/{url}"
 
 def get_ts(wayback_url):
+    if 'web.archive.org/web' not in wayback_url:
+        return None
     wayback_url = wayback_url.replace('http://web.archive.org/web/', '')
     url = wayback_url.replace('https://web.archive.org/web/', '')
     slash = url.find('/')

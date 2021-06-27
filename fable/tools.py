@@ -309,17 +309,20 @@ class Memoizer:
         else:
             return html, fu
     
-    def wayback_index(self, url, policy='latest-rep', ts=None, **kwargs):
+    def wayback_index(self, url, policy='latest-rep', ts=None, all_none_400=False, **kwargs):
         """
         Get most representative snapshot for a certain url
+        all_none_400: Also crawled for 300 status code snapshots, stored as "ts_nb"
         policy: policy for getting which wayback snapshot
-          - latest-rep: Lastest representitive
-          - closest: Closest to ts (ts required)
-          - closest-later: closest to ts but later (ts required)
-          - closest-earlier: closest to ts but earlier (ts required)
-          - earliest: earliest snapshot
-          - latest: latest snapshot
-          - all: all snapshots (return lists instead of str)
+          - Return: wayback-form URL
+            - latest-rep: Lastest representitive
+            - closest: Closest to ts (ts required)
+            - closest-later: closest to ts but later (ts required)
+            - closest-earlier: closest to ts but earlier (ts required)
+            - earliest: earliest snapshot
+            - latest: latest snapshot
+          - Return: [(ts, wayback-form URL)]
+            - all: all snapshots (return lists instead of str)
         """
         assert(policy in {'latest-rep', 'closest-later', 'closest-earlier', 'earliest', 'latest', 'closest', 'all'})
         wayback_q = {"url": url, "policy": policy}
@@ -327,35 +330,31 @@ class Memoizer:
             wayback_url = self.db.wayback_rep.find_one(wayback_q)
             if wayback_url:
                 return wayback_url['wayback_url']
-        default_param = True
-        default_key = {True: 'ts', False: 'ts_nb'}
-        if 'param_dict' not in kwargs:
-            param_dict = {
-                "filter": ['statuscode:200', 'mimetype:text/html'],
-                "collapse": "timestamp:8"
-            }
-        else:
-            param_dict = kwargs['param_dict']
-            del(kwargs['param_dict'])
-            default_param = False
+        param_dict = {
+            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
+            "collapse": "timestamp:8"
+        }
+        nb_map = {True: 'ts_nb', False: 'ts'}
         cps = self.db.wayback_index.find_one({'_id': url})
-        if not cps or default_key[default_param] not in cps:
+        if not cps:
             cps, status = crawl.wayback_index(url, param_dict=param_dict, total_link=True, **kwargs)
             tracer.debug('Wayback Index (tools.py): Get wayback query response')
             if len(cps) == 0: # No snapshots
                 tracer.info(f"Wayback Index: No snapshots {status}")
-                return
+                return None if policy not in ['all'] else []
             cps.sort(key=lambda x: x[0])
+            update_dict = {
+                'url': url,
+                'ts': [c[0] for c in cps if str(c[2])[0] == '2'],
+                'ts_nb': [c[0] for c in cps]
+            }
             try:
-                self.db.wayback_index.update_one({"_id": url}, {'$set': {
-                    'url': url,
-                    default_key[default_param]: [c[0] for c in cps]
-                }}, upsert=True)
+                self.db.wayback_index.update_one({"_id": url}, {'$set': update_dict}, upsert=True)
             except: pass
+            cps = update_dict
         else:
             tracer.debug('Wayback Index (tools.py): db has wayback_index')
-            key = default_key[default_param]
-            cps = [(c, url_utils.constr_wayback(url, c)) for c in cps[key]]
+        cps = [(c, url_utils.constr_wayback(url, c)) for c in cps[nb_map[all_none_400]]]
 
         if policy == 'closest':
             sec_diff = lambda x: (dparser.parse(str(x)) - dparser.parse(str(ts))).total_seconds()
@@ -861,12 +860,11 @@ class Similar:
         return True
         
 
-    def title_similar(self, target_url, target_title, target_content, candidates_titles, candidates_contents, check_unique=True, shorttext=True, fixed=True):
+    def title_similar(self, target_url, target_title, target_content, candidates_titles, candidates_contents, shorttext=True, fixed=True):
         """
         See whether there is UNIQUE title from candidates that is similar target
         target_url: URL in the wayback form
         candidates_x: {url: x}, with url in the same host!
-        check_unique: whether title's uniqueness is checked before comparison
         shorttext: Whether shorttext match is used
 
         Return a list with all candidate higher than threshold
@@ -884,7 +882,7 @@ class Similar:
         #         return []
         # else:
         #     self.wb_titles[target_title].add(lw_target_url)
-        if check_unique and not self._is_title_unique(target_url, target_title, target_content, wayback=True):
+        if not self._is_title_unique(target_url, target_title, target_content, wayback=True):
             tracer.debug(f"title_similar: target_url's title '{target_title}' is not unique")
             return []
 
@@ -910,7 +908,7 @@ class Similar:
             #     elif norm(url) not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
             #         tracer.debug(f'title of url: {url} none UNIQUE: {self.lw_titles[c]}')
             #         continue
-            if check_unique and not self._is_title_unique(url, c, candidates_contents.get(url, ''), wayback=False):
+            if not self._is_title_unique(url, c, candidates_contents.get(url, ''), wayback=False):
                 tracer.debug(f"title_similar: cand_url's title '{c}' is not unique")
                 continue
             if shorttext:

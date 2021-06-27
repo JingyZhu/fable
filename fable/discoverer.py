@@ -135,10 +135,6 @@ class Backpath_Finder:
         MAX_DEPTH = len(us.path.split('/')) + len(parse_qs(us.query))
         search_queue = [Path(homepage)]
         seen = set()
-        param_dict = {
-            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
-            "collapse": "timestamp:8"
-        }
         while len(search_queue) > 0:
             path = search_queue.pop(0)
             tracer.info(f'BackPath: {path.url} outgoing_queue:{len(search_queue)}')
@@ -148,7 +144,7 @@ class Backpath_Finder:
             if url_utils.url_match(url, path.url):
                 return path
 
-            wayback_url = self.memo.wayback_index(path.url, policy=self.memo_policy, ts=ts, param_dict=param_dict)
+            wayback_url = self.memo.wayback_index(path.url, policy=self.memo_policy, ts=ts)
             path.update_wayback(wayback_url)
             tracer.info(wayback_url)
 
@@ -179,13 +175,10 @@ class Backpath_Finder:
 
         Returns: reorg_url is latest archive is an redirection to working page, else None
         """
-        param_dict = {
-            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
-        }
         us = urlsplit(url)
         is_homepage = us.path in ['/', ''] and not us.query
         try:
-            wayback_url = self.memo.wayback_index(url, policy='latest', param_dict=param_dict)
+            wayback_url = self.memo.wayback_index(url, policy='latest', all_none_400=True)
             _, wayback_url = self.memo.crawl(wayback_url, final_url=True)
             match = url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
         except:
@@ -422,13 +415,10 @@ class Discoverer:
         Returns: reorg_url is latest archive of an redirection to working page, else None
         """
         tracer.debug(f'_wayback_alias: {url}')
-        param_dict = {
-            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
-        }
         us = urlsplit(url)
         is_homepage = us.path in ['/', ''] and not us.query
         try:
-            wayback_url = self.memo.wayback_index(url, policy='latest', param_dict=param_dict)
+            wayback_url = self.memo.wayback_index(url, policy='latest', all_none_400=True)
             _, wayback_url = self.memo.crawl(wayback_url, final_url=True)
             match = url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
         except:
@@ -456,13 +446,10 @@ class Discoverer:
         Returns: reorg_url is latest archive is an redirection to working page, else None
         """
         tracer.debug('Start wayback_alias')
-        param_dict = {
-            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
-        }
         us = urlsplit(url)
         is_homepage = us.path in ['/', ''] and not us.query
         try:
-            wayback_ts_urls = self.memo.wayback_index(url, policy='all', param_dict=param_dict)
+            wayback_ts_urls = self.memo.wayback_index(url, policy='all', all_none_400=True)
         except: return
 
         if not wayback_ts_urls or len(wayback_ts_urls) == 0:
@@ -616,14 +603,11 @@ class Discoverer:
         policy = 'closest' if dst_ts else 'latest-rep'
         wayback_dst = url_utils.constr_wayback(dst, dst_ts) if dst_ts else url_utils.constr_wayback(dst, '20201231')
 
-        param_dict = {
-            "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
-            "collapse": "timestamp:8"
-        }
+
         r_dict = {
             "status": None
         }
-        wayback_src = self.memo.wayback_index(src, policy=policy, ts=dst_ts, param_dict=param_dict)
+        wayback_src = self.memo.wayback_index(src, policy=policy, ts=dst_ts)
         r_dict['wayback_src'] = wayback_src
 
         # TODO(eff): Taking long time, due to crawl
