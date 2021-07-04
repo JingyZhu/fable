@@ -12,6 +12,7 @@ from collections import defaultdict
 import random
 import brotli
 from dateutil import parser as dparser
+import datetime
 from urllib.parse import urlsplit, urlparse
 import bisect
 from bs4 import BeautifulSoup
@@ -216,6 +217,18 @@ def norm_path(url):
     else:
         return f"{us.path}?{us.query}"
 
+
+def date_parse(date):
+    """Wrapper around dparser.parse to handle exceptions"""
+    trim = [len(date), 8, 4]
+    for t in trim:
+        try:
+            d = dparser.parse(date[:t])
+            return d
+        except:
+            pass
+    return datetime.datetime.now()
+
 class Memoizer:
     """
     Class for reducing crawl and wayback indexing
@@ -360,7 +373,7 @@ class Memoizer:
             return None if policy not in ['all'] else []
 
         if policy == 'closest':
-            sec_diff = lambda x: (dparser.parse(str(x)) - dparser.parse(str(ts))).total_seconds()
+            sec_diff = lambda x: (date_parse(str(x)) - date_parse(str(ts))).total_seconds()
             cps_close = [(cp, abs(sec_diff(cp[0]))) for cp in cps]
             return sorted(cps_close, key=lambda x: x[1])[0][0][1]
         elif policy == 'closest-later':
@@ -378,7 +391,7 @@ class Memoizer:
         elif policy == 'latest-rep':
             # Get latest 6 snapshots, and random sample 3 for finding representative results
             cps_sample = cps[-3:] if len(cps) >= 3 else cps
-            cps_sample = [(cp[0], cp[1]) for cp in cps_sample if (dparser.parse(cps_sample[-1][0]) - dparser.parse(cp[0])).days <= 180]
+            cps_sample = [(cp[0], cp[1]) for cp in cps_sample if (date_parse(cps_sample[-1][0]) - date_parse(cp[0])).days <= 180]
             cps_dict = {}
             for ts, wayback_url in cps_sample:
                 html = self.crawl(wayback_url, proxies=self.PS.select())
