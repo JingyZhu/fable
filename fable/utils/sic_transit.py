@@ -219,7 +219,7 @@ def broken(url, html=False, ignore_soft_404=False):
     content_type = headers['content-type'] if 'content-type' in headers else ''
     if html and 'html' not in content_type:
         logger.info('sic transit broken: Not HTML')
-        return True, "Not html"
+        return "N/A", "Not html"
     if ignore_soft_404:
         return False, "No hard broken"
     # Ignore Homepages
