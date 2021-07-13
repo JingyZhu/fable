@@ -20,6 +20,7 @@ sys.setrecursionlimit(1500)
 he = url_utils.HostExtractor()
 
 def send_request(url):
+    """Only fetch for response body when content-type is HTML"""
     resp = None
     requests_header = {'user-agent': config.config('user_agent')}
 
@@ -27,12 +28,14 @@ def send_request(url):
     if not rp.allowed(url, requests_header['user-agent']):
         return None, 'Not Allowed'
     try:
-        with base_utils.timeout(seconds=20):
-            resp = requests.get(url, headers=requests_header, timeout=15)
+        resp = requests.get(url, headers=requests_header, timeout=15, stream=True)
+        headers = {k.lower(): v.lower() for k, v in resp.headers.items()}
+        content_type = headers['content-type'] if 'content-type' in headers else ''
+        if 'html' in content_type:
+            content = resp.content
         req_failed = False
     # Download Timeout
     except base_utils.TimeoutError:
-        print("AHA")
         resp = None
         error_msg = 'DownloadTimeout'
     # Requsts timeout
@@ -105,8 +108,6 @@ def get_status(url, resp, msg):
         elif msg == 'TooManyRedirects':
             status = 'OtherError'
             detail = 'TooManyRedirects'
-        elif msg == "DownloadTimeout":
-            status = 'DownloadTimeout'
         else:
             status = 'OtherError'
             detail = 'othererror'
@@ -221,8 +222,6 @@ def broken(url, html=False, ignore_soft_404=False):
     if msg == 'Not Allowed':
         return 'N/A', msg
     status, _ = get_status(url, resp, msg)
-    if status == "DownloadTimeout":
-        return "N/A", "Not able to donwload html"
     if re.compile('^([45]|DNSError|OtherError)').match(status):
         return True, status
     headers = {k.lower(): v for k, v in resp.headers.items()}
@@ -230,15 +229,15 @@ def broken(url, html=False, ignore_soft_404=False):
     if html and 'html' not in content_type:
         logger.info('sic transit broken: Not HTML')
         return "N/A", "Not html"
+    elif 'html' not in content_type: # * Not HTML, not detecting soft-404 on Non HTML resource
+        return True, "Non soft-404 on non-HTML resource"
     if ignore_soft_404:
         return False, "No hard broken"
     # Ignore Homepages
     if urlsplit(url).path in ['', '/']:
         return False, "Homepage (no Soft-404 detection)"
     try:
-        print("before soup", url)
         soup = BeautifulSoup(resp.text, 'lxml')
-        print("after soup", url)
         if len(soup.find_all('link', {'rel': 'canonical'})) > 0:
             if urlsplit(resp.url).path in ['', '/']: raise
             if url_utils.url_match(url, resp.url):
