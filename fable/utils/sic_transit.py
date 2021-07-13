@@ -11,7 +11,7 @@ from math import ceil
 from bs4 import BeautifulSoup
 
 from fable import config
-from . import text_utils, url_utils
+from . import text_utils, url_utils, base_utils
 from .crawl import rp 
 import logging
 logger = logging.getLogger('logger')
@@ -27,8 +27,14 @@ def send_request(url):
     if not rp.allowed(url, requests_header['user-agent']):
         return None, 'Not Allowed'
     try:
-        resp = requests.get(url, headers=requests_header, timeout=15)
+        with base_utils.timeout(seconds=20):
+            resp = requests.get(url, headers=requests_header, timeout=15)
         req_failed = False
+    # Download Timeout
+    except base_utils.TimeoutError:
+        print("AHA")
+        resp = None
+        error_msg = 'DownloadTimeout'
     # Requsts timeout
     except requests.exceptions.ReadTimeout:
         error_msg = 'ReadTimeout'
@@ -99,6 +105,8 @@ def get_status(url, resp, msg):
         elif msg == 'TooManyRedirects':
             status = 'OtherError'
             detail = 'TooManyRedirects'
+        elif msg == "DownloadTimeout":
+            status = 'DownloadTimeout'
         else:
             status = 'OtherError'
             detail = 'othererror'
@@ -213,6 +221,8 @@ def broken(url, html=False, ignore_soft_404=False):
     if msg == 'Not Allowed':
         return 'N/A', msg
     status, _ = get_status(url, resp, msg)
+    if status == "DownloadTimeout":
+        return "N/A", "Not able to donwload html"
     if re.compile('^([45]|DNSError|OtherError)').match(status):
         return True, status
     headers = {k.lower(): v for k, v in resp.headers.items()}
@@ -226,7 +236,9 @@ def broken(url, html=False, ignore_soft_404=False):
     if urlsplit(url).path in ['', '/']:
         return False, "Homepage (no Soft-404 detection)"
     try:
+        print("before soup", url)
         soup = BeautifulSoup(resp.text, 'lxml')
+        print("after soup", url)
         if len(soup.find_all('link', {'rel': 'canonical'})) > 0:
             if urlsplit(resp.url).path in ['', '/']: raise
             if url_utils.url_match(url, resp.url):

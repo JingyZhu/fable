@@ -27,6 +27,7 @@ sys.path.append('../')
 from .. import config
 from .. import tracer
 from .url_utils import filter_wayback
+from . import base_utils
 
 import logging
 # if not isinstance(logging.getLoggerClass(), tracer.tracer):
@@ -281,13 +282,16 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
         return None, "Not Allowed by Robot.txt"
     while True:
         try:
-            r = requests.get(url, timeout=timeout, proxies=proxies, headers=requests_header)
+            with base_utils.timeout(2*timeout):
+                r = requests.get(url, timeout=timeout, proxies=proxies, headers=requests_header)
             if wait and (r.status_code == 429 or r.status_code == 504) and count < 3:  # Requests limit
                 logger.debug(f'requests_crawl: get status code {r.status_code}')
                 count += 1
                 time.sleep(10)
                 continue
             break
+        except base_utils.TimeoutError:
+            return None, 'Not able to get HTML'
         except requests.exceptions.ConnectionError as exc:
             if len(proxies):
                 logger.warn(f'Connection Error with Proxies: {str(exc)},\n Retry without proxy')
