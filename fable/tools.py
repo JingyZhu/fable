@@ -983,7 +983,7 @@ def is_canonical(url1, url2, resp1=None, resp2=None, use_resp=False):
 
     Return: (currently) boolean on if is canonical
     """
-    if url_match(url1, url2):
+    if url_utils.url_match(url1, url2):
         return True
     if not use_resp:
         resp1 = crawl.requests_crawl(url1, raw=True)
