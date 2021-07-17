@@ -25,9 +25,11 @@ import numpy as np
 from collections import defaultdict
 import functools
 
+from .. import config
 from . import base_utils
 
 sys.setrecursionlimit(1500)
+tmp_path = config.TMP_PATH
 vectorizer_kwargs = {'stop_words': 'english'}
 
 NULL = open('/dev/null', 'w')
