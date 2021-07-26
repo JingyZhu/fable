@@ -6,6 +6,9 @@ from .. import config
 import os, re, sys
 import signal
 
+
+NULL = open('/dev/null', 'w')
+
 class TimeoutError(Exception):
     pass
 

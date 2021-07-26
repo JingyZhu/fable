@@ -27,7 +27,7 @@ TRIM_SIZE = 10 # trim size for the queue
 GUESS_DEPTH = 3
 OUTGOING = 1 # Single cost if a an iteration
 MIN_GUESS = 6
-CUT = 30
+CUT = 10
 
 def wsum_simi(simi):
     return 3/4*simi[0] + 1/4*simi[1]
@@ -192,7 +192,7 @@ class Backpath_Finder:
                 return new_url
         return
 
-    def find_same_link(self, link_sigs, liveweb_url, liveweb_html):
+    def _find_same_link(self, link_sigs, liveweb_url, liveweb_html):
         """
         For same page from wayback and liveweb (still working). Find the same url from liveweb which matches to wayback
         
@@ -230,7 +230,7 @@ class Backpath_Finder:
                 curr_url = new_url
             html = self.memo.crawl(curr_url)
             for compare in range(i_pointer+1, len(path.path)):
-                link_match = self.find_same_link([(path.path[compare], path.sigs[compare][0], path.sigs[compare][1])], curr_url, html) # TODO, explicit list of wayback_sig mayn
+                link_match = self._find_same_link([(path.path[compare], path.sigs[compare][0], path.sigs[compare][1])], curr_url, html) # TODO, explicit list of wayback_sig mayn
                 if link_match:
                     matched = True
                     matched_sig, simi, by = link_match
@@ -259,6 +259,7 @@ class Discoverer:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.bf = Backpath_Finder(policy='latest', memo=self.memo, similar=self.similar)
+        self.threshold = 0.8
 
 
     def guess_backlinks(self, url, num):
@@ -293,7 +294,7 @@ class Discoverer:
 
         param_dict = {
             'from': 1997,
-            'to': 2020,
+            'to': 2021,
             'filter': ['mimetype:text/html', 'statuscode:200'],
             'collapse': 'urlkey',
             'limit': 10000
@@ -305,6 +306,9 @@ class Discoverer:
         explicit_parent = url_utils.url_parent(url)
         if self.memo.wayback_index(explicit_parent, policy='earliest'):
             cands.append(explicit_parent)
+        # * Add homepage to candidates
+        home_us = us._replace(path='/', fragment='', query='')
+        cands.append(urlunsplit(home_us))
         if path not in ['', '/'] or query:
             if path and path[-1] == '/': path = path[:-1]
             path_dir = os.path.dirname(path)
@@ -325,10 +329,9 @@ class Discoverer:
             and not url_utils.url_match(w[1], explicit_parent) and w[1] not in parents and self.loop_cand(url, w[1])]
         closest_urls.sort(key=lambda x: closeness(url, x), reverse=True)
         cands += closest_urls[:max(0, num-len(parents))] if len(closest_urls) > max(0, num-len(parents)) else closest_urls
-        
         return cands
 
-    def link_same_page(self, wayback_dst, title, content, backlinked_url, backlinked_html, cut=CUT):
+    def _link_same_page(self, wayback_dst, title, content, backlinked_url, backlinked_html, cut=CUT):
         """
         See whether backedlinked_html contains links to the same page as html
         content: content file of the original url want to find copy
@@ -379,19 +382,71 @@ class Discoverer:
                 return similars[0], fromm
         return None, None
     
-    def find_same_link(self, wayback_sigs, liveweb_url, liveweb_html):
+    def _first_not_linked(self, dst, src, waybacks):
+        """
+        Find first archived copy of backlink that don't have link to the dst URL (including liveweb version if available):
+        Need to see consecutive non exist backlink
+        At most check 1 snapshot for each month
+
+        dst: target URL (in liveweb form)
+        src: Start wayback URL for backlink archive
+        waybacks: wayback URLs of src
+
+        Return: If there is such link, return [sigs], else, None
+        """
+        months = set()
+        ts_src = url_utils.get_ts(src)
+        waybacks = [w[1] for w in waybacks if ts_src < w[0]]
+        if not sic_transit.broken(url_utils.filter_wayback(src))[0]:
+            waybacks.append(url_utils.filter_wayback(src))
+        last_not_seen, last_sigs = None, None
+        for wayback in waybacks:
+            ts = url_utils.get_ts(wayback)
+            if not ts: ts = '20211231'
+            month = ts[:6]
+            if month in months: continue
+            months.add(month)
+            wayback_html = self.memo.crawl(wayback)
+            wayback_outgoing_sigs = crawl.outgoing_links_sig(wayback, wayback_html, wayback=True)
+            # TODO: Backlink anchor text may evolve during different copies
+            seen = False
+            for wayback_outgoing_link, anchor, sibtext in wayback_outgoing_sigs:
+                if url_utils.url_match(wayback_outgoing_link, dst, wayback=True):
+                    seen = True
+                    break
+            if seen:
+                continue
+            tracer.debug(f"_first_not_linked: {src} has last not linked copy: {wayback}")
+            if last_not_seen:
+                break
+            else:
+                last_not_seen = wayback
+                last_sigs = wayback_outgoing_sigs
+        return last_sigs
+
+    def _find_same_link(self, wayback_sigs, backlink_sigs):
         """
         For same page from wayback and liveweb (still working). Find the same url from liveweb which matches to wayback
         
-        Returns: If there is a match on the url, return sig, similarity, by
-                 Else: return None
+        Returns: 1st & 2nd highest match
         """
-        live_outgoing_sigs = crawl.outgoing_links_sig(liveweb_url, liveweb_html)
+        max_match = [('', '', 0), ('', '', 0)] # * [(URL, anchor text, Similarity)]
+        # * Whehter 1st and 2nd simi are separable
+        separable = lambda x: x[0][2] >= self.threshold and x[1][2] < self.threshold
+        # * Whehther 1st and 2nd simi are both similar
+        duplicate = lambda x: x[0][2] >= self.threshold and x[1][2] >= self.threshold
         for wayback_sig in wayback_sigs:
-            matched_vals = self.similar.match_url_sig(wayback_sig, live_outgoing_sigs)
-            if matched_vals is not None:
-                return matched_vals
-        return
+            matched_vals = self.similar.match_url_sig(wayback_sig, backlink_sigs)
+            anchor_vals = sorted(matched_vals["anchor"].values(), key=lambda x: x[2], reverse=True)
+            while len(anchor_vals) < 2: anchor_vals.append(('', '', 0))
+            if separable(anchor_vals):
+                max_match = anchor_vals[:2] if anchor_vals[0][2] > max_match[0][2] else max_match
+            elif duplicate(anchor_vals):
+                sig_vals = sorted([matched_vals["sig"].get(v[0], (v[0], "", 0)) for v in anchor_vals if v[2] >= self.threshold], key=lambda x: x[2], reverse=True)
+                while len(sig_vals) < 2: sig_vals.append(('', '', 0))
+                if separable(sig_vals):
+                    max_match = sig_vals[:2] if sig_vals[0][2] > max_match[0][2] else max_match
+        return max_match
     
     def loop_cand(self, url, outgoing_url):
         """
@@ -578,36 +633,37 @@ class Discoverer:
 
     def discover_backlinks(self, src, dst, dst_title, dst_content, dst_html, dst_snapshot, dst_ts=None):
         """
-        For src and dst, see:
-            1. If src is archived on wayback
-            2. If src is linking to dst on wayback
-            3. If src is still working today
+        For src and dst, to match a page, check 4 requirements:
+            1. If src linked to original dst on wayback
+            2. If src dropped the original link (either on wayback or livepage)
+            3. If a single new link matches the original link
+            4. If URL in the matched new link is still working today
         
         dst_ts: timestamp for dst on wayback to reference on policy
                 If there is no snapshot, use closest-latest
         
         returns: 
             {
-                "status": found/loop/reorg/notfound,
+                "status": found/loop/NoDrop/NoMatch/Broken,
                 "url(s)": found: found url,
                           loop: outgoing loop urls,
                 "links":  found: matched backlink
-                          reorg/notfound: backlink
+                          Others: backlink
                 "reason": found: (from, similarity, how)
-                          notfound: (reason why not found)
+                          Others: (reason why not found)
 
                 "wayback_src": wayback url of src
             }       
         """
         tracer.info(f'Backlinks: {src} {dst}')
         policy = 'closest' if dst_ts else 'latest-rep'
-        wayback_dst = url_utils.constr_wayback(dst, dst_ts) if dst_ts else url_utils.constr_wayback(dst, '20201231')
+        wayback_dst = url_utils.constr_wayback(dst, dst_ts) if dst_ts else url_utils.constr_wayback(dst, '20211231')
 
 
         r_dict = {
             "status": None
         }
-        wayback_src = self.memo.wayback_index(src, policy=policy, ts=dst_ts)
+        wayback_src = self.memo.wayback_index(src, policy=policy, ts=dst_ts, all_none_400=True)
         r_dict['wayback_src'] = wayback_src
 
         # TODO(eff): Taking long time, due to crawl
@@ -648,68 +704,62 @@ class Discoverer:
                 wayback_linked[0] = True
                 wayback_linked[1].append((wayback_outgoing_link, anchor, sibtext))
         tracer.info(f'Wayback linked: {wayback_linked[1]}')
-        if src_broken:
-            new_src = self._wayback_alias(src)
-            if new_src:
-                src_broken = False
-                src = new_src 
-        if wayback_linked[0] and not src_broken: # * src linking to dst and is working today
-            src_html, src = self.memo.crawl(src, final_url=True, max_retry=2)
-            rval = self.find_same_link(wayback_linked[1], src, src_html)
-            if rval:
-                matched_sig, simi, by = rval
-                if not sic_transit.broken(matched_sig[0])[0]:
-                    r_dict.update({
-                        "status": "found",
-                        "links": matched_sig,
-                        "url(s)": matched_sig[0],
-                        "reason": (f'link_{by}', simi, 'matched backlinks')
-                    })
-                    return r_dict
-                else:
-                    r_dict.update({
-                        "status": "notfound",
-                        "links": wayback_linked[1],
-                        "reason": "Linked, matched url broken"
-                    })
-                    return r_dict
-            elif dst_snapshot: # * Only consider the case for dst with snapshots
-                top_similar, fromm = self.link_same_page(wayback_dst, dst_title, dst_content, src, src_html)
-                if top_similar is not None:
-                    r_dict.update({
-                        "status": "found",
-                        "url(s)": top_similar[0],
-                        "reason": (fromm, top_similar[1], 'matched on outgoing links')
-                    })
-                    return r_dict
-                else:
-                    r_dict.update({
-                        "status": "notfound",
-                        "links": wayback_linked[1],
-                        "reason": "Linked, no matched link"
-                    })
-                    return r_dict
-            else: # *For dst without snapshots
+        # if src_broken:
+        #     new_src = self._wayback_alias(src)
+        #     if new_src:
+        #         src_broken = False
+        #         src = new_src 
+        # * To mach a link, require to pass 4 stage: 
+        # * linked, (original link) dropped, (new link) matched, (new URL) work
+        if wayback_linked[0]: # * 1.1 linked
+            all_wayback_src = self.memo.wayback_index(src, policy="all")
+            backlink_sigs = self._first_not_linked(dst, wayback_src, all_wayback_src)
+            if backlink_sigs: # * 2.1 dropped
+                max_match = self._find_same_link(wayback_linked[1], backlink_sigs)
+                if max_match[0][2] >= self.threshold and max_match[1][2] < self.threshold: # * 3.1 matched
+                    top_match = max_match[0]
+                    if not sic_transit.broken(max_match[0][0], html=True)[0]: # * 4.1 work
+                        fromm = "anchor" if isinstance(top_match[1], str) else "sig"
+                        r_dict.update({
+                            "status": "found",
+                            "url(s)": max_match[0][0],
+                            "reason": (fromm, top_match[1], 'matched on backlinks')
+                        })
+                    else: # * 4.0 Not working
+                        r_dict.update({
+                            "status":  "Broken",
+                            "url(s)": max_match[0][0],
+                            "reason": "Matched new link's URL still broken"
+                        })
+                else: # * 3.0 Not matched, link same page
+                    top_similar, fromm = None, None
+                    if not src_broken:
+                        top_similar, fromm = self._link_same_page(wayback_dst, dst_title, dst_content, src, src_html)
+                    if top_similar is not None:
+                        r_dict.update({
+                            "status": "found",
+                            "url(s)": top_similar[0],
+                            "reason": (fromm, top_similar[1], 'matched on blind outgoing links')
+                        })
+                    else:
+                        r_dict.update({
+                            "status": "NoMatch",
+                            "links": wayback_linked[1],
+                            "reason": "Linked, no matched link"
+                        })
+            else: # * 2.0 Not dropped
                 r_dict.update({
-                    "status": "notfound",
+                    "status": "NoDrop",
                     "links": wayback_linked[1],
-                    "reason": "Linked, no matched link"
+                    "reason": "Linked, never (detected) drop the old link"
                 })
-                return r_dict
-        elif not wayback_linked[0]: # *Not linked to dst, need to look futher
+        else: # * 1.0 Not linked to dst, need to look futher
             r_dict.update({
                 "status": "loop",
                 "url(s)": wayback_outgoing_sigs,
                 "reason": None
             })
-            return r_dict
-        else: # *Linked to dst, but broken today
-            r_dict.update({
-                "status": "reorg",
-                "url(s)": wayback_outgoing_sigs,
-                "reason": "Backlink broken today"
-            })
-            return r_dict
+        return r_dict
 
     def discover(self, url, depth=None, seen=None, trim_size=TRIM_SIZE):
         """
@@ -723,7 +773,7 @@ class Discoverer:
         has_snapshot = False
         url_ts = None
         suffice = False # *Only used for has_snapshot=False. See whehter url sufice restrictions. (Parent sp&linked&not broken today)
-        traces = [] # *Used for tracing the discovery process
+        # traces = [] # *Used for tracing the discovery process
         repr_text = [] # *representitive text for url, composed with [title, content, url]
         ### *First try with wayback alias
         try:
@@ -781,15 +831,15 @@ class Discoverer:
             outgoing_queue.sort(key=lambda x: x[2])
             outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
 
-        ee_count = 2 * (not has_snapshot) # Early exit satisfy condition score
-        def early_exit(status, reason):
-            """Determine whether it is ok to early exit"""
-            nonlocal ee_count
-            if status != "notfound":
-                return False
-            if reason == "backlink no snapshot":
-                ee_count += 1
-            return ee_count > 2
+        # ee_count = 2 * (not has_snapshot) # Early exit satisfy condition score
+        # def early_exit(status, reason):
+        #     """Determine whether it is ok to early exit"""
+        #     nonlocal ee_count
+        #     if status != "notfound":
+        #         return False
+        #     if reason == "backlink no snapshot":
+        #         ee_count += 1
+        #     return ee_count > 2
 
         while len(guess_total) + len(outgoing_queue) > 0:
             # *Ops for guessed links
@@ -805,10 +855,11 @@ class Discoverer:
                     continue
                 seen.add(src)
                 r_dict = self.discover_backlinks(src, url, title, content, html, has_snapshot, url_ts)
+                # print(r_dict)
                 status, reason = r_dict['status'], r_dict['reason']
                 tracer.discover(url, src, r_dict.get("wayback_src"), status, reason, r_dict.get("links"))
-                if early_exit(status, reason):
-                    break
+                # if early_exit(status, reason):
+                #     break
                 if status == 'found':
                     return r_dict['url(s)'], {'suffice': True, 'type': reason[0], 'value': reason[1]}
                 elif status == 'loop':

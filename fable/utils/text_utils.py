@@ -32,8 +32,6 @@ sys.setrecursionlimit(1500)
 tmp_path = config.TMP_PATH
 vectorizer_kwargs = {'stop_words': 'english'}
 
-NULL = open('/dev/null', 'w')
-
 class TFidfDynamic:
     def re_init(self):
         """
@@ -154,6 +152,7 @@ class TFidfStatic:
         self.workingset_tfidf = None
     
     def similar(self, text1, text2):
+        if text1 == "" or text2 == "": return 0
         if self.workingset_vec is None:
             inputs_tfidf = TfidfVectorizer(**vectorizer_kwargs)
             try:

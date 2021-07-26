@@ -590,46 +590,39 @@ class Similar:
             self.db = db # TODO: For testing only
         self.site = None
     
-    def match_url_sig(self, wayback_sig, liveweb_sigs):
+    def match_url_sig(self, old_linked_sig, new_sigs):
         """
-        See whether there is a url signature on liveweb that can match wayback sig
-        Based on 2 methods: UNIQUE Similar anchor text, Non-UNIQUE same anchor text & similar sig
+        Calc similarities between wayback_sig and liveweb_sigs, for both anchor texts and sig texts
+        Input:
+            old_linked_sig: (link, anchor, sig)
+            new_sigs: [(link, anchor, sig)]
         
-        Return: link_sig, similarity, by{anchor, sig}
+        Return: {"anchor": {link: (link, anchor, simi)}, "sig": {link: (link, sig, simi)}}
         """
         self.tfidf._clear_workingset()
-        anchor_count = defaultdict(set)
-        corpus = [wayback_sig[1]] + [s for s in wayback_sig[2] if s != '']
+        anchor_simis, sig_simis = defaultdict(list), defaultdict(list)
+        corpus = [old_linked_sig[1]] + [s for s in old_linked_sig[2] if s != '']
         # TODO (new or not?): Not consider if the liveweb still have this link (only if exact match?)
-        simis = []
-        for link, anchor, sig in liveweb_sigs:
-            anchor_count[anchor].add(link)
+        simis = {"anchor": [], "sig": []}
+        for link, anchor, sig in new_sigs:
             corpus.append(anchor)
             for s in sig:
                 if s != '': corpus.append(s)
         self.tfidf.add_corpus(corpus)
-        for lws in liveweb_sigs:
+        for lws in new_sigs:
             link, anchor, sig = lws
-            if len(anchor_count[anchor]) < 2: # UNIQUE anchor
-                simi = self.tfidf.similar(wayback_sig[1], anchor)
-                if simi >= self.short_threshold:
-                    simis.append((lws, simi, 'anchor'))
-            else:
-                if wayback_sig[1] != anchor:
-                    continue
-                simi = 0
-                for ws in wayback_sig[2]:
-                    if ws == '': continue
-                    for ls in sig:
-                        if ls == '': continue
-                        simi = max(simi, self.tfidf.similar(ws, ls))
-                if simi >= self.short_threshold:
-                    simis.append((lws, simi, 'sig'))
-        if len(simis) == 0:
-            return None
-        else:
-            return max(simis, key=lambda x: x[1])
-    
+            link = url_utils.filter_wayback(link)
+            simi = self.tfidf.similar(old_linked_sig[1], anchor)
+            anchor_simis[link].append((link, anchor, simi))
+            sig_simi = 0
+            for osig in old_linked_sig[2]:
+                for nsig in sig:
+                    sig_simi = max(self.tfidf.similar(osig, nsig), sig_simi)
+            sig_simis[link].append((link, sig, sig_simi))
+        simis["anchor"] = {k: max(v, key=lambda x: x[2]) for k, v in anchor_simis.items()}
+        simis["sig"] = {k: max(v, key=lambda x: x[2]) for k, v in sig_simis.items()}
+        return simis
+
     def max_similar(self, target_content, candidates_contents, init=True):
         """
         Return the max similarity between target_content and candidates_contents
@@ -655,7 +648,7 @@ class Similar:
         See whether there are content from candidates that is similar target
         candidates: {url: content}
 
-        Return a list with all candidate higher than threshold
+        Return: sorted([(url, similarity)], reverse=True)
         """
         self.tfidf._clear_workingset()
         self.tfidf.add_corpus([target_content] + list(candidates_contents.values()))
@@ -663,8 +656,10 @@ class Similar:
         for url, c in candidates_contents.items():
             simi = self.tfidf.similar(target_content, c)
             tracer.debug(f'simi: {simi}')
-            if simi >= self.threshold:
-                simi_cand.append((url, simi))
+            simi_cand.append((url, simi))
+        
+        while len(simi_cand) < 2:
+            simi_cand.append(("", 0))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def _init_titles(self, site, version='domdistiller'):
@@ -832,11 +827,8 @@ class Similar:
             return 0
         tracer.debug(f'shorttext_match: simi between {text1} \n {text2}')
         simi = self.tfidf.similar(text1, text2)
-        if simi >= (self.short_threshold + self.threshold) / 2:
-            return simi
-        else:
-            return 0
-
+        return simi
+        
     def _is_title_unique(self, url, title, content, wayback=False):
         """
         Check is input title is unique among the sites
@@ -883,28 +875,17 @@ class Similar:
         candidates_x: {url: x}, with url in the same host!
         shorttext: Whether shorttext match is used
 
-        Return a list with all candidate higher than threshold
+        Return: sorted([(url, similarity)], reverse=True)
         """
         global he
         site = he.extract(target_url, wayback=True)
         if site not in self.site:
             self._init_titles(site)
-        # if target_title in self.wb_titles:
-        #     if len(self.wb_titles[target_title]) > 1:
-        #         tracer.debug(f'wayback title of url: {lw_target_url} us not UNIQUE: {self.wb_titles[target_title]}')
-        #         return []
-        #     elif norm(lw_target_url) not in self.wb_titles[target_title] and len(self.wb_titles[target_title]) > 0:
-        #         tracer.debug(f'wayback title of url: {lw_target_url} is not UNIQUE: {self.wb_titles[target_title]}')
-        #         return []
-        # else:
-        #     self.wb_titles[target_title].add(lw_target_url)
         if not self._is_title_unique(target_url, target_title, target_content, wayback=True):
             tracer.debug(f"title_similar: target_url's title '{target_title}' is not unique")
-            return []
+            return [('', 0), ('', 0)]
 
         self.tfidf._clear_workingset()
-        # print([[v[0], [vv['url'] for vv in v[1]] ] for v in self.wb_meta])
-        # print({k: [vv['url'] for vv in v] for k, v in self.wb_titles.items()})
         # * Extract Unique Titles for both wb urls and lw urls
         tgt_uniq_title = unique_title(target_url, target_title, target_content, self.wb_meta, wayback=True)
         cand_uniq_titles = {url: unique_title(url, title, candidates_contents.get(url, ''), self.lw_meta, wayback=False) \
@@ -917,13 +898,6 @@ class Similar:
             site = he.extract(url)
             if site not in self.site and not fixed:
                 self._init_titles(site)
-            # if c in self.lw_titles:
-            #     if len(self.lw_titles[c]) > 1:
-            #         tracer.debug(f'title of url: {url} none UNIQUE: {self.lw_titles[c]}')
-            #         continue
-            #     elif norm(url) not in self.lw_titles[c] and len(self.lw_titles[c]) > 0:
-            #         tracer.debug(f'title of url: {url} none UNIQUE: {self.lw_titles[c]}')
-            #         continue
             if not self._is_title_unique(url, c, candidates_contents.get(url, ''), wayback=False):
                 tracer.debug(f"title_similar: cand_url's title '{c}' is not unique")
                 continue
@@ -931,9 +905,10 @@ class Similar:
                 simi = self.shorttext_match(tgt_uniq_title, uniq_c)
             else:
                 simi = self.tfidf.similar(tgt_uniq_title, uniq_c)
-            if simi:
-                simi_cand.append((url, simi))
-
+            simi_cand.append((url, simi))
+        
+        while len(simi_cand) < 2:
+            simi_cand.append(("", 0))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def clear_titles(self):
@@ -948,28 +923,28 @@ class Similar:
         self.wb_seen = None
     
     def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, \
-                cand_htmls={}, fixed=True):
+                cand_htmls={}, fixed=True, **kwargs):
         """
         All text-based similar tech is included
         Fixed: Whether title similarity is allowed across different sites
 
-        Return: [(similar urls, similarity)], from which comparison(title/content)
+        Return: [(similar urls, similarity)], from which comparison(title/content) if there is some similarity
+                else: [], ""
         """
-        # tg_url, tg_title, tg_content, tg_html = tg_crawl['url'], tg_crawl['title'], tg_crawl['content'], tg_crawl['html']
-        # cand_titles = {c['url']: c['title'] for c in cand_crawls if 'title' in c}
-        # cand_contents = {c['url']: c['content'] for c in cand_crawls if 'content' in c}
-        # cand_htmls = {c['url']: c['html'] for c in cand_crawls if 'html' in c}
-        
         self._add_crawl(tg_url, tg_title, tg_content)
+        separable = lambda x: x[0][1] >= self.threshold and x[1][1] < self.threshold
         for cand_url in cand_titles:
             self._add_crawl(cand_url, cand_titles[cand_url], cand_contents.get(cand_url), \
                             cand_htmls.get(cand_url))
         if self.site is not None and tg_title:
-            similars = self.title_similar(tg_url, tg_title, tg_content, cand_titles, cand_contents, fixed=fixed)
-            if len(similars) > 0:
-                return similars, "title"
-        similars = self.content_similar(tg_content, cand_contents, cand_htmls)
-        return similars, "content"
+            title_similars = self.title_similar(tg_url, tg_title, tg_content, cand_titles, cand_contents, fixed=fixed, **kwargs)
+            if separable(title_similars):
+                return title_similars, "title"
+        content_similars = self.content_similar(tg_content, cand_contents, cand_htmls)
+        if separable(content_similars):
+            return content_similars, "content"
+        else:
+            return [], ""
 
 
 def is_canonical(url1, url2, resp1=None, resp2=None, use_resp=False):

@@ -82,7 +82,7 @@ class ReorgPageFinder:
         for reorg_url in list(site_reorg_urls):
             reorg_tech = []
             for iclass in self.inference_classes:
-                if iclass in reorg_url:
+                if len(reorg_url.get(iclass, {})) > 0:
                     self._add_url_to_patterns(reorg_url['url'], (reorg_url.get('title', ''),), reorg_url[iclass]['reorg_url'])
         if len(self.tracer.handlers) > 2:
             self.tracer.handlers.pop()
@@ -271,13 +271,13 @@ class ReorgPageFinder:
                 return
         # !_search
         noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
-        searched_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.search": True})
-        searched_checked = set([sc['url'] for sc in searched_checked])
+        # searched_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.search": True})
+        # searched_checked = set([sc['url'] for sc in searched_checked])
         
-        required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
+        broken_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
 
-        urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
-        broken_urls = set([u['url'] for u in urls])
+        # urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
+        # broken_urls = set([u['url'] for u in urls])
         self.tracer.info(f'Search SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
         while len(broken_urls) > 0:
@@ -323,33 +323,16 @@ class ReorgPageFinder:
             if searched is not None:
                 searched, trace = searched
                 self.tracer.info(f"HIT: {searched}")
-                fp = self.fp_check(url, searched)
-                if not fp: # False positive test
-                    update_dict.update({'reorg_url': searched, 'by':{
-                        "method": "search"
-                    }})
-                    update_dict['by'].update(trace)
-                else:
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'url': url,
-                            'false_positive_search': True, 
-                            'hostname': self.site
-                        }}, upsert=True)
-                    except: pass
-                    searched = None
+                update_dict.update({'reorg_url': searched, 'by':{
+                    "method": "search"
+                }})
+                update_dict['by'].update(trace)
 
-
-            if len(update_dict) > 0:
-                try:
-                    self.db.reorg.update_one({'url': url}, {"$set": {self.classname: update_dict, "title": title}} ) 
-                except Exception as e:
-                    self.tracer.warn(f'Search update DB: {str(e)}')
-            else:
-                try:
-                    self.db.reorg.update_one({'url': url}, {"$set": {"title": title}} ) 
-                except Exception as e:
-                    self.tracer.warn(f'Search (not found) update DB: {str(e)}')
-            searched_checked.add(url)
+            try:
+                self.db.reorg.update_one({'url': url}, {"$set": {self.classname: update_dict, "title": title}} ) 
+            except Exception as e:
+                self.tracer.warn(f'Search update DB: {str(e)}')
+            # searched_checked.add(url)
             
             try:
                 self.db.checked.update_one({'_id': url}, {"$set": {
@@ -362,6 +345,7 @@ class ReorgPageFinder:
             if not infer:
                 continue
 
+            # * Inference
             if searched is not None:
                 example = (url, (title,), searched)
                 added = self._add_url_to_patterns(*unpack_ex(example))
@@ -391,13 +375,13 @@ class ReorgPageFinder:
                 return
 
         noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
-        discovered_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.discover": True})
-        discovered_checked = set([sc['url'] for sc in discovered_checked])
+        # discovered_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.discover": True})
+        # discovered_checked = set([sc['url'] for sc in discovered_checked])
         
-        required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
+        broken_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
         
-        urls = [u for u in noreorg_urls if u['url'] not in discovered_checked and u['url'] in required_urls]
-        broken_urls = set([bu['url'] for bu in urls])
+        # urls = [u for u in noreorg_urls if u['url'] not in discovered_checked and u['url'] in required_urls]
+        # broken_urls = set([bu['url'] for bu in urls])
         self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
         while len(broken_urls) > 0:
@@ -408,19 +392,16 @@ class ReorgPageFinder:
             while True: # Dummy while lloop served as goto
                 self.tracer.info("Start wayback alias")
                 start = time.time()
-                discovered = self.discoverer.wayback_alias(url)
-                if discovered:
-                    fp = self.fp_check(url, discovered)
-                    if fp: discovered = None
-                    else:
-                        trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
-                        break
+                # discovered = self.discoverer.wayback_alias(url)
+                # if discovered:
+                #     trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
+                #     break
 
-                self.tracer.info("Start backpath (latest)")
-                discovered, trace = self.discoverer.bf_find(url, policy='latest')
-                if discovered:
-                    method = 'backpath_latest'
-                    break
+                # self.tracer.info("Start backpath (latest)")
+                # discovered, trace = self.discoverer.bf_find(url, policy='latest')
+                # if discovered:
+                #     method = 'backpath_latest'
+                #     break
                 
                 self.tracer.info("Start discover")
                 discovered, trace = self.discoverer.discover(url)
@@ -437,6 +418,7 @@ class ReorgPageFinder:
             has_title = self.db.reorg.find_one({'url': url})
             # if has_title is None: # No longer in reorg (already deleted)
             #     continue
+            # * Get title of the URL (if available)
             if 'title' not in has_title:
                 try:
                     wayback_url = self.memo.wayback_index(url)
@@ -457,22 +439,11 @@ class ReorgPageFinder:
 
             if discovered is not None:
                 self.tracer.info(f'Found reorg: {discovered}')
-                fp = self.fp_check(url, discovered)
-                if not fp: # False positive test
-                    update_dict.update({'reorg_url': discovered, 'by':{
-                        "method": method
-                    }})
-                    by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath', 'suffice']}
-                    update_dict['by'].update(by_discover)
-                else:
-                    # discover
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'url': url,
-                            'false_positive_discover_test': True, 
-                            'hostname': self.site
-                        }}, upsert=True)
-                    except: pass
-                    discovered = None
+                update_dict.update({'reorg_url': discovered, 'by':{
+                    "method": method
+                }})
+                by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath', 'suffice']}
+                update_dict['by'].update(by_discover)
             elif not suffice:
                 try:
                     self.db.na_urls.update_one({'_id': url}, {'$set': {
@@ -481,32 +452,15 @@ class ReorgPageFinder:
                     }}, upsert=True)
                 except:pass
 
-
-            if len(update_dict) > 0:
-                try:
-                    self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict, 'title': title}})
-                except Exception as e:
-                    self.tracer.warn(f'Discover update DB: {str(e)}')
-            else:
-                try:
-                    self.db.reorg.update_one({'url': url}, {"$set": {"title": title}} ) 
-                except Exception as e:
-                    self.tracer.warn(f'Discover (not found) update DB: {str(e)}')
-            discovered_checked.add(url)
+            # * Update dict correspondingly
             try:
-                self.db.checked.update_one({'_id': url}, {"$set": {
-                    "url": url,
-                    "hostname": self.site,
-                    f"{self.classname}.discover": True
-                }}, upsert=True)
+                self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict, 'title': title}})
             except Exception as e:
-                self.tracer.warn(f'Discover update checked: {str(e)}')
+                self.tracer.warn(f'Discover update DB: {str(e)}')
+            # discovered_checked.add(url)
             
-            if not infer:
-                continue
-
-            # TEMP
-            if discovered is not None:
+            # * Inference
+            if infer and discovered is not None:
                 example = (url, (title,), discovered)
                 added = self._add_url_to_patterns(*unpack_ex(example))
                 if not added:
