@@ -11,6 +11,7 @@ COPY . /home/fable
 
 # ? USER root
 WORKDIR /home/fable
+ENV PYTHONPATH=${PYTHONPATH}:/home/fable
 # Prepare
 RUN mkdir /usr/share/man/man1
 RUN conda config --set changeps1 false 
@@ -40,6 +41,7 @@ RUN git clone https://github.com/misja/python-boilerpipe.git deps/python-boilerp
 RUN pip install -e deps/python-boilerpipe
 
 # ? USER fable
+WORKDIR /home
 ENTRYPOINT /bin/sh -c /bin/bash
 
 # # To run: sudo docker run --rm -it --mount type=bind,src=/mnt/fable-files,target=/mnt/fable-files --name fable fable 

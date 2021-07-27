@@ -392,10 +392,10 @@ class ReorgPageFinder:
             while True: # Dummy while lloop served as goto
                 self.tracer.info("Start wayback alias")
                 start = time.time()
-                # discovered = self.discoverer.wayback_alias(url)
-                # if discovered:
-                #     trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
-                #     break
+                discovered = self.discoverer.wayback_alias(url)
+                if discovered:
+                    trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
+                    break
 
                 # self.tracer.info("Start backpath (latest)")
                 # discovered, trace = self.discoverer.bf_find(url, policy='latest')
