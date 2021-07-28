@@ -19,8 +19,8 @@ async function writeTitle(Runtime, filename) {
         expression: 'org.chromium.distiller.DomDistiller.apply()[1]'
     });
     let title = result.result.value;
-    title = title.trim();
     if (title == undefined) title = '';
+    title = title.trim();
     fs.writeFileSync(filename, title);
 }
 
