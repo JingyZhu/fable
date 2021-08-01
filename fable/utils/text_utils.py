@@ -20,6 +20,7 @@ from subprocess import call
 import re, os, time
 import sys, copy
 import multiprocessing as mp
+from multiprocessing import Process
 import scipy.sparse as sp
 import numpy as np
 from collections import defaultdict
@@ -359,6 +360,22 @@ def unwrap_tags(soup):
             tag.string = ' '.join(tag.contents)
     return soup
 
+def _try_soup(html):
+    """Try BeautifulSoup the HTML. (Some HTML may cause unknown segmentation fault, use another process to test it out)"""
+    def p_soup(html):
+        soup = BeautifulSoup(html, "lxml")
+    p = Process(target=p_soup, args=(html,))
+    p.start()
+    start = time.time()
+    while time.time() - start < 10:
+        if not p.is_alive():
+            return True
+        time.sleep(1)
+    else:
+        p.kill()
+        p.join()
+        return False
+
 def domdistiller_extract(html, lang=None):
     """
     Insert domdistiller js into the html
@@ -367,6 +384,9 @@ def domdistiller_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the content 
     """
+    if not _try_soup(html): 
+        print("Cannot consturct soup")
+        return ""
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
@@ -434,6 +454,9 @@ def lang_meta(html):
     """
     Grab the metadata of html
     """
+    if not _try_soup(html): 
+        print("Cannot consturct soup")
+        return None
     soup = BeautifulSoup(html, 'lxml')
     html = soup.find('html')
     try:
@@ -497,6 +520,9 @@ def domdistiller_title_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the title
     """
+    if not _try_soup(html): 
+        print("Cannot consturct soup")
+        return ""
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
@@ -581,6 +607,9 @@ def domdistiller_title_body_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the title
     """
+    if not _try_soup(html): 
+        print("Cannot consturct soup")
+        return "", ""
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
