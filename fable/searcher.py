@@ -156,11 +156,11 @@ class Searcher:
             token = ' '.join(token)
             if search_engine == 'bing':
                 # * Bing
-                search_results = search.bing_search(f'instreamset:url:{token} site:{site}')
+                search_results = search.bing_search(f'instreamset:url:{token} site:{site}', use_db=self.use_db)
                 tracer.search_results(url, 'bing', f"token_{i}", search_results)
             else:
                 # * Google
-                search_results = search.google_search(f'inurl:{token}', site_spec_url=site)
+                search_results = search.google_search(f'inurl:{token}', site_spec_url=site, use_db=self.use_db)
                 tracer.search_results(url, 'google', f"token_{i}", search_results)
             search_tokens = {}
             for sr in search_results:
