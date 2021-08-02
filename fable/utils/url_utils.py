@@ -11,9 +11,6 @@ from url_normalize import url_normalize
 from bs4 import BeautifulSoup
 import sys
 
-from fable import config
-
-sys.setrecursionlimit(1500)
 
 def filter_wayback(url):
     if 'web.archive.org/web' not in url:

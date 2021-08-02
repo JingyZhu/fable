@@ -91,6 +91,10 @@ class tracer(logging.Logger):
     def topN(self, url, topN):
         self.update_data[url]['topN'] = topN
         self.info(f'topN: {topN}', level=3)
+
+    def token(self, url, available_tokens):
+        self.update_data[url]['token'] = available_tokens
+        self.info(f'tokens: {available_tokens}', level=3)
     
     def search_results(self, url, engine, typee, results):
         """

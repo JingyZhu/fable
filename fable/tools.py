@@ -642,25 +642,6 @@ class Similar:
                 max_simi = simi
                 max_content = c
         return max_simi, max_content
-
-    def content_similar(self, target_content, candidates_contents, candidates_html=None):
-        """
-        See whether there are content from candidates that is similar target
-        candidates: {url: content}
-
-        Return: sorted([(url, similarity)], reverse=True)
-        """
-        self.tfidf._clear_workingset()
-        self.tfidf.add_corpus([target_content] + list(candidates_contents.values()))
-        simi_cand = []
-        for url, c in candidates_contents.items():
-            simi = self.tfidf.similar(target_content, c)
-            tracer.debug(f'simi: {simi}')
-            simi_cand.append((url, simi))
-        
-        while len(simi_cand) < 2:
-            simi_cand.append(("", 0))
-        return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def _init_titles(self, site, version='domdistiller'):
         """
@@ -769,6 +750,17 @@ class Similar:
         end = time.time()
         tracer.info(f'wb_titles: {sum([len(v) for v in self.wb_titles.values()])} \n init_time: {end - start:.2f}')
         return True
+    
+    def clear_titles(self):
+        self.site = None
+        self.lw_titles = None
+        self.wb_titles = None
+        # self.lw_index = None
+        self.lw_meta = None
+        # self.wb_index = None
+        self.wb_meta = None
+        self.lw_seen = None
+        self.wb_seen = None
 
     def _add_crawl(self, url, title, content, html=None):
         """Add new crawls into similar comparison"""
@@ -911,17 +903,51 @@ class Similar:
             simi_cand.append(("", 0))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
-    def clear_titles(self):
-        self.site = None
-        self.lw_titles = None
-        self.wb_titles = None
-        # self.lw_index = None
-        self.lw_meta = None
-        # self.wb_index = None
-        self.wb_meta = None
-        self.lw_seen = None
-        self.wb_seen = None
+    def content_similar(self, target_content, candidates_contents, candidates_html=None):
+        """
+        See whether there are content from candidates that is similar target
+        candidates: {url: content}
+
+        Return: sorted([(url, similarity)], reverse=True)
+        """
+        self.tfidf._clear_workingset()
+        self.tfidf.add_corpus([target_content] + list(candidates_contents.values()))
+        simi_cand = []
+        for url, c in candidates_contents.items():
+            simi = self.tfidf.similar(target_content, c)
+            tracer.debug(f'simi: {simi}')
+            simi_cand.append((url, simi))
+        
+        while len(simi_cand) < 2:
+            simi_cand.append(("", 0))
+        return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
+    def token_similar(self, url, target_token, candidates_tokens):
+        """
+        For each candidate, get most similar token
+        Candidates_token: {url: [tokens]}
+        Return: sorted([(url, token, similarity)])
+        """
+        all_tokens = [target_token]
+        for tokens in candidates_tokens.values():
+            all_tokens += tokens
+        self.tfidf._clear_workingset()
+        self.tfidf.add_corpus(all_tokens)
+        simi_cand = []
+        for can, tokens in candidates_tokens.items():
+            max_token = (can, '', 0)
+            for t in tokens:
+                simi = self.tfidf.similar(target_token, t)
+                if simi > max_token[2]:
+                    max_token = (can, t, simi)
+            simi_cand.append(max_token)
+        while len(simi_cand) < 2:
+            simi_cand.append(("", "", 0))
+        return sorted(simi_cand, key=lambda x: x[2], reverse=True)
+    
+    def _separable(self, simi):
+        return simi[0][-1] >= self.threshold and simi[1][-1] < self.threshold
+
     def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, \
                 cand_htmls={}, fixed=True, **kwargs):
         """

@@ -8,7 +8,6 @@ from langcodes import Language
 from langdetect import detect_langs
 from goose3 import Goose
 from newspaper import Article
-from boilerpipe.extract import Extractor
 import brotli
 import bs4
 from bs4 import BeautifulSoup
@@ -25,6 +24,8 @@ import scipy.sparse as sp
 import numpy as np
 from collections import defaultdict
 import functools
+from subprocess import Popen, PIPE
+import textwrap
 
 from .. import config
 from . import base_utils
@@ -337,6 +338,7 @@ def newspaper_extract(html, lang=None):
 
 
 def boilerpipe_extract(html, lang=None):
+    from boilerpipe.extract import Extractor
     extractor = Extractor(extractor="ArticleExtractor", html=html)
     text = extractor.getText()
     if not isinstance(text, str):
@@ -362,19 +364,23 @@ def unwrap_tags(soup):
 
 def _try_soup(html):
     """Try BeautifulSoup the HTML. (Some HTML may cause unknown segmentation fault, use another process to test it out)"""
-    def p_soup(html):
+    code =  """
+        from bs4 import BeautifulSoup
+        import sys
+        from boilerpipe.extract import Extractor
+        sys.setrecursionlimit(1500)
+        html = sys.stdin.read()
         soup = BeautifulSoup(html, "lxml")
-    p = Process(target=p_soup, args=(html,))
-    p.start()
-    start = time.time()
-    while time.time() - start < 10:
-        if not p.is_alive():
-            return True
-        time.sleep(1)
+        s = str(soup)
+    """
+    code = textwrap.dedent(code)
+    p = Popen(f"python3 -c '{code}'", shell=True, stdin=PIPE, stdout=PIPE, stderr=open('/dev/null', 'w'))
+    p.communicate(input=html.encode())
+    return_code = p.wait()
+    if return_code in [11, 139]: # * Segfault return code
+        return False 
     else:
-        p.kill()
-        p.join()
-        return False
+        return True
 
 def domdistiller_extract(html, lang=None):
     """
@@ -384,9 +390,6 @@ def domdistiller_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the content 
     """
-    if not _try_soup(html): 
-        print("Cannot consturct soup")
-        return ""
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
@@ -454,9 +457,6 @@ def lang_meta(html):
     """
     Grab the metadata of html
     """
-    if not _try_soup(html): 
-        print("Cannot consturct soup")
-        return None
     soup = BeautifulSoup(html, 'lxml')
     html = soup.find('html')
     try:
@@ -470,7 +470,10 @@ def extract_body(html, version='domdistiller', handle_exception=True):
     Wrapper functions for different version of html body extraction
     if version is list, no backup applied
     """
-    lang = lang_meta(html)
+    able_soup = _try_soup(html)
+    if not able_soup:
+        print("Cannot soup the HTML")
+    lang = lang_meta(html) if able_soup else None
     backup_versions = ['domdistiller', 'boilerpipe']
     if isinstance(version, str):
         backup_versions = [v for v in backup_versions if v != version]
@@ -487,6 +490,8 @@ def extract_body(html, version='domdistiller', handle_exception=True):
     }
     try:
         for v in [version] + backup_versions:
+            if v == 'domdistiller' and not able_soup:
+                continue
             content = func_dict[v](html, lang=lang)
             if content != "": return content
         return content
@@ -520,9 +525,6 @@ def domdistiller_title_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the title
     """
-    if not _try_soup(html): 
-        print("Cannot consturct soup")
-        return ""
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
@@ -565,6 +567,7 @@ def domdistiller_title_extract(html, lang=None):
 
 
 def boilerpipe_title_extract(html, lang=None):
+    from boilerpipe.extract import Extractor
     extractor = Extractor(extractor="ArticleExtractor", html=html)
     text = extractor.source.getTitle()
     if not isinstance(text, str):
@@ -576,7 +579,10 @@ def extract_title(html, version='mine', handle_exception=True):
     """
     Wrapper functions for different version of html title extraction
     """
-    lang = lang_meta(html)
+    able_soup = _try_soup(html)
+    if not able_soup:
+        print("Cannot soup the HTML")
+    lang = lang_meta(html) if able_soup else None
     if html == '': return ''
     backup_versions = ['domdistiller', 'newspaper']
     backup_versions = [v for v in backup_versions if v != version]
@@ -589,6 +595,8 @@ def extract_title(html, version='mine', handle_exception=True):
     title = func_dict[version](html, lang=lang)
     try:
         for v in [version] + backup_versions:
+            if v == 'domdistiller' and not able_soup:
+                continue
             title = func_dict[v](html, lang=lang)
             if title is not None: return title if "Wayback Machine" not in title else ""
             else:
@@ -607,9 +615,6 @@ def domdistiller_title_body_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the title
     """
-    if not _try_soup(html): 
-        print("Cannot consturct soup")
-        return "", ""
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
@@ -681,9 +686,15 @@ def extract_title_body(html, handle_exception=True):
     """
     Wrapper functions for different version of html title & body extraction
     """
-    lang = lang_meta(html)
+    able_soup = _try_soup(html)
+    if not able_soup:
+        print("Cannot soup the HTML")
+    lang = lang_meta(html) if able_soup else None
     if html == '': return '', ''
-    title, content = domdistiller_title_body_extract(html, lang=lang)
+    if able_soup:
+        title, content = domdistiller_title_body_extract(html, lang=lang)
+    else:
+        title, content = '', ''
     if content != "":
         return title, content
     else:

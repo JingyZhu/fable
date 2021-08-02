@@ -295,7 +295,7 @@ class ReorgPageFinder:
             has_title = self.db.reorg.find_one({'url': url})
             # if has_title is None: # No longer in reorg (already deleted)
             #     continue
-            if 'title' not in has_title or has_title['title'] == 'N/A':
+            if 'title' not in has_title:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
@@ -303,18 +303,12 @@ class ReorgPageFinder:
                 except: # No snapthost on wayback
                     self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
                     try:
-                        self.db.checked.update_one({'_id': url}, {"$set": {
-                            "url": url,
-                            "hostname": self.site,
-                            f"{self.classname}.search": True
-                        }}, upsert=True)
                         self.db.na_urls.update_one({'_id': url}, {"$set": {
                             'url': url,
                             'hostname': self.site,
                             'no_snapshot': True
                         }}, upsert=True)
                     except: pass
-                    continue
             else:
                 title = has_title['title']
 
@@ -333,20 +327,9 @@ class ReorgPageFinder:
             except Exception as e:
                 self.tracer.warn(f'Search update DB: {str(e)}')
             # searched_checked.add(url)
-            
-            try:
-                self.db.checked.update_one({'_id': url}, {"$set": {
-                    "url": url,
-                    "hostname": self.site,
-                    f"{self.classname}.search": True
-                }}, upsert=True)
-            except: pass
-
-            if not infer:
-                continue
 
             # * Inference
-            if searched is not None:
+            if infer and searched is not None:
                 example = (url, (title,), searched)
                 added = self._add_url_to_patterns(*unpack_ex(example))
                 if not added: 
@@ -435,7 +418,6 @@ class ReorgPageFinder:
                     title = 'N/A'
             else:
                 title = has_title['title']
-
 
             if discovered is not None:
                 self.tracer.info(f'Found reorg: {discovered}')
