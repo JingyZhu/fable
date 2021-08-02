@@ -14,6 +14,10 @@ from . import text_utils, crawl, url_utils
 
 requests_header = {'user-agent': config.config('user_agent')}
 headers = {"Ocp-Apim-Subscription-Key": config.BING_SEARCH_KEY}
+bypass_proxy = {
+    'http': None,
+    'https': None
+}
 
 google_url = 'https://www.googleapis.com/customsearch/v1'
 bing_url = 'https://api.bing.microsoft.com/v7.0/search'
@@ -69,7 +73,7 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
     if site_spec_url:
         try:
             if '://' not in site_spec_url: site_spec_url = f'http://{site_spec_url}'
-            r = requests.get(site_spec_url, headers=crawl.requests_header, timeout=10)
+            r = requests.get(site_spec_url, headers=crawl.requests_header, timeout=10, proxies=bypass_proxy)
             site = host_extractor.extract(r.url)
             param_dict.update({'siteSearch': site})
         except: site = ""
@@ -84,7 +88,7 @@ def google_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False)
             return result['results']
     while True:
         try:
-            r = requests.get(google_url, params=google_query_dict)
+            r = requests.get(google_url, params=google_query_dict, proxies=bypass_proxy)
             status_code = r.status_code
             r = r.json()
         except Exception as e:
@@ -129,7 +133,7 @@ def bing_search(query, end=0, param_dict={}, site_spec_url=None, use_db=False):
             # print("Search hit on db")
             return result['results']
     try:
-        r = requests.get(bing_url, params=bing_query_dict, headers=headers)
+        r = requests.get(bing_url, params=bing_query_dict, headers=headers, proxies=bypass_proxy)
         r = r.json()
     except Exception as e:
         print(str(e))
