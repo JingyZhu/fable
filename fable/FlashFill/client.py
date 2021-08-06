@@ -3,7 +3,7 @@ import pandas as pd
 import pickle
 import os
 
-proxy = ServerProxy('http://52.146.88.170:8988', allow_none=True)
+proxy = ServerProxy('http://x.x.x.x:xxxx', allow_none=True)
 files = ['sheet1.csv', 'sheet2.csv']
 
 inputs = []

@@ -5,7 +5,7 @@ import os
 if 'output' not in os.listdir('.\\'):
     os.mkdir('output')
 
-server = SimpleXMLRPCServer(('172.31.30.96', 5678), logRequests=True, allow_none=True)
+server = SimpleXMLRPCServer(('0.0.0.0', 5678), logRequests=True, allow_none=True)
 server.register_instance(FlashFillHandler())
 
 if __name__ == '__main__':
