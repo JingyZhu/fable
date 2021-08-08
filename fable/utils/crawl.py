@@ -308,8 +308,11 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
     if html and 'html' not in content_type:
         logger.debug('requests_crawl: No html in content-type')
         return
-    r.encoding = r.apparent_encoding
-    _ = r.content
+    try:
+        r.encoding = r.apparent_encoding
+        _ = r.content
+    except:
+        logger.debug('requests_crawl: Fail to decode the content of response')
     if raw:
         return r
     else:
