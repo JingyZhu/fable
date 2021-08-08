@@ -28,7 +28,6 @@ from subprocess import Popen, PIPE
 import textwrap
 
 from .. import config
-from . import base_utils
 
 sys.setrecursionlimit(1500)
 tmp_path = config.TMP_PATH
@@ -274,6 +273,7 @@ def extract_date(html, version="article", url=""):
     """
     Wrapper function for different version of date extraction
     """
+    from . import base_utils
     backup_versions = ['article', 'mine']
     backup_versions = [v for v in backup_versions if v != version]
     if html == '': return ''
@@ -390,6 +390,7 @@ def domdistiller_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the content 
     """
+    from . import base_utils
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
@@ -525,6 +526,7 @@ def domdistiller_title_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the title
     """
+    from . import base_utils
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])
@@ -615,6 +617,7 @@ def domdistiller_title_body_extract(html, lang=None):
     Run chrome to load the page
     Call org.chromium.distiller to get the title
     """
+    from . import base_utils
     soup = BeautifulSoup(html, 'lxml')
     for tag in soup.find_all('', {'src': True}):
         del(tag.attrs['src'])

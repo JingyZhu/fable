@@ -11,7 +11,7 @@ import os
 import regex
 
 from . import config, tools, tracer
-from .utils import search, crawl, text_utils, url_utils, sic_transit
+from .utils import crawl, sic_transit
 
 import logging
 logging.setLoggerClass(tracer.tracer)

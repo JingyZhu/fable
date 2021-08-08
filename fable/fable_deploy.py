@@ -9,7 +9,7 @@ import json
 import logging
 
 from . import config
-from .utils import text_utils, url_utils, crawl, sic_transit
+from .utils import url_utils, crawl, sic_transit
 
 db_broken = MongoClient(config.MONGO_HOSTNAME, username=config.MONGO_USER, password=config.MONGO_PWD, authSource='admin').web_decay
 db = config.DB

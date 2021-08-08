@@ -11,7 +11,7 @@ from math import ceil
 from bs4 import BeautifulSoup
 
 from fable import config
-from . import text_utils, url_utils, base_utils
+from . import text_utils, url_utils
 from .crawl import rp 
 import logging
 logger = logging.getLogger('logger')
@@ -34,10 +34,6 @@ def send_request(url):
         if 'html' in content_type:
             content = resp.content
         req_failed = False
-    # Download Timeout
-    except base_utils.TimeoutError:
-        resp = None
-        error_msg = 'DownloadTimeout'
     # Requsts timeout
     except requests.exceptions.ReadTimeout:
         error_msg = 'ReadTimeout'

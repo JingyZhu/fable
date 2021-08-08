@@ -1,17 +1,12 @@
 """
 Global tracer for recording the metadata gathered during finding aliases
 """
-import pymongo
-from pymongo import MongoClient
-import brotli
 import re, os, sys
 from collections import defaultdict
-from urllib.parse import urlsplit, urlparse
 import logging
 import inspect
 
 from . import config
-from .utils import url_utils
 
 db = config.DB
 

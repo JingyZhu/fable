@@ -10,7 +10,7 @@ import logging
 
 from . import config
 from .tracer import tracer as tracing
-from .utils import text_utils, url_utils, crawl, sic_transit
+from .utils import url_utils, crawl, sic_transit
 
 db = config.DB
 he = url_utils.HostExtractor()

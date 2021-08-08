@@ -3,17 +3,15 @@ Discover backlinks to today's page
 """
 import os
 from urllib.parse import urlsplit, urlparse, parse_qsl, parse_qs, urlunsplit
-from itertools import chain, combinations
 from bs4 import BeautifulSoup
 from queue import Queue
 from collections import defaultdict
 import re, json
-import random
 from dateutil import parser as dparser
 import datetime
 
 from . import config, tools, tracer
-from .utils import search, crawl, text_utils, url_utils, sic_transit
+from .utils import crawl, url_utils, sic_transit
 
 import logging
 logging.setLoggerClass(tracer.tracer)

@@ -27,7 +27,6 @@ sys.path.append('../')
 from .. import config
 from .. import tracer
 from .url_utils import filter_wayback
-from . import base_utils
 
 import logging
 # if not isinstance(logging.getLoggerClass(), tracer.tracer):

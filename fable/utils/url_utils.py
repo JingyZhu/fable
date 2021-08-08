@@ -4,12 +4,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, parse_qsl, parse_qs, urlsplit, urlunsplit
 import re
 import os, time
-from os.path import realpath, join, dirname
-import subprocess
-from collections import defaultdict
-from url_normalize import url_normalize
 from bs4 import BeautifulSoup
-import sys
 
 
 def filter_wayback(url):

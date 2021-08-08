@@ -4,8 +4,8 @@ Search broken pages' content
 import re, regex, os
 from urllib.parse import urlsplit, urlunsplit
 
-from . import config, tools, tracer
-from .utils import search, crawl, text_utils, url_utils
+from . import  tools, tracer
+from .utils import search, crawl, url_utils
 
 import logging
 logging.setLoggerClass(tracer.tracer)
