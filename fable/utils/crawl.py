@@ -171,7 +171,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             break
         except Exception as e:
             try:
-                logger.warn(f"Wayback index: {str(e)}" + '\n'  + r.text.split('\n')[0])
+                logger.warn(f"Wayback index: {str(e)}")
             except Exception as e:
                 count += 1
                 if count < 3:
