@@ -92,6 +92,7 @@ def status_categories(status):
     Soft-404/ 4/5xx / DNSErrorOtherError
     """
     # if not re.compile("^([2345]|DNSError|OtherError)").match(status): return "Unknown"
+    status = f'{status}' # Put status into string
     if re.compile("^[45]").match(status): return "4/5xx"
     elif re.compile("^(DNSError|OtherError)").match(status): return "DNSOther"
     elif  re.compile("^(\[.*\]|Similar|Same|no features)").match(status): return "Soft-404"
