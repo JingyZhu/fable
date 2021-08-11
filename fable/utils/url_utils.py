@@ -5,6 +5,9 @@ from urllib.parse import urlparse, parse_qsl, parse_qs, urlsplit, urlunsplit
 import re
 import os, time
 from bs4 import BeautifulSoup
+from collections import defaultdict
+import copy
+import itertools
 
 
 def filter_wayback(url):
@@ -30,13 +33,21 @@ def get_ts(wayback_url):
     ts = url[:slash]
     return ts
 
-class urlset:
-    def __init__(self, forms):
-        """forms: form tag text on the html"""
-        # TODO: implement this class constructor
-        self.url = ''
-        self.queries = []
+def my_parse_qs(query):
+    """Add case handler where the query string is not standard"""
+    if not query:
+        return {}
+    pq = parse_qs(query)
+    if len(pq) > 0:
+        return pq
+    else:
+        return {'NoKey': [query]}
 
+def normal_hostname(hostname):
+    hostname = hostname.split(':')[0]
+    hostname = hostname.split('.')
+    if hostname[0] == 'www': hostname = hostname[1:]
+    return '.'.join(hostname)
 
 class HostExtractor:
     def __init__(self):
@@ -52,6 +63,122 @@ class HostExtractor:
             url = 'http://' + url
         hostname = urlparse(url).netloc.split(':')[0]
         return self.psl.privatesuffix(hostname)
+
+class URLPatternDict:
+    def __init__(self, max_diff=1):
+        """max_diff: max number of tokens that can be different"""
+        self.pattern_dict = defaultdict(list)
+        self.max_diff = max_diff
+        self.urls = set()
+    
+    def _detect_str_alnum(self, string):
+            """Detect whether string has alpha and/or numeric char"""
+            typee = ''
+            alpha_char = [c for c in string if c.isalpha()]
+            num_char = [c for c in string if c.isdigit()]
+            if len(alpha_char) > 0:
+                typee += 'A'
+            if len(num_char) > 0:
+                typee += 'N'
+            return typee
+
+    def _wildcard(self, pattern, idxs):
+            """
+            Do two things:
+            1. Based on idx, change certain token in path/query into wildcard
+            2. Specify wildcard type (Alpha/Numberic/AlphaNum/All)
+
+            patterns: list of token
+            idxs: tuple of idx, length depend on max_diff
+            """
+            seen = set()
+            for idx in idxs:
+                if idx in seen: continue
+                seen.add(idx)
+                if isinstance(pattern[idx], str):
+                    # * Wildcard the path
+                    str_type = self._detect_str_alnum(pattern[idx])
+                    pattern[idx] = f'*{str_type}'
+                else:
+                    # * Wildcard the query
+                    str_type = self._detect_str_alnum(pattern[idx][1])
+                    token = list(pattern[idx])
+                    token[1] = f'*{str_type}'
+                    pattern[idx] = tuple(token)
+            return pattern
+
+    def gen_patterns(self, url):
+        us = urlsplit(url)
+        us = us._replace(netloc=us.netloc.split(':')[0])
+        site = he.extract(url)
+        host = normal_hostname(us.netloc)
+        host_list = host.replace(site, '').strip('.').split('.')
+        if us.path == '':
+            us = us._replace(path='/')
+        if us.path[-1] == '/' and us.path != '/':
+            us = us._replace(path=us.path[:-1])
+        host_list = list(filter(lambda x: x!= '', host_list))
+        path_list = list(filter(lambda x: x!= '', us.path.split('/')))
+        query_list = {k: v[0] for k, v in my_parse_qs(us.query).items()}
+        query_list = sorted(query_list.items())
+        pattern_list = host_list + path_list + query_list
+        patterns = []
+        total = len(pattern_list)
+        idxs_combination = list(itertools.combinations_with_replacement(range(total), self.max_diff))
+        # * Reorder combination so that lower diff comes first
+        idxs_combination.sort(key=lambda x: len(set(x)))
+        for idxs in idxs_combination:
+            new_pattern = copy.deepcopy(pattern_list)
+            new_pattern = self._wildcard(new_pattern, idxs)
+            patterns.append(tuple(new_pattern))
+        return patterns
+
+    def add_url(self, url):
+        if url in self.urls:
+            return
+        self.urls.add(url)
+        patterns = self.gen_patterns(url)
+        for pat in patterns:
+            self.pattern_dict[pat].append(url)
+    
+    def match_url(self, url):
+        """
+        Note: A URL may appear in multiple objs due to different match reasons
+        Return: [{
+            "urls": [matched urls],
+            "pattern": matched pattern
+        }]
+        """
+        patterns = self.gen_patterns(url)
+        seen_match = set()
+        matched = []
+        for pat in patterns:
+            if pat in self.pattern_dict:
+                matched_urls = self.pattern_dict[pat]
+                if tuple(sorted(matched_urls)) in seen_match:
+                    continue
+                seen_match.add(tuple(sorted(matched_urls)))
+                matched.append({
+                    "urls": self.pattern_dict[pat],
+                    "pattern": pat
+                })
+        return matched
+
+    def pop_matches(self, least_match=2):
+        """Pop all matched URL pattern in the dict"""
+        seen_match = set()
+        matched = []
+        for pat, urls in self.pattern_dict.items():
+            if len(urls) < least_match:
+                continue
+            if tuple(sorted(urls)) in seen_match:
+                continue
+            seen_match.add(tuple(sorted(urls)))
+            matched.append({
+                'urls': urls,
+                'pattern': pat
+            })
+        return matched
 
 he = HostExtractor()
 

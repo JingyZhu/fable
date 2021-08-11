@@ -38,8 +38,6 @@ class ReorgPageFinder:
         self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.db = db
         self.site = None
-        self.pattern_dict = None
-        self.seen_reorg_pairs = None
         self.classname = classname
         self.logname = classname if logname is None else logname
         self.tracer = tracer if tracer is not None else self._init_tracer(loglevel=loglevel)
@@ -55,28 +53,11 @@ class ReorgPageFinder:
     def set_inferencer_classes(self, classes):
         self.inference_classes = classes + [self.classname]
 
-    def init_site(self, site, urls):
+    def init_site(self, site, urls=[]):
         self.site = site
-        objs = []
-        already_in = list(self.db.reorg.find({'hostname': site}))
-        already_in = set([u['url'] for u in already_in])
-        for url in urls:
-            if url in already_in:
-                continue
-            objs.append({'url': url, 'hostname': site})
-            # TODO May need avoid insert false positive 
-            if not sic_transit.broken(url):
-                try:
-                    self.db.na_urls.update_one({'_id': url}, {'$set': 
-                        {'url': url, 'hostname': site, 'url': url, 'false_positive': True}}, upsert=True)
-                except: pass
-        try:
-            self.db.reorg.insert_many(objs, ordered=False)
-        except: pass
         site_reorg_urls = self.db.reorg.find({'hostname': site})
         # ? Whether to infer on all classes, all only one? 
         # ? reorg_urls = [reorg for reorg in reorg_urls if len(set(reorg.keys()).intersection(reorg_keys)) > 0]
-        confidence = {'content': 1, 'link_anchor': 2, 'title': 3, 'link_sig': 4, 'wayback_alias': 5}
         self.pattern_dict = defaultdict(list)
         self.seen_reorg_pairs = set()
         for reorg_url in list(site_reorg_urls):
@@ -98,45 +79,6 @@ class ReorgPageFinder:
         self.pattern_dict = None
         self.seen_reorg_pairs = None
         self.tracer.handlers.pop()
-
-    def _add_url_to_patterns(self, url, meta, reorg):
-        """
-        Only applies to same domain currently
-        Return bool on whether success
-        """
-        # if he.extract(reorg) != he.extract(url):
-        #     return False
-        patterns = url_utils.gen_path_pattern(url)
-        if (url, reorg) in self.seen_reorg_pairs:
-            return True
-        else:
-            self.seen_reorg_pairs.add((url, reorg))
-        
-        if len(patterns) <= 0: return False
-        if meta[0] == 'N/A':
-            meta = list(meta)
-            meta[0] = ''
-            meta = tuple(meta)
-        for pat in patterns:
-            self.pattern_dict[pat].append((url, meta, reorg))
-        return True
-
-    def _most_common_output(self, examples):
-        """
-        Given a list of examples, return ones with highest # common pattern
-
-        Return: List of examples in highest common pattern
-        """
-        output_patterns = defaultdict(list)
-        for ex in examples:
-            reorg_url = ex[2]
-            reorg_pats = url_utils.gen_path_pattern(reorg_url)
-            for reorg_pat in reorg_pats:
-                output_patterns[reorg_pat].append(ex)
-        output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
-        output_pattern, output_ex = output_patterns[0]
-        self.tracer.debug(f"_most_common_output: {output_pattern} {len(output_ex)} {len(examples)}")
-        return output_ex
 
     def query_inferer(self, examples):
         """
@@ -256,7 +198,7 @@ class ReorgPageFinder:
         self.tracer.flush()
 
 
-    def search(self, infer=False, required_urls=None, title=True):
+    def search(self, required_urls, infer=False, title=True):
         """
         infer: Infer every time when a new alias is found
         Required urls: URLs that will be run on (no checked)
@@ -270,14 +212,10 @@ class ReorgPageFinder:
                 self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
                 return
         # !_search
-        noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
-        # searched_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.search": True})
-        # searched_checked = set([sc['url'] for sc in searched_checked])
-        
-        broken_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
+        reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
+        reorg_checked = set([u['url'] for u in reorg_checked])
+        broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
 
-        # urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
-        # broken_urls = set([u['url'] for u in urls])
         self.tracer.info(f'Search SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
         while len(broken_urls) > 0:
@@ -346,7 +284,7 @@ class ReorgPageFinder:
                     examples = success
                     success = self.query_inferer(examples)
     
-    def discover(self, infer=False, required_urls=None):
+    def discover(self, required_urls, infer=False,):
         """
         infer: Infer every time when a new alias is found
         Required urls: URLs that will be run on
@@ -357,14 +295,10 @@ class ReorgPageFinder:
                 self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
                 return
 
-        noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
-        # discovered_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.discover": True})
-        # discovered_checked = set([sc['url'] for sc in discovered_checked])
-        
-        broken_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
-        
-        # urls = [u for u in noreorg_urls if u['url'] not in discovered_checked and u['url'] in required_urls]
-        # broken_urls = set([bu['url'] for bu in urls])
+        reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
+        reorg_checked = set([u['url'] for u in reorg_checked])
+        broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
+
         self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
         while len(broken_urls) > 0:

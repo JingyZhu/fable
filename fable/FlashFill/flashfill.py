@@ -70,7 +70,7 @@ class FlashFillHandler:
         return: xlsx_path, output_cols
         """ 
         writer = pd.ExcelWriter(f'output\\{identifier}.xlsx')
-        csvs = [pd.DataFrame(csv) for csv in csvs]
+        # csvs = [pd.DataFrame(csv) for csv in csvs]
         output_cols, self.headers = [], {}
         for name, df in zip(sheet_names, csvs):
             cols = df.columns.tolist()
@@ -98,7 +98,8 @@ class FlashFillHandler:
                 csv.columns = self.headers[sheet_name]
                 outputs.append({
                     'sheet_name': sheet_name,
-                    'csv': csv.to_dict(orient='list')
+                    # 'csv': csv.to_dict(orient='list')
+                    'csv': csv
                 })
         os.remove(xlsx_path)
         return outputs
