@@ -13,7 +13,7 @@ import sys
 sys.path.append('../')
 from fable import config, tracer
 from fable.tracer import tracer as tracing
-from fable.utils import search, crawl, text_utils, url_utils, sic_transit
+from fable.utils import search, crawl, text_utils, url_utils
 
 import logging
 logging.setLoggerClass(tracer.tracer)
@@ -118,7 +118,7 @@ class StrawmanSearcher:
                 fpara_q = fst_para[:1400 - len(site_str)] if len(fst_para) > 1400 - len(site_str) else fst_para
                 search_results = search.bing_search(f'{fpara_q} {site_str}', use_db=self.use_db)
                 if len(search_results) > 10: search_results = search_results[:10]
-                similar = search_once(search_results, typee='topN')
+                similar = search_once(search_results, typee='first_para')
                 if similar is not None: 
                     return similar
             else:
@@ -127,7 +127,7 @@ class StrawmanSearcher:
                     fst_para = fst_para[:32]
                 fpara_q = ' '.join(fst_para)
                 search_results = search.google_search(fpara_q, site_spec_url=site, use_db=self.use_db)
-                similar = search_once(search_results, typee='topN')
+                similar = search_once(search_results, typee='first_para')
                 if similar is not None:
                     return similar
         return
@@ -155,31 +155,6 @@ class StrawmanFinder:
     
     def init_site(self, site, urls):
         self.site = site
-        # already_in = list(self.db.reorg.find({'hostname': site}))
-        # already_in = set([u['url'] for u in already_in])
-        # for url in urls:
-            # if url in already_in:
-            #     continue
-            # if not sic_transit.broken(url):
-            #     try:
-            #         self.db.na_urls.update_one({'_id': url}, {'$set': 
-            #             {'url': url, 'hostname': site, 'url': url, 'false_positive': True}}, upsert=True)
-            #     except: pass
-            # try:
-            #     self.db.reorg.update_one({'url': url}, {'$set': {
-            #         'url': url,
-            #         'hostname': site
-            #     }}, upsert=True)
-            # except: pass
-        # reorg_urls = self.db.reorg.find({'hostname': site, 'reorg_url': {"$exists": True}})
-        # for reorg_url in list(reorg_urls):
-        #     # Patch the no title urls
-        #     if 'title' not in reorg_url:
-        #         wayback_reorg_url = self.memo.wayback_index(reorg_url['url'])
-        #         reorg_html, wayback_reorg_url = self.memo.crawl(wayback_reorg_url, final_url=True)
-        #         reorg_title = self.memo.extract_title(reorg_html, version='domdistiller')
-        #         reorg_url['title'] = reorg_title
-        #         self.db.reorg.update_one({'url': reorg_url['url']}, {'$set': {'title': reorg_title}})
         if len(self.tracer.handlers) > 2:
             self.tracer.handlers.pop()
         formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
@@ -193,25 +168,7 @@ class StrawmanFinder:
         self.site = None
         self.logger.handlers.pop()
 
-    def fp_check(self, url, reorg_url):
-        """
-        Determine False Positive
-
-        returns: Boolean on if false positive
-        """
-        if url_utils.url_match(url, reorg_url):
-            return True
-        html, url = self.memo.crawl(url, final_url=True)
-        reorg_html, reorg_url = self.memo.crawl(reorg_url, final_url=True)
-        if html is None or reorg_html is None:
-            return False
-        content = self.memo.extract_content(html)
-        reorg_content = self.memo.extract_content(reorg_html)
-        self.similar.tfidf._clear_workingset()
-        simi = self.similar.tfidf.similar(content, reorg_content)
-        return simi >= 0.8
-
-    def search(self, required_urls=None, title=True):
+    def search(self, required_urls, title=True):
         if not title:
             self.similar.clear_titles()
         elif self.similar.site is None or self.site not in self.similar.site:
@@ -220,14 +177,10 @@ class StrawmanFinder:
                 self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
                 return
         # !_search
-        noreorg_urls = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": False}}))
-        searched_checked = self.db.checked.find({"hostname": self.site, f"{self.classname}.search": True})
-        searched_checked = set([sc['url'] for sc in searched_checked])
-        
-        required_urls = set(required_urls) if required_urls else set([u['url'] for u in noreorg_urls])
+        reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
+        reorg_checked = set([u['url'] for u in reorg_checked])
+        broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
 
-        urls = [u for u in noreorg_urls if u['url'] not in searched_checked and u['url'] in required_urls]
-        broken_urls = set([u['url'] for u in urls])
         self.tracer.info(f'Search SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
         while len(broken_urls) > 0:
@@ -249,11 +202,6 @@ class StrawmanFinder:
                 except: # No snapthost on wayback
                     self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
                     try:
-                        self.db.checked.update_one({'_id': url}, {"$set": {
-                            "url": url,
-                            "hostname": self.site,
-                            f"{self.classname}.search": True
-                        }}, upsert=True)
                         self.db.na_urls.update_one({'_id': url}, {"$set": {
                             'url': url,
                             'hostname': self.site,
@@ -269,37 +217,12 @@ class StrawmanFinder:
             if searched is not None:
                 searched, trace = searched
                 self.tracer.info(f"HIT: {searched}")
-                # ! Temp
-                fp = self.fp_check(url, searched)
-                fp = False
-                # ! Temp
-                if not fp: # False positive test
-                    # ! search
-                    update_dict.update({'reorg_url': searched, 'by':{
-                        "method": "search"
-                    }})
-                    update_dict['by'].update(trace)
-                else:
-                    try: self.db.na_urls.update_one({'_id': url}, {'$set': {
-                            'url': url,
-                            'false_positive_search': True, 
-                            'hostname': self.site
-                        }}, upsert=True)
-                    except: pass
-                    searched = None
+                update_dict.update({'reorg_url': searched, 'by':{
+                    "method": "search"
+                }})
+                update_dict['by'].update(trace)
 
-
-            if len(update_dict) > 0:
-                try:
-                    self.db.reorg.update_one({'url': url}, {"$set": {self.classname: update_dict, "title": title}} ) 
-                except Exception as e:
-                    self.tracer.warn(f'Search update DB: {str(e)}')
-            searched_checked.add(url)
-            
             try:
-                self.db.checked.update_one({'_id': url}, {"$set": {
-                    "url": url,
-                    "hostname": self.site,
-                    f"{self.classname}.search": True
-                }}, upsert=True)
-            except: pass
+                self.db.reorg.update_one({'url': url}, {"$set": {self.classname: update_dict, "title": title}} ) 
+            except Exception as e:
+                self.tracer.warn(f'Search update DB: {str(e)}')

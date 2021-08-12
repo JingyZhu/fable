@@ -11,7 +11,7 @@ import os
 import regex
 
 from . import config, tools, tracer
-from .utils import crawl, sic_transit
+from .utils import crawl, sic_transit, url_utils
 
 import logging
 logging.setLoggerClass(tracer.tracer)
@@ -20,15 +20,6 @@ logging.setLoggerClass(logging.Logger)
 
 ISNUM = lambda x: type(x).__module__ == np.__name__ or isinstance(x, int)
 VERTICAL_BAR_SET = '\u007C\u00A6\u2016\uFF5C\u2225\u01C0\u01C1\u2223\u2502\u0964\u0965'
-
-def my_parse_qs(query):
-    if not query:
-        return {}
-    pq = parse_qs(query)
-    if len(pq) > 0:
-        return pq
-    else:
-        return {'NoKey': [query]}
 
 
 def normal_hostname(hostname):
@@ -45,6 +36,59 @@ class Inferer:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.not_workings = set() # Seen broken inferred URLs
+        self.site = None
+        self.seen_reorg_pairs = None
+        self.pattern_dict = None
+
+    def init_site(self, site):
+        if self.site:
+            self.clear_site()
+        self.site = site
+        self.seen_reorg_pairs = set()
+        self.pattern_dict = defaultdict(list)
+
+    def clear_site(self):
+        self.site = None
+        self.seen_reorg_pairs = None
+        self.pattern_dict = None
+
+    def _add_url_to_patterns(self, url, meta, reorg):
+        """
+        Only applies to same domain currently
+        meta: [title]
+        Return bool on whether success
+        """
+        # if he.extract(reorg) != he.extract(url):
+        #     return False
+        patterns = url_utils.gen_path_pattern(url)
+        if (url, reorg) in self.seen_reorg_pairs:
+            return True
+        else:
+            self.seen_reorg_pairs.add((url, reorg))
+        
+        if len(patterns) <= 0: return False
+        if meta[0] == 'N/A':
+            meta[0] = ''
+        for pat in patterns:
+            self.pattern_dict[pat].append((url, meta, reorg))
+        return True
+
+    def _most_common_output(self, examples):
+        """
+        Given a list of examples, return ones with highest # common pattern
+
+        Return: List of examples in highest common pattern
+        """
+        output_patterns = defaultdict(list)
+        for ex in examples:
+            reorg_url = ex[2]
+            reorg_pats = url_utils.gen_path_pattern(reorg_url)
+            for reorg_pat in reorg_pats:
+                output_patterns[reorg_pat].append(ex)
+        output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
+        output_pattern, output_ex = output_patterns[0]
+        self.tracer.debug(f"_most_common_output: {output_pattern} {len(output_ex)} {len(examples)}")
+        return output_ex
 
     def infer(self, examples, urls, site='NA'):
         """
@@ -67,152 +111,77 @@ class Inferer:
                 elif ch == "'": continue
                 else: rs += ' '
             return rs
-        max_url, max_reorg_url = 0, 0
-        query_keys, reorg_query_keys = set(), set()
-        input_ext= False
-        # * Aligh URL to same length
-        for url, _, reorg_url in examples:
-            us = urlsplit(url)
-            path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
-            if os.path.splitext(us.path)[1]:
-                input_ext = True
-            if us.query: 
-                query_keys.update(my_parse_qs(us.query).keys())
-            max_url = max(path_len + input_ext, max_url)
-            us_reorg = urlsplit(reorg_url)
-            path_len = len(list(filter(lambda x: x != '', us_reorg.path.split('/')))) + 1
-            if us_reorg.query:
-                reorg_query_keys.update(my_parse_qs(us_reorg.query).keys())
-            max_reorg_url = max(path_len, max_reorg_url)
-
-        for url, _ in urls:
-            us = urlsplit(url)
-            path_len = len(list(filter(lambda x: x != '', us.path.split('/')))) + 1
-            if os.path.splitext(us.path)[1]:
-                input_ext = True
-            if us.query: 
-                query_keys.update(my_parse_qs(us.query).keys())
-            max_url = max(path_len + input_ext, max_url)
-
-        sheets = []
-        sheet1_csv = defaultdict(list) # Both url and meta
-        sheet2_csv = defaultdict(list) # Only meta
-        sheet3_csv = defaultdict(list) # Only URL
-
-        def insert_metadata(sheet, c, meta, expand=True):
-            """Expand: Whether to expand the metadata into different form"""
-            if expand:
-            #     sheet[f'Meta{c}'].append(meta)
-            #     sheet[f'Meta{c+1}'].append(meta.lower())
-                sheet[f'Meta{c}'].append(normal(meta))
-                sheet[f'Meta{c+1}'].append(normal(meta.lower()))
-                c += 2
-            else:
-                sheet[f'Meta{c}'].append(meta)
-                c += 1
-            return sheet, c
-
-        # * Input the known input-output pair
-        for url, meta, reorg_url in examples:
+        
+        def insert_url(sheet, row, url):
+            """Insert the original (broken) URL part into the sheet"""
             us = urlsplit(url)
             path_list = list(filter(lambda x: x != '', us.path.split('/')))
-            if input_ext:
-                filename, ext = os.path.splitext(path_list[-1])
-                path_list[-1] = filename
-                path_list.append(ext)
             url_inputs = [normal_hostname(us.netloc)] + path_list
-            sheet2_csv['Site'].append(normal_hostname(us.netloc))
-            for i, url_piece in enumerate(url_inputs):
-                sheet1_csv[f'URL{i}'].append(url_piece)
-                sheet3_csv[f'URL{i}'].append(url_piece)
-            if len(url_inputs) < max_url:
-                for i in range(len(url_inputs), max_url):
-                    sheet1_csv[f'URL{i}'].append('')
-                    sheet3_csv[f'URL{i}'].append('')
-            qs = my_parse_qs(us.query)
-            for key in query_keys:
+            for j, url_piece in enumerate(url_inputs):
+                sheet.loc[row, f'URL{j}'] = url_piece
+                qs = url_utils.my_parse_qs(us.query)
+            for key, value in qs.items():
                 if key == 'NoKey':
-                    sheet1_csv[f'Query_{key}'].append(f"{qs.get(key, [''])[0]}")
-                    sheet3_csv[f'Query_{key}'].append(f"{qs.get(key, [''])[0]}")
+                    sheet.loc[row, f'Query_{key}'] = value[0]
                 else:
-                    sheet1_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
-                    sheet3_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
-            count = [0, 0]
-            for i, meta_piece in enumerate(meta):
-                if i == 0:
-                    sheet1_csv, count[0] = insert_metadata(sheet1_csv, count[0], meta_piece)
-                    sheet2_csv, count[1] = insert_metadata(sheet2_csv, count[1], meta_piece)
+                    sheet.loc[i, f'Query_{key}'] = f'{key}={value[0]}'
+            return sheet
+
+        def insert_metadata(sheet, row, meta, expand=True):
+            """Expand: Whether to expand the metadata into different form"""
+            for j, meta_piece in enumerate(meta):
+                if expand:
+                    sheet.loc[row, f'Meta{j}'] = normal(meta_piece)
+                    sheet.loc[row, f'Meta{j+0.5}'] = normal(meta_piece.lower())
                 else:
-                    sheet1_csv, count[0] = insert_metadata(sheet1_csv, count[0], meta_piece, False)
-                    sheet2_csv, count[1] = insert_metadata(sheet2_csv, count[1], meta_piece, False)
-            us_reorg = urlsplit(reorg_url)
+                    sheet.loc[row, f'Meta{j}'] = meta_piece
+            return sheet
+        
+        def insert_reorg(sheet, row, reorg):
+            """Insert alias part into the sheet"""
+            us_reorg = urlsplit(reorg)
             path_reorg_list = list(filter(lambda x: x != '', us_reorg.path.split('/')))
             url_reorg_inputs = [f"https://{normal_hostname(us_reorg.netloc)}"] + path_reorg_list
-            for i, reorg_url_piece in enumerate(url_reorg_inputs):
-                sheet1_csv[f'Output_{i}'].append(reorg_url_piece)
-                sheet2_csv[f'Output_{i}'].append(reorg_url_piece)
-                sheet3_csv[f'Output_{i}'].append(reorg_url_piece)
-            if i < max_reorg_url:
-                for i in range(len(url_reorg_inputs), max_reorg_url):
-                    sheet1_csv[f'Output_{i}'].append('')
-                    sheet2_csv[f'Output_{i}'].append('')
-                    sheet3_csv[f'Output_{i}'].append('')
-            qs_reorg = my_parse_qs(us_reorg.query)
-            for key in reorg_query_keys:
+            for j, reorg_url_piece in enumerate(url_reorg_inputs):
+                sheet.loc[row, f'Output_{j}'] = reorg_url_piece
+                qs_reorg = url_utils.my_parse_qs(us_reorg.query)
+            for key, value in qs_reorg.items():
                 if key == 'NoKey':
-                    sheet1_csv[f'Output_Q_{key}'].append(f"{qs_reorg.get(key, [''])[0]}")
-                    sheet2_csv[f'Output_Q_{key}'].append(f"{qs_reorg.get(key, [''])[0]}")
-                    sheet3_csv[f'Output_Q_{key}'].append(f"{qs_reorg.get(key, [''])[0]}")
+                    sheet.loc[i, f'Output_Q_{key}'] = value[0]
                 else:
-                    sheet1_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
-                    sheet2_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
-                    sheet3_csv[f'Output_Q_{key}'].append(f"{key}={qs_reorg.get(key, [''])[0]}")
-        urls_idx = {}
+                    sheet.loc[i, f'Output_Q_{key}'] = f'{key}={value[0]}'
+            return sheet
+                
+        sheet1 = pd.DataFrame() # Both url and meta
+        sheet2 = pd.DataFrame() # Only meta
+        sheet3 = pd.DataFrame() # Only URL
+        # * Input examples
+        for i, (url, meta, reorg_url) in enumerate(examples):
+            # * Input URL part
+            sheet1 = insert_url(sheet1, i, url)
+            sheet3 = insert_url(sheet3, i, url)
+            # * Input Metadata part
+            sheet1 = insert_metadata(sheet1, i, meta, expand=True)
+            sheet2 = insert_metadata(sheet2, i, meta, expand=True)
+            # * Input Reorg Part
+            sheet1 = insert_reorg(sheet1, i, reorg_url)
+            sheet2 = insert_reorg(sheet2, i, reorg_url)
+            sheet3 = insert_reorg(sheet3, i, reorg_url)
 
+        url_idx = {}
         # * Input the to infer examples
         for i, (url, meta) in enumerate(urls):
-            us = urlsplit(url)
-            urls_idx[url] = i + len(examples)
-            # sheet1_csv['URL'].append(url)
-            path_list = list(filter(lambda x: x != '', us.path.split('/')))
-            if input_ext:
-                filename, ext = os.path.splitext(path_list[-1])
-                path_list[-1] = filename
-                path_list.append(ext)
-            url_inputs = [normal_hostname(us.netloc)] + path_list
-            sheet2_csv['Site'].append(normal_hostname(us.netloc))
-            for i, url_piece in enumerate(url_inputs):
-                sheet1_csv[f'URL{i}'].append(url_piece)
-                sheet3_csv[f'URL{i}'].append(url_piece)
-            if len(url_inputs) < max_url:
-                for i in range(len(url_inputs), max_url):
-                    sheet1_csv[f'URL{i}'].append('')
-                    sheet3_csv[f'URL{i}'].append('')
-            qs = my_parse_qs(us.query)
-            for key in query_keys:
-                if key == 'NoKey':
-                    sheet1_csv[f'Query_{key}'].append(f"{qs.get(key, [''])[0]}")
-                    sheet3_csv[f'Query_{key}'].append(f"{qs.get(key, [''])[0]}")
-                else:
-                    sheet1_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
-                    sheet3_csv[f'Query_{key}'].append(f"{key}={qs.get(key, [''])[0]}")
-            count = [0, 0]
-            for i, meta_piece in enumerate(meta):
-                if i == 0:
-                    sheet1_csv, count[0] = insert_metadata(sheet1_csv, count[0], meta_piece)
-                    sheet2_csv, count[1] = insert_metadata(sheet2_csv, count[1], meta_piece)
-                else:
-                    sheet1_csv, count[0] = insert_metadata(sheet1_csv, count[0], meta_piece, False)
-                    sheet2_csv, count[1] = insert_metadata(sheet2_csv, count[1], meta_piece, False)
-            for i in range(max_reorg_url):
-                sheet1_csv[f'Output_{i}'].append('')
-                sheet2_csv[f'Output_{i}'].append('')
-                sheet3_csv[f'Output_{i}'].append('')
-            for key in reorg_query_keys:
-                sheet1_csv[f'Output_Q_{key}'].append('')
-                sheet2_csv[f'Output_Q_{key}'].append('')
-                sheet3_csv[f'Output_Q_{key}'].append('')
-        sheets = [sheet1_csv, sheet2_csv, sheet3_csv]
+            counter = i+len(examples)
+            url_idx[url] = counter
+            # * Input URL part
+            sheet1 = insert_url(sheet1, counter, url)
+            sheet3 = insert_url(sheet3, counter, url)
+            # * Input Metadata part
+            sheet1 = insert_metadata(sheet1, counter, meta, expand=True)
+            sheet2 = insert_metadata(sheet2, counter, meta, expand=True)
+        
+        # * RPC formatted dataframe to FlashFill
+        sheets = [sheet1, sheet2, sheet3]
         sheets = [pickle.dumps({
             'sheet_name': f'sheet{i+1}',
             'csv': sheet
@@ -232,30 +201,28 @@ class Inferer:
         if count == 3:
             return {}
         outputs = [pickle.loads(o.data) for o in outputs]
-        outputs = [pd.DataFrame(o['csv']) for o in outputs]
-        poss_infer = defaultdict(set)
+        poss_infer = defaultdict(set) # * Any results inferred from 3 sheets
         seen_reorg = set()
         for output in outputs:
             for url, meta in urls:
-                idx = urls_idx[url]
-                reorg_url_lists = output.filter(regex='^Output', axis=1).iloc[idx]
-                num_outputs = len(reorg_url_lists)
+                idx = url_idx[url]
+                reorg_url_lists = output.filter(regex='^Output_\d', axis=1).iloc[idx]
+                reorg_query_lists = output.filter(regex='^Output_Q', axis=1).iloc[idx]
+                num_url_outputs = len(reorg_url_lists)
                 scheme_netloc = reorg_url_lists['Output_0']
                 reorg_paths = []
-                for j in range(1, num_outputs - len(reorg_query_keys)):
+                for j in range(1, num_url_outputs):
                     reorg_part = reorg_url_lists[f'Output_{j}']
                     # TODO: How to deal with nan requires more thoughts
                     if reorg_part != reorg_part: # * Check for NaN value (trick)
                         continue
                     if ISNUM(reorg_part): reorg_part = str(int(reorg_part))
                     reorg_paths.append(reorg_part)
-                # if len(reorg_paths) < num_outputs - output_query - 1:
-                #     continue
                 reorg_paths = '/'.join(reorg_paths)
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
                 reorg_queries = []
-                for key in reorg_query_keys:
-                    reorg_kv = reorg_url_lists[f'Output_Q_{key}']
+                for key in reorg_query_lists:
+                    reorg_kv = reorg_query_lists[f'Output_Q_{key}']
                     if reorg_kv != reorg_kv or (key != "NoKey" and not reorg_kv.split('=')[1]):
                         continue
                     if ISNUM(reorg_kv): reorg_kv = str(int(reorg_kv))
@@ -268,6 +235,65 @@ class Inferer:
                     seen_reorg.add(reorg_url)
                 poss_infer[url].add(reorg_url)
         return {k: list(v) for k, v in poss_infer.items()}
+    
+    def infer_all(self, examples):
+        """
+        examples: Lists of (url, title), reorg_url. 
+                Should already be inserted into self.pattern_dict
+        
+        returns: Returned successed (url, (meta)), reorg
+        """
+        if len(examples) <= 0:
+            return []
+        patterns = set() # All patterns in example
+        for url, (title), reorg_url in examples:
+            pats = url_utils.gen_path_pattern(url)
+            patterns.update(pats)
+        patterns = list(patterns)
+        broken_urls = self.db.reorg.find({'hostname': self.site})
+        # infer
+        broken_urls = [reorg for reorg in broken_urls if len(set(reorg.keys()).intersection(self.inference_classes)) == 0]
+        # self.db.reorg.update_many({'hostname': self.site, "title": ""}, {"$unset": {"title": ""}})
+        infer_urls = defaultdict(list) # * {Pattern: [(urls, (meta,))]}
+        for toinfer_url in list(broken_urls):
+            for pat in patterns:
+                if not url_utils.pattern_match(pat, toinfer_url['url']):
+                    continue
+                title = toinfer_url.get('title', '')
+                if title == 'N/A': title = ''
+                infer_urls[pat].append((toinfer_url['url'], (title,)))
+        if len(infer_urls) <=0:
+            return []
+        success = []
+        for pat, pat_urls in infer_urls.items():
+            self.tracer.info(f'Pattern: {pat}')
+            # * Do two inferences. One with all patterns, the other with most common output patterns
+            infered_dict_all = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site)
+            common_output = self._most_common_output(self.pattern_dict[pat])# //print(common_output)
+            infered_dict_common = self.inferer.infer(common_output, pat_urls, site=self.site)
+            infered_dict = {url: list(set(infered_dict_all[url] + infered_dict_common[url])) for url in infered_dict_all}
+            # self.tracer.debug(f'infered_dict: {infered_dict}')
+            
+            pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]} # {url: (url, (meta))}
+            fp_urls = set([p[2] for p in self.pattern_dict[pat]])
+            for infer_url, cand in infered_dict.items():
+                # // logger.info(f'Infer url: {infer_url} {cand}')
+                reorg_url, trace = self.inferer.if_reorg(infer_url, cand, fp_urls=fp_urls)
+                if reorg_url is not None:
+                    self.tracer.info(f'Found by infer: {infer_url} --> {reorg_url}')
+                    by_dict = {'method': 'infer'}
+                    by_dict.update(trace)
+                    # Infer
+                    self.db.reorg.update_one({'url': infer_url}, {'$set': {
+                        self.classname: {
+                            'reorg_url': reorg_url, 
+                            'by': by_dict
+                        }
+                    }})
+                    suc = (pat_infer_urls[infer_url][0], pat_infer_urls[infer_url][1], reorg_url)
+                    self.inferer._add_url_to_patterns(*unpack_ex(suc))
+                    success.append(suc)
+        return success
     
     def if_reorg(self, url, reorg_urls, compare=True, fp_urls={}):
         """
