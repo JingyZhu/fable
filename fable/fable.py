@@ -153,8 +153,9 @@ class ReorgPageFinder:
             self.tracer.info(f'Runtime (Search): {end - start}')
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
-            # if has_title is None: # No longer in reorg (already deleted)
-            #     continue
+            if has_title is None:
+                has_title = {'url': url, 'hostname': self.site}
+                self.db.reorg.update_one({'url': url}, {'$set': has_title}, upsert=True)
             if 'title' not in has_title:
                 try:
                     wayback_url = self.memo.wayback_index(url)
@@ -256,8 +257,9 @@ class ReorgPageFinder:
             self.tracer.flush()
             update_dict = {}
             has_title = self.db.reorg.find_one({'url': url})
-            # if has_title is None: # No longer in reorg (already deleted)
-            #     continue
+            if has_title is None:
+                has_title = {'url': url, 'hostname': self.site}
+                self.db.reorg.update_one({'url': url}, {'$set': has_title}, upsert=True)
             # * Get title of the URL (if available)
             if 'title' not in has_title:
                 try:
