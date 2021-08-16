@@ -70,10 +70,11 @@ class ReorgPageFinder:
         for reorg_url in list(site_reorg_urls):
             # reorg_tech = []
             for iclass in self.inference_classes:
+                title = reorg_url['title'] if 'title' in reorg_url and isinstance(reorg_url['title'], str) else ''
                 if len(reorg_url.get(iclass, {})) > 0:
-                    self.inferer.add_url_alias(reorg_url['url'], (reorg_url.get('title', ''),), reorg_url[iclass]['reorg_url'])
+                    self.inferer.add_url_alias(reorg_url['url'], (title,), reorg_url[iclass]['reorg_url'])
                 else:
-                    self.inferer.add_url(reorg_url['url'], (reorg_url.get('title', ''),))
+                    self.inferer.add_url(reorg_url['url'], (title,))
         # * Initialized tracer
         if len(self.tracer.handlers) > 2:
             self.tracer.handlers.pop()
@@ -119,7 +120,8 @@ class ReorgPageFinder:
         found_aliases = self.inferer.infer_new(example)
         any_added = False
         for infer_url, (infer_alias, reason) in found_aliases.items():
-            title = self.db.reorg.find_one({'url': infer_url}).get('title', '')
+            reorg_title = self.db.reorg.find_one({'url': infer_url})
+            title = reorg_title['title'] if 'title' in reorg_title and isinstance(reorg_title['title'], str) else ''
             update_dict = {"reorg_url": infer_alias, "by": {"method": "infer"}}
             update_dict['by'].update(reason)
             self.db.reorg.update_one({'url': infer_url}, {'$set': {self.classname:update_dict}})
@@ -143,7 +145,8 @@ class ReorgPageFinder:
         found_aliases = self.inferer.infer_all()
         any_added = False
         for infer_url, (infer_alias, reason) in found_aliases.items():
-            title = self.db.reorg.find_one({'url': infer_url}).get('title', '')
+            reorg_title = self.db.reorg.find_one({'url': infer_url})
+            title = reorg_title['title'] if 'title' in reorg_title and isinstance(reorg_title['title'], str) else ''
             update_dict = {"reorg_url": infer_alias, "by": {"method": "infer"}}
             update_dict['by'].update(reason)
             self.db.reorg.update_one({'url': infer_url}, {'$set': {self.classname: update_dict}})
@@ -202,6 +205,7 @@ class ReorgPageFinder:
                             'no_snapshot': True
                         }}, upsert=True)
                     except: pass
+                    title = 'N/A'
             else:
                 title = has_title['title']
 

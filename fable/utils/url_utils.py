@@ -61,7 +61,7 @@ class HostExtractor:
             url = filter_wayback(url)
         if 'http://' not in url and 'https://' not in url:
             url = 'http://' + url
-        hostname = urlparse(url).netloc.split(':')[0]
+        hostname = urlsplit(url).netloc.strip('.').split(':')[0]
         return self.psl.privatesuffix(hostname)
 
 class URLPatternDict:
