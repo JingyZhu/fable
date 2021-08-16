@@ -91,7 +91,6 @@ class Inferer:
             meta = list(meta)
             meta[0] = ''
             meta = tuple(meta)
-        print(url)
         self.upd.add_url(url)
         self.url_meta[url] = meta
     
