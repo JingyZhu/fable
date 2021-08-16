@@ -117,6 +117,7 @@ class ReorgPageFinder:
         self.inferer.add_url_alias(url, meta, alias)
         example = (url, meta, alias)
         found_aliases = self.inferer.infer_new(example)
+        any_added = False
         for infer_url, (infer_alias, reason) in found_aliases.items():
             title = self.db.reorg.find_one({'url': infer_url}).get('title', '')
             update_dict = {"reorg_url": infer_alias, "by": {"method": "infer"}}
@@ -134,12 +135,18 @@ class ReorgPageFinder:
 
     def infer(self):
         """TODO: What needs to be logged?"""
+        if self.similar.site is None or self.site not in self.similar.site:
+            self.similar.clear_titles()
+            if not self.similar._init_titles(self.site):
+                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
+                return
         found_aliases = self.inferer.infer_all()
+        any_added = False
         for infer_url, (infer_alias, reason) in found_aliases.items():
             title = self.db.reorg.find_one({'url': infer_url}).get('title', '')
             update_dict = {"reorg_url": infer_alias, "by": {"method": "infer"}}
             update_dict['by'].update(reason)
-            self.db.reorg.update_one({'url': infer_url}, {'$set': {self.classname:update_dict}})
+            self.db.reorg.update_one({'url': infer_url}, {'$set': {self.classname: update_dict}})
             added = self.inferer.add_url_alias(infer_url, (title,), infer_alias)
             any_added = any_added or added
         self.tracer.flush()

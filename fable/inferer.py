@@ -75,7 +75,9 @@ class Inferer:
             self.url_aliases[url].add(reorg)
         
         if meta[0] == 'N/A':
+            meta = list(meta)
             meta[0] = ''
+            meta = tuple(meta)
         self.url_meta[url] = meta
         return True
     
@@ -86,7 +88,9 @@ class Inferer:
         if url in self.url_meta:
             return
         if meta[0] == 'N/A':
+            meta = list(meta)
             meta[0] = ''
+            meta = tuple(meta)
         self.upd.add_url(url)
         self.url_meta[url] = meta
     
@@ -211,6 +215,8 @@ class Inferer:
         for output in outputs:
             for url, meta in urls:
                 idx = url_idx[url]
+                if idx >= output.shape[0]: # ? Weird bug here: idx exceeds sheet
+                    continue
                 reorg_url_lists = output.filter(regex='^Output_\d', axis=1).iloc[idx]
                 reorg_query_lists = output.filter(regex='^Output_Q', axis=1).iloc[idx]
                 num_url_outputs = len(reorg_url_lists)
@@ -226,8 +232,7 @@ class Inferer:
                 reorg_paths = '/'.join(reorg_paths)
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
                 reorg_queries = []
-                for key in reorg_query_lists:
-                    reorg_kv = reorg_query_lists[f'Output_Q_{key}']
+                for key, reorg_kv in reorg_query_lists.items():
                     if reorg_kv != reorg_kv or (key != "NoKey" and not reorg_kv.split('=')[1]):
                         continue
                     if ISNUM(reorg_kv): reorg_kv = str(int(reorg_kv))
@@ -268,14 +273,27 @@ class Inferer:
                 toinfer.append(cell)
         # * Construct examples (intput)
         good_outputs = output_upd.pop_matches()
+        print(good_outputs)
         good_outputs.sort(key=lambda x: len(x['urls']), reverse=True)
+        if len(good_outputs) == 0:
+            return [], []
+        top_good = good_outputs[0]
         # * Pick most common output pattern, and construct sheet
-        for good_output in good_outputs[0]['urls']:
+        for good_output in top_good['urls']:
             input_url = alias_url[good_output][0]
             cell = (input_url, self.url_meta[input_url], good_output)
+            tracer.inference(input_url, self.url_meta[input_url], examples, good_output)
             examples.append(cell)
         return examples, toinfer
     
+    def _filter_multicast(self, possible_infer):
+        """Filter out all inferred alias that appeared in mutliple original URL"""
+        alias_match = defaultdict(set)
+        for infer_url, cands in possible_infer.items():
+            for cand in cands:
+                alias_match[cand].add(infer_url)
+        return {k: [vv for vv in v if len(alias_match[vv]) <= 1] for k, v in possible_infer.items()}
+
     def infer_new(self, example):
         """
         When given a new example, infer all to-find related
@@ -289,16 +307,17 @@ class Inferer:
         found_alias = {}
         for match in matched_urls:
             examples, toinfer = self._construct_input_output(match)
-            print(examples, toinfer)
+            tracer.info(f"constructed sheet {match['pattern']} (len(examples)/len(toinfer)): {len(examples)}/{len(toinfer)}")
             if len(examples) == 0:
-                tracer.debug(f'infer_new: No (enough) inputs can be constructed from this pattern')
+                tracer.debug(f'infer_all: No (enough) inputs can be constructed from this pattern')
                 continue
             possible_infer = self.infer(examples, toinfer)
+            possible_infer = self._filter_multicast(possible_infer)
             for infer_url, cands in possible_infer.items():
                 alias, reason = self._verify_alias(infer_url, cands)
                 if alias:
                     tracer.info(f"Found by infer: {infer_url} --> {alias} reason: {reason['type']}")
-                    found_alias[infer_url] = alias
+                    found_alias[infer_url] = (alias, reason)
         return found_alias
     
     def infer_all(self):
@@ -308,17 +327,21 @@ class Inferer:
         Return: {url: (found_alias, reason)}
         """
         found_alias = {}
-        for match in self.upd.pop_matches(least_match=3):
+        all_matched = self.upd.pop_matches(least_match=3)
+        tracer.info(f'infer_all: number of patterns: {len(all_matched)}')
+        for match in all_matched:
             examples, toinfer = self._construct_input_output(match)
+            tracer.info(f"constructed sheet {match['pattern']} (len(examples)/len(toinfer)): {len(examples)}/{len(toinfer)}")
             if len(examples) == 0:
                 tracer.debug(f'infer_new: No (enough) inputs can be constructed from this pattern')
                 continue
             possible_infer = self.infer(examples, toinfer)
+            possible_infer = self._filter_multicast(possible_infer)
             for infer_url, cands in possible_infer.items():
                 alias, reason = self._verify_alias(infer_url, cands)
                 if alias:
                     tracer.info(f"Found by infer: {infer_url} --> {alias} reason: {reason['type']}")
-                    found_alias[infer_url] = alias
+                    found_alias[infer_url] = (alias, reason)
         return found_alias
        
 
@@ -343,7 +366,8 @@ class Inferer:
             #     continue
             new_reorg = True
             if reorg_url in self.not_workings:
-                tracer.debug('Inferred URL already checked broken')
+                tracer.debug(f'Inferred URL already checked broken: {reorg_url}')
+                continue
             reorg_broken, reason = sic_transit.broken(reorg_url, html=True)
             if reorg_broken == True and not soft_404_content(reason): # * Broken
                 self.not_workings.add(reorg_url)
@@ -353,7 +377,7 @@ class Inferer:
         def return_noncompare():
             """No more information available than whether URLs are working or not"""
             nonlocal working_aliases, new_reorg
-            if len(working_aliases) >= 0:
+            if len(working_aliases) > 0:
                 # TODO: What if len(working_aliases) > 1?
                 return list(working_aliases)[0], {'type': "nocomp_check", "value": 'N/A'}
             elif not new_reorg:
