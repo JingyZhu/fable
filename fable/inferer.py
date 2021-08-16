@@ -28,6 +28,13 @@ def normal_hostname(hostname):
     if hostname[0] == 'www': hostname = hostname[1:]
     return '.'.join(hostname)
 
+def soft_404_content(reason):
+    if not isinstance(reason, list):
+        return False
+    for r in reason:
+        if r != "Similar soft 404 content":
+            return False
+    return True
 
 class Inferer:
     def __init__(self, proxies={}, memo=None, similar=None):
@@ -37,22 +44,22 @@ class Inferer:
         self.similar = similar if similar is not None else tools.Similar()
         self.not_workings = set() # Seen broken inferred URLs
         self.site = None
-        self.seen_reorg_pairs = None
-        self.pattern_dict = None
+        self.url_aliases = defaultdict(set) # * Reorg pairs that have been added
+        self.url_meta = {} # * {URL: Meta}
+        self.upd = url_utils.URLPatternDict(max_diff=2) # * URLPatternDict for clustering input URLs
 
     def init_site(self, site):
         if self.site:
             self.clear_site()
         self.site = site
-        self.seen_reorg_pairs = set()
-        self.pattern_dict = defaultdict(list)
 
     def clear_site(self):
         self.site = None
-        self.seen_reorg_pairs = None
-        self.pattern_dict = None
+        self.url_aliases = defaultdict(set)
+        self.url_meta = {}
+        self.upd = url_utils.URLPatternDict(max_diff=2)
 
-    def _add_url_to_patterns(self, url, meta, reorg):
+    def add_url_alias(self, url, meta, reorg):
         """
         Only applies to same domain currently
         meta: [title]
@@ -60,37 +67,34 @@ class Inferer:
         """
         # if he.extract(reorg) != he.extract(url):
         #     return False
-        patterns = url_utils.gen_path_pattern(url)
-        if (url, reorg) in self.seen_reorg_pairs:
-            return True
+
+        if url in self.url_aliases and reorg in self.url_aliases[url]:
+            return False
         else:
-            self.seen_reorg_pairs.add((url, reorg))
+            self.upd.add_url(url)
+            self.url_aliases[url].add(reorg)
         
-        if len(patterns) <= 0: return False
         if meta[0] == 'N/A':
             meta[0] = ''
-        for pat in patterns:
-            self.pattern_dict[pat].append((url, meta, reorg))
+        self.url_meta[url] = meta
         return True
-
-    def _most_common_output(self, examples):
+    
+    def add_url(self, url, meta):
         """
-        Given a list of examples, return ones with highest # common pattern
-
-        Return: List of examples in highest common pattern
+        Add URLs required to infer
         """
-        output_patterns = defaultdict(list)
-        for ex in examples:
-            reorg_url = ex[2]
-            reorg_pats = url_utils.gen_path_pattern(reorg_url)
-            for reorg_pat in reorg_pats:
-                output_patterns[reorg_pat].append(ex)
-        output_patterns = sorted(output_patterns.items(), key=lambda x:len(x[1]), reverse=True)
-        output_pattern, output_ex = output_patterns[0]
-        self.tracer.debug(f"_most_common_output: {output_pattern} {len(output_ex)} {len(examples)}")
-        return output_ex
+        if url in self.url_meta:
+            return
+        if meta[0] == 'N/A':
+            meta[0] = ''
+        self.upd.add_url(url)
+        self.url_meta[url] = meta
+    
+    def add_urls(self, url_metas):
+        for url, meta in url_metas:
+            self.add_url(url, meta)
 
-    def infer(self, examples, urls, site='NA'):
+    def infer(self, examples, urls):
         """
         Infer reorg urls of urls by learning the transformation rule in urls
         examples: list of ((urls, (other metadata)), reorg_url)
@@ -190,7 +194,7 @@ class Inferer:
         while count < 3:
             try:
                 # socket.setdefaulttimeout(20)
-                outputs = self.proxy.handle(sheets, site + str(time.time()))
+                outputs = self.proxy.handle(sheets, self.site + str(time.time()))
                 # socket.setdefaulttimeout(None)
                 break
             except Exception as e:
@@ -200,7 +204,8 @@ class Inferer:
                 continue
         if count == 3:
             return {}
-        outputs = [pickle.loads(o.data) for o in outputs]
+        outputs = pickle.loads(outputs.data)
+        outputs = [o['csv'] for o in outputs]
         poss_infer = defaultdict(set) # * Any results inferred from 3 sheets
         seen_reorg = set()
         for output in outputs:
@@ -236,124 +241,168 @@ class Inferer:
                 poss_infer[url].add(reorg_url)
         return {k: list(v) for k, v in poss_infer.items()}
     
-    def infer_all(self, examples):
+    def _construct_input_output(self, match):
         """
-        examples: Lists of (url, title), reorg_url. 
-                Should already be inserted into self.pattern_dict
-        
-        returns: Returned successed (url, (meta)), reorg
+        Given a pattern of URLs, output a sheet for RPC inference
+
+        Return: examples: [(url, meta, reorg)], to_infer: [(url, meta)]
         """
-        if len(examples) <= 0:
-            return []
-        patterns = set() # All patterns in example
-        for url, (title), reorg_url in examples:
-            pats = url_utils.gen_path_pattern(url)
-            patterns.update(pats)
-        patterns = list(patterns)
-        broken_urls = self.db.reorg.find({'hostname': self.site})
-        # infer
-        broken_urls = [reorg for reorg in broken_urls if len(set(reorg.keys()).intersection(self.inference_classes)) == 0]
-        # self.db.reorg.update_many({'hostname': self.site, "title": ""}, {"$unset": {"title": ""}})
-        infer_urls = defaultdict(list) # * {Pattern: [(urls, (meta,))]}
-        for toinfer_url in list(broken_urls):
-            for pat in patterns:
-                if not url_utils.pattern_match(pat, toinfer_url['url']):
-                    continue
-                title = toinfer_url.get('title', '')
-                if title == 'N/A': title = ''
-                infer_urls[pat].append((toinfer_url['url'], (title,)))
-        if len(infer_urls) <=0:
-            return []
-        success = []
-        for pat, pat_urls in infer_urls.items():
-            self.tracer.info(f'Pattern: {pat}')
-            # * Do two inferences. One with all patterns, the other with most common output patterns
-            infered_dict_all = self.inferer.infer(self.pattern_dict[pat], pat_urls, site=self.site)
-            common_output = self._most_common_output(self.pattern_dict[pat])# //print(common_output)
-            infered_dict_common = self.inferer.infer(common_output, pat_urls, site=self.site)
-            infered_dict = {url: list(set(infered_dict_all[url] + infered_dict_common[url])) for url in infered_dict_all}
-            # self.tracer.debug(f'infered_dict: {infered_dict}')
-            
-            pat_infer_urls = {iu[0]: iu for iu in infer_urls[pat]} # {url: (url, (meta))}
-            fp_urls = set([p[2] for p in self.pattern_dict[pat]])
-            for infer_url, cand in infered_dict.items():
-                # // logger.info(f'Infer url: {infer_url} {cand}')
-                reorg_url, trace = self.inferer.if_reorg(infer_url, cand, fp_urls=fp_urls)
-                if reorg_url is not None:
-                    self.tracer.info(f'Found by infer: {infer_url} --> {reorg_url}')
-                    by_dict = {'method': 'infer'}
-                    by_dict.update(trace)
-                    # Infer
-                    self.db.reorg.update_one({'url': infer_url}, {'$set': {
-                        self.classname: {
-                            'reorg_url': reorg_url, 
-                            'by': by_dict
-                        }
-                    }})
-                    suc = (pat_infer_urls[infer_url][0], pat_infer_urls[infer_url][1], reorg_url)
-                    self.inferer._add_url_to_patterns(*unpack_ex(suc))
-                    success.append(suc)
-        return success
+        tracer.debug(f"_construct_input_output: {match['pattern']}")
+        matched_urls = match['urls']
+        output_upd = url_utils.URLPatternDict(max_diff=2)
+        examples, toinfer = [], []
+        alias_url = defaultdict(list) # * Reverse index
+        # * Filter out multiple inputs having same output URL
+        for matched_url in matched_urls: 
+            if len(self.url_aliases.get(matched_url, set())) > 0: # * Has alias
+                for matched_alias in self.url_aliases[matched_url]:
+                    alias_url[matched_alias].append(matched_url)
+        for matched_url in matched_urls:
+            if len(self.url_aliases.get(matched_url, set())) > 0: # * Has alias
+                for matched_alias in self.url_aliases[matched_url]:
+                    if len(alias_url[matched_alias]) > 1:
+                        continue
+                    output_upd.add_url(matched_alias)
+            else: # * To infer
+                cell = (matched_url, self.url_meta[matched_url])
+                toinfer.append(cell)
+        # * Construct examples (intput)
+        good_outputs = output_upd.pop_matches()
+        good_outputs.sort(key=lambda x: len(x['urls']), reverse=True)
+        # * Pick most common output pattern, and construct sheet
+        for good_output in good_outputs[0]['urls']:
+            input_url = alias_url[good_output][0]
+            cell = (input_url, self.url_meta[input_url], good_output)
+            examples.append(cell)
+        return examples, toinfer
     
-    def if_reorg(self, url, reorg_urls, compare=True, fp_urls={}):
+    def infer_new(self, example):
+        """
+        When given a new example, infer all to-find related
+        Return: {url: (found_alias, reason)}
+        """
+        url, meta, alias = example
+        self.url_aliases[url].add(alias)
+        self.url_meta[url] = meta
+        self.upd.add_url(url)
+        matched_urls = self.upd.match_url(url)
+        found_alias = {}
+        for match in matched_urls:
+            examples, toinfer = self._construct_input_output(match)
+            print(examples, toinfer)
+            if len(examples) == 0:
+                tracer.debug(f'infer_new: No (enough) inputs can be constructed from this pattern')
+                continue
+            possible_infer = self.infer(examples, toinfer)
+            for infer_url, cands in possible_infer.items():
+                alias, reason = self._verify_alias(infer_url, cands)
+                if alias:
+                    tracer.info(f"Found by infer: {infer_url} --> {alias} reason: {reason['type']}")
+                    found_alias[infer_url] = alias
+        return found_alias
+    
+    def infer_all(self):
+        """
+        Infer on all patterns added to inferer
+        
+        Return: {url: (found_alias, reason)}
+        """
+        found_alias = {}
+        for match in self.upd.pop_matches(least_match=3):
+            examples, toinfer = self._construct_input_output(match)
+            if len(examples) == 0:
+                tracer.debug(f'infer_new: No (enough) inputs can be constructed from this pattern')
+                continue
+            possible_infer = self.infer(examples, toinfer)
+            for infer_url, cands in possible_infer.items():
+                alias, reason = self._verify_alias(infer_url, cands)
+                if alias:
+                    tracer.info(f"Found by infer: {infer_url} --> {alias} reason: {reason['type']}")
+                    found_alias[infer_url] = alias
+        return found_alias
+       
+
+    def _verify_alias(self, url, reorg_urls, compare=True):
         """
         reorg_urls: all urls infered by inferer
         compare: whether to actually compare the content/title
-        fp_urls: Used when compare=False. List of already known urls from output to avoid inference from infering on the same url
         return: Matched URLS, trace(dict)
         """
         reorg_content = {}
         reorg_title = {}
-        if not compare:
-            new_reorg = False
-            for reorg_url in reorg_urls:
-                # Try:
-                if urlsplit(url).path not in ['', '/'] and urlsplit(reorg_url).path in ['', '/']:
-                    continue
-                # End of Try
-                # match = [url_utils.url_match(reorg_url, fp_url) for fp_url in fp_urls]
-                # if True in match:
-                #     continue
-                new_reorg = True
-                if reorg_url in self.not_workings:
-                    tracer.debug('Inferred URL already checked broken')
-                rval, _ = sic_transit.broken(reorg_url)
-                if rval == False:
-                    return reorg_url, {'type': "nocomp_check", "value": 'N/A'}
-                else:
-                    self.not_workings.add(reorg_url)
-            if not new_reorg:
+        working_aliases = set()
+        # * 1. Check breakage of inferred candidates
+        new_reorg = False
+        for reorg_url in reorg_urls:
+            # Try:
+            if urlsplit(url).path not in ['', '/'] and urlsplit(reorg_url).path in ['', '/']:
+                continue
+            # End of Try
+            # match = [url_utils.url_match(reorg_url, fp_url) for fp_url in fp_urls]
+            # if True in match:
+            #     continue
+            new_reorg = True
+            if reorg_url in self.not_workings:
+                tracer.debug('Inferred URL already checked broken')
+            reorg_broken, reason = sic_transit.broken(reorg_url, html=True)
+            if reorg_broken == True and not soft_404_content(reason): # * Broken
+                self.not_workings.add(reorg_url)
+            else:
+                working_aliases.add(reorg_url)
+
+        def return_noncompare():
+            """No more information available than whether URLs are working or not"""
+            nonlocal working_aliases, new_reorg
+            if len(working_aliases) >= 0:
+                # TODO: What if len(working_aliases) > 1?
+                return list(working_aliases)[0], {'type': "nocomp_check", "value": 'N/A'}
+            elif not new_reorg:
                 return None, {'reason': 'No new reorg actually inferred'}
             else:
                 return None, {'reason': 'Inferred urls broken'}
-        else:
-            for reorg_url in reorg_urls:
-                if reorg_url in self.not_workings:
-                    tracer.debug('Inferred URL already checked broken')
-                    continue
-                reorg_html = self.memo.crawl(reorg_url)
-                if reorg_html is None:
-                    self.not_workings.add(reorg_url)
-                    continue
-                reorg_content[reorg_url] = self.memo.extract_content(reorg_html)
-                reorg_title[reorg_url] = self.memo.extract_title(reorg_html)
-            if len(reorg_content) + len(reorg_title) == 0:
-                value = self.if_reorg(url, reorg_urls, compare=False, fp_urls=fp_urls)
-                return value
-            try:
-                wayback_url = self.memo.wayback_index(url)
-                html = self.memo.crawl(wayback_url)
-                if html is None: return None, {"reason": "url fail to load on wayback"}
-                content = self.memo.extract_content(html)
-                title = self.memo.extract_title(html)
-            except:
-                # * No wayback archive of broken page, do no compare check
-                value = self.if_reorg(url, reorg_urls, compare=False, fp_urls=fp_urls)
-                return value
-                # return None, {"reason": "Fail to get wayback url, html or content/title"}
+
+        if not compare:
+            return return_noncompare()
+        # * Compare version
+        # * 2. Get URL's title & Content
+        for reorg_url in reorg_urls: # * Check whether reorg_url is broken
+            if reorg_url in self.not_workings:
+                tracer.debug('Inferred URL already checked broken')
+                continue
+            reorg_html = self.memo.crawl(reorg_url)
+            if reorg_html is None:
+                continue
+            reorg_content[reorg_url] = self.memo.extract_content(reorg_html)
+            reorg_title[reorg_url] = self.memo.extract_title(reorg_html)
+        if len(reorg_content) + len(reorg_title) == 0: # * No available content or title
+            return return_noncompare()
+        wayback_available = False
+        try:
+            wayback_url = self.memo.wayback_index(url)
+            html = self.memo.crawl(wayback_url)
+            if html is None: return None, {"reason": "url fail to load on wayback"}
+            content = self.memo.extract_content(html)
+            title = self.memo.extract_title(html)
+            wayback_available = True
+        except:
+            pass
+        # * 3.1 Match title/content
+        if wayback_available:
             similars, fromm = self.similar.similar(wayback_url, title, content, reorg_title, reorg_content)
             if len(similars) > 0:
                 top_similar = similars[0]
                 return top_similar[0], {'type': fromm, 'value': top_similar[1]}
             else:
-                return None, {'reason': "no similar pages"}
+                return return_noncompare()
+        # * 3.2 Match tokens
+        else: # * Compare token instead
+            alias_tokens = {}
+            available_tokens = tools.get_unique_token(url)
+            for alias in working_aliases:
+                alias_tokens[alias] = tools.tokenize_url(alias)
+            token_simi = self.similar.token_similar(url, available_tokens, alias_tokens)[:2]
+            if self.similar._separable(token_simi):
+                top_similar = token_simi[0]
+                return top_similar[0], {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
+            else:
+                return return_noncompare()

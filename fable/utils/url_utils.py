@@ -141,7 +141,7 @@ class URLPatternDict:
         for pat in patterns:
             self.pattern_dict[pat].append(url)
     
-    def match_url(self, url):
+    def match_url(self, url, least_match=2):
         """
         Note: A URL may appear in multiple objs due to different match reasons
         Return: [{
@@ -155,6 +155,8 @@ class URLPatternDict:
         for pat in patterns:
             if pat in self.pattern_dict:
                 matched_urls = self.pattern_dict[pat]
+                if len(matched_urls) < least_match:
+                    continue
                 if tuple(sorted(matched_urls)) in seen_match:
                     continue
                 seen_match.add(tuple(sorted(matched_urls)))
@@ -163,6 +165,9 @@ class URLPatternDict:
                     "pattern": pat
                 })
         return matched
+    
+    def match_pattern(self, pattern):
+        return self.pattern_dict.get(pattern)
 
     def pop_matches(self, least_match=2):
         """Pop all matched URL pattern in the dict"""

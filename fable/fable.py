@@ -16,10 +16,6 @@ db = config.DB
 he = url_utils.HostExtractor()
 
 
-def unpack_ex(ex):
-    url, meta, reorg = ex
-    return url, meta, reorg
-
 class ReorgPageFinder:
     def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, tracer=None,\
                 classname='fable', logname=None, loglevel=logging.INFO):
@@ -55,15 +51,30 @@ class ReorgPageFinder:
 
     def init_site(self, site, urls=[]):
         self.site = site
+        # * Add new URLs to reorg first 
+        already_in = list(self.db.reorg.find({'hostname': site}))
+        already_in_set = set([u['url'] for u in already_in])
+        objs = []
+        for url in urls:
+            if url in already_in_set:
+                continue
+            objs.append({'url': url, 'hostname': site})
+        try:
+            self.db.reorg.insert_many(objs, ordered=False)
+        except: pass
+        # * Initialize Inferer
         self.inferer.init_site(site)
         site_reorg_urls = self.db.reorg.find({'hostname': site})
         # ? Whether to infer on all classes, all only one? 
         # ? reorg_urls = [reorg for reorg in reorg_urls if len(set(reorg.keys()).intersection(reorg_keys)) > 0]
         for reorg_url in list(site_reorg_urls):
-            reorg_tech = []
+            # reorg_tech = []
             for iclass in self.inference_classes:
                 if len(reorg_url.get(iclass, {})) > 0:
-                    self.inferer._add_url_to_patterns(reorg_url['url'], (reorg_url.get('title', ''),), reorg_url[iclass]['reorg_url'])
+                    self.inferer.add_url_alias(reorg_url['url'], (reorg_url.get('title', ''),), reorg_url[iclass]['reorg_url'])
+                else:
+                    self.inferer.add_url(reorg_url['url'], (reorg_url.get('title', ''),))
+        # * Initialized tracer
         if len(self.tracer.handlers) > 2:
             self.tracer.handlers.pop()
         formatter = logging.Formatter('%(levelname)s %(asctime)s %(message)s')
@@ -97,26 +108,40 @@ class ReorgPageFinder:
         simi = self.similar.tfidf.similar(content, reorg_content)
         return simi >= 0.8
 
+    def infer_new(self, url, meta, alias):
+        """
+        Called whenever search/discover found new aliases
+        Return: [URLs found aliases through inference]
+        """
+        new_finds = []
+        self.inferer.add_url_alias(url, meta, alias)
+        example = (url, meta, alias)
+        found_aliases = self.inferer.infer_new(example)
+        for infer_url, (infer_alias, reason) in found_aliases.items():
+            title = self.db.reorg.find_one({'url': infer_url}).get('title', '')
+            update_dict = {"reorg_url": infer_alias, "by": {"method": "infer"}}
+            update_dict['by'].update(reason)
+            self.db.reorg.update_one({'url': infer_url}, {'$set': {self.classname:update_dict}})
+            added = self.inferer.add_url_alias(infer_url, (title,), infer_alias)
+            any_added = any_added or added
+            new_finds.append(infer_url)
+        # if not any_added: 
+        #     break
+        # examples = success
+        # found_aliases = self.inferer.infer_new(examples)
+        return new_finds
+
+
     def infer(self):
-        if self.similar.site is None or self.site not in self.similar.site:
-            self.similar.clear_titles()
-            if not self.similar._init_titles(self.site):
-                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
-                return
-        urls = {}
-        success = [None]
-        for pat, examples in self.pattern_dict.items():
-            for example in examples:
-                url, _, _ = example
-                urls[url] = example
-        examples = list(urls.values())
-        success = list(urls.values())
-        while(len(success)) > 0:
-            success = self.inferer.infer_all(examples)
-            for suc in success:
-                self.inferer._add_url_to_patterns(*unpack_ex(suc))
-            examples = success
-            success = self.inferer.infer_all(examples)
+        """TODO: What needs to be logged?"""
+        found_aliases = self.inferer.infer_all()
+        for infer_url, (infer_alias, reason) in found_aliases.items():
+            title = self.db.reorg.find_one({'url': infer_url}).get('title', '')
+            update_dict = {"reorg_url": infer_alias, "by": {"method": "infer"}}
+            update_dict['by'].update(reason)
+            self.db.reorg.update_one({'url': infer_url}, {'$set': {self.classname:update_dict}})
+            added = self.inferer.add_url_alias(infer_url, (title,), infer_alias)
+            any_added = any_added or added
         self.tracer.flush()
 
 
@@ -190,21 +215,8 @@ class ReorgPageFinder:
 
             # * Inference
             if infer and searched is not None:
-                example = (url, (title,), searched)
-                added = self.inferer._add_url_to_patterns(*unpack_ex(example))
-                if not added: 
-                    continue
-                success = self.inferer.infer_all([example])
-                while len(success) > 0:
-                    added = False
-                    for suc in success:
-                        broken_urls.discard(unpack_ex(suc)[0])
-                        a = self.inferer._add_url_to_patterns(*unpack_ex(suc))
-                        added = added or a
-                    if not added: 
-                        break
-                    examples = success
-                    success = self.inferer.infer_all(examples)
+                new_finds = self.infer_new(url, (title,), searched)
+                broken_urls.difference_update(new_finds)
     
     def discover(self, required_urls, infer=False,):
         """
@@ -301,18 +313,6 @@ class ReorgPageFinder:
             
             # * Inference
             if infer and discovered is not None:
-                example = (url, (title,), discovered)
-                added = self.inferer._add_url_to_patterns(*unpack_ex(example))
-                if not added:
-                    continue
-                success = self.inferer.infer_all([example])
-                while len(success) > 0:
-                    added = False
-                    for suc in success:
-                        broken_urls.discard(unpack_ex(suc)[0])
-                        a = self.inferer._add_url_to_patterns(*unpack_ex(suc))
-                        added = added or a
-                    if not added:
-                        break
-                    examples = success
-                    success = self.inferer.infer_all(examples)
+                new_finds = self.infer_new(url, (title,), discovered)
+                broken_urls.difference_update(new_finds)
+    

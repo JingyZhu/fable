@@ -30,46 +30,6 @@ class Searcher:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
 
-    def _get_unique_token(self, url):
-        """Given a URL, return which tokens should be put into search engine"""
-        us = urlsplit(url)
-        path = us.path
-        if path == '': path = '/'
-        if path[-1] == '/' and path != '/': path = path[:-1]
-        path = path.split('/')
-        available_tokens = []
-        params = {
-            'output': 'json',
-            "limit": 10,
-            'collapse': 'urlkey',
-            'filter': ['statuscode:200', 'mimetype:text/html'],
-        }
-        for i in range(len(path)-1, 0, -1):
-            sub_path = '/'.join(path[:i+1])
-            sub_us = us._replace(path=sub_path + '*', query='', fragment='')
-            sub_url = urlunsplit(sub_us)
-            wayback_index, _ = crawl.wayback_index(sub_url, param_dict=params)
-            # print(sub_url)
-            tracer.debug(f'_get_unique_token: {sub_url}, {len(wayback_index)}')
-            if len(wayback_index) <= 1:
-                available_tokens.append(path[i])
-            else:
-                break
-        return available_tokens
-    
-    def _tokenize_url(self, url):
-        path = urlsplit(url).path
-        if path == '': path = '/'
-        if path[-1] == '/' and path != '/': path = path[:-1]
-        path = path.split('/')
-        tokens = []
-        for p in path:
-            token = os.path.splitext(p)[0]
-            token = regex.split("[^a-zA-Z1-9]", token)
-            token = ' '.join(token)
-            tokens.append(token)
-        return tokens
-
     def search(self, url, search_engine='bing'):
         global he
         if search_engine not in ['google', 'bing']:
@@ -147,7 +107,7 @@ class Searcher:
                         return similar
         
         # * Search with token
-        available_tokens = self._get_unique_token(url)
+        available_tokens = tools.get_unique_token(url)
         tracer.token(url, available_tokens)
         search_results = []
         for i, token in enumerate(available_tokens):
@@ -164,7 +124,7 @@ class Searcher:
                 tracer.search_results(url, 'google', f"token_{i}", search_results)
             search_tokens = {}
             for sr in search_results:
-                tokens = self._tokenize_url(sr)
+                tokens = tools.tokenize_url(sr)
                 search_tokens[sr] = tokens
             token_simi = self.similar.token_similar(url, token, search_tokens)[:2]
             if self.similar._separable(token_simi):

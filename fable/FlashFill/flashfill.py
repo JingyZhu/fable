@@ -36,7 +36,7 @@ class FlashFillHandler:
         xlsx_path, output_cols = self.csv_xlsx(csvs, sheet_names, identifier)
         self.fill(xlsx_path, output_cols)
         outputs = self.xlsx_csv(xlsx_path)
-        return [pickle.dumps(o) for o in outputs] 
+        return pickle.dumps(outputs)
         
     def fill(self, xlsx_path, output_cols, visible=False):
         """

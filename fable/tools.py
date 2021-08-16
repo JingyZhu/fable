@@ -13,7 +13,7 @@ import random
 import brotli
 from dateutil import parser as dparser
 import datetime
-from urllib.parse import urlsplit, urlparse
+from urllib.parse import urlsplit, urlunsplit
 import bisect
 from bs4 import BeautifulSoup
 
@@ -1029,3 +1029,44 @@ def is_canonical(url1, url2, resp1=None, resp2=None, use_resp=False):
     if text_utils.k_shingling(text_norm(content1), text_norm(content2)) >= 0.95:
         return True
     return False
+
+def tokenize_url(url):
+        path = urlsplit(url).path
+        if path == '': path = '/'
+        if path[-1] == '/' and path != '/': path = path[:-1]
+        path = path.split('/')
+        tokens = []
+        for p in path:
+            token = os.path.splitext(p)[0]
+            token = regex.split("[^a-zA-Z1-9]", token)
+            token = ' '.join(token)
+            tokens.append(token)
+        return tokens
+
+def get_unique_token(url):
+        """Given a URL, return which tokens should be put into search engine"""
+        us = urlsplit(url)
+        path = us.path
+        if path == '': path = '/'
+        if path[-1] == '/' and path != '/': path = path[:-1]
+        path = path.split('/')
+        available_tokens = []
+        params = {
+            'output': 'json',
+            "limit": 10,
+            'collapse': 'urlkey',
+            'filter': ['statuscode:200', 'mimetype:text/html'],
+        }
+        for i in range(len(path)-1, 0, -1):
+            sub_path = '/'.join(path[:i+1])
+            sub_us = us._replace(path=sub_path + '*', query='', fragment='')
+            sub_url = urlunsplit(sub_us)
+            wayback_index, _ = crawl.wayback_index(sub_url, param_dict=params)
+            # print(sub_url)
+            tracer.debug(f'_get_unique_token: {sub_url}, {len(wayback_index)}')
+            if len(wayback_index) <= 1:
+                available_tokens.append(path[i])
+            else:
+                break
+        return available_tokens
+    
