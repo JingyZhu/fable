@@ -294,7 +294,7 @@ class Inferer:
                 alias_match[cand].add(infer_url)
         return {k: [vv for vv in v if len(alias_match[vv]) <= 1] for k, v in possible_infer.items()}
 
-    def infer_new(self, example):
+    def infer_on_example(self, example):
         """
         When given a new example, infer all to-find related
         Return: {url: (found_alias, reason)}
@@ -320,6 +320,33 @@ class Inferer:
                     found_alias[infer_url] = (alias, reason)
         return found_alias
     
+    def infer_url(self, urlmeta):
+        """
+        Note: toinfer URL should not be added as alias
+        urlmeta: (url, meta) to infer
+        Return: {url: (found_alias, reason)} with only target toinfer in the dict
+        """
+        url, meta = urlmeta
+        self.add_url(url, meta)
+        matched_urls = self.upd.match_url(url)
+        found_alias = {}
+        for match in matched_urls:
+            examples, toinfer = self._construct_input_output(match)
+            tracer.info(f"constructed sheet {match['pattern']} (len(examples)/len(toinfer)): {len(examples)}/{len(toinfer)}")
+            if len(examples) == 0:
+                tracer.debug(f'infer_all: No (enough) inputs can be constructed from this pattern')
+                continue
+            possible_infer = self.infer(examples, toinfer)
+            possible_infer = self._filter_multicast(possible_infer)
+            if len(possible_infer.get(url, [])) <= 0:
+                continue
+            alias, reason = self._verify_alias(url, possible_infer[url])
+            if alias:
+                tracer.info(f"Found by infer: {url} --> {alias} reason: {reason['type']}")
+                found_alias[url] = (alias, reason)
+                return found_alias
+        return found_alias
+
     def infer_all(self):
         """
         Infer on all patterns added to inferer

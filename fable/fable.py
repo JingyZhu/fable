@@ -91,25 +91,7 @@ class ReorgPageFinder:
         self.seen_reorg_pairs = None
         self.tracer.handlers.pop()
 
-    def _fp_check(self, url, reorg_url):
-        """
-        Determine False Positive
-
-        returns: Boolean on if false positive
-        """
-        if url_utils.url_match(url, reorg_url):
-            return True
-        html, url = self.memo.crawl(url, final_url=True)
-        reorg_html, reorg_url = self.memo.crawl(reorg_url, final_url=True)
-        if html is None or reorg_html is None:
-            return False
-        content = self.memo.extract_content(html)
-        reorg_content = self.memo.extract_content(reorg_html)
-        self.similar.tfidf._clear_workingset()
-        simi = self.similar.tfidf.similar(content, reorg_content)
-        return simi >= 0.8
-
-    def infer_new(self, url, meta, alias):
+    def infer_on_example(self, url, meta, alias):
         """
         Called whenever search/discover found new aliases
         Return: [URLs found aliases through inference]
@@ -117,7 +99,7 @@ class ReorgPageFinder:
         new_finds = []
         self.inferer.add_url_alias(url, meta, alias)
         example = (url, meta, alias)
-        found_aliases = self.inferer.infer_new(example)
+        found_aliases = self.inferer.infer_on_example(example)
         any_added = False
         for infer_url, (infer_alias, reason) in found_aliases.items():
             reorg_title = self.db.reorg.find_one({'url': infer_url})
@@ -133,7 +115,6 @@ class ReorgPageFinder:
         # examples = success
         # found_aliases = self.inferer.infer_new(examples)
         return new_finds
-
 
     def infer(self):
         """TODO: What needs to be logged?"""
@@ -153,7 +134,6 @@ class ReorgPageFinder:
             added = self.inferer.add_url_alias(infer_url, (title,), infer_alias)
             any_added = any_added or added
         self.tracer.flush()
-
 
     def search(self, required_urls, infer=False, title=True):
         """
@@ -326,4 +306,3 @@ class ReorgPageFinder:
             if infer and discovered is not None:
                 new_finds = self.infer_new(url, (title,), discovered)
                 broken_urls.difference_update(new_finds)
-    
