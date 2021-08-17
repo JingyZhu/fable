@@ -233,7 +233,7 @@ class Inferer:
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
                 reorg_queries = []
                 for key, reorg_kv in reorg_query_lists.items():
-                    if reorg_kv != reorg_kv or (key != "NoKey" and not reorg_kv.split('=')[1]):
+                    if reorg_kv != reorg_kv or (key != "Output_Q_NoKey" and not reorg_kv.split('=')[1]):
                         continue
                     if ISNUM(reorg_kv): reorg_kv = str(int(reorg_kv))
                     reorg_queries.append(reorg_kv)
