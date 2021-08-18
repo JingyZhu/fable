@@ -194,7 +194,7 @@ class StrawmanFinder:
             has_title = self.db.reorg.find_one({'url': url})
             # if has_title is None: # No longer in reorg (already deleted)
             #     continue
-            if 'title' not in has_title or has_title['title'] == 'N/A':
+            if 'title' not in has_title:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
@@ -208,7 +208,7 @@ class StrawmanFinder:
                             'no_snapshot': True
                         }}, upsert=True)
                     except: pass
-                    continue
+                    title = 'N/A'
             else:
                 title = has_title['title']
 
