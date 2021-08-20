@@ -164,6 +164,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     }
     params.update(param_dict)
     count = 0
+    r = None
     while True:
         try:
             r = requests.get('http://web.archive.org/cdx/search/cdx', headers=requests_header, params=params, proxies=proxies, timeout=30)
@@ -182,7 +183,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
                     time.sleep(20)
                     continue 
                 return [], str(e)
-            if not wait or r.status_code not in [429, 445, 503]:
+            if not r or not wait or r.status_code not in [429, 445, 503]:
                 return [], str(e)
             time.sleep(10)
     if total_link:

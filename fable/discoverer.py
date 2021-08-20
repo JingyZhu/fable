@@ -315,7 +315,7 @@ class Discoverer:
         elif us.netloc.split(':')[0] != site:
             hs = us.netloc.split(':')[0].split('.')
             hs[0] = '*'
-            q_url = urlunsplit(us._replace(scheme='', path='', query=''))
+            q_url = urlunsplit(us._replace(netloc='.'.join(hs), path='', query=''))
             wayback_urls, _ = crawl.wayback_index(q_url, param_dict=param_dict)
         else:
             # TODO Think about this
