@@ -175,16 +175,12 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             time.sleep(20)
             continue
         except Exception as e:
-            try:
-                logger.warn(f"Wayback index: {str(e)}")
-            except Exception as e:
-                count += 1
-                if count < 3:
-                    time.sleep(20)
-                    continue 
+            logger.warn(f"Wayback index: {str(e)}")
+            if not r or not wait or r.status_code not in [429, 445, 501, 503]:
                 return [], str(e)
-            if not r or not wait or r.status_code not in [429, 445, 503]:
+            if count > 3:
                 return [], str(e)
+            count += 1
             time.sleep(10)
     if total_link:
         r = [(i[1], f"{wayback_home}{i[1]}/{i[2]}", i[4]) for i in r[1:]]

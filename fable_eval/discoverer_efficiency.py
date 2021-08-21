@@ -199,37 +199,42 @@ class Discoverer:
         # * To mach a link, require to pass 4 stage: 
         # * linked, (original link) dropped, (new link) matched, (new URL) work
         if wayback_linked[0]: # * 1.1 linked
-            all_wayback_src = self.memo.wayback_index(src, policy="all")
-            backlink_sigs = self._first_not_linked(dst, wayback_src, all_wayback_src)
-            if backlink_sigs: # * 2.1 dropped
-                max_match = self._find_same_link(wayback_linked[1], backlink_sigs)
-                if max_match[0][2] >= self.threshold and max_match[1][2] < self.threshold: # * 3.1 matched
-                    top_match = max_match[0]
-                    if not sic_transit.broken(max_match[0][0], html=True)[0]: # * 4.1 work
-                        fromm = "anchor" if isinstance(top_match[1], str) else "sig"
-                        r_dict.update({
-                            "status": "found",
-                            "url(s)": max_match[0][0],
-                            "reason": (fromm, top_match[1], 'matched on backlinks')
-                        })
-                    else: # * 4.0 Not working
-                        r_dict.update({
-                            "status":  "Broken",
-                            "url(s)": max_match[0][0],
-                            "reason": "Matched new link's URL still broken"
-                        })
-                else: # * 3.0 Not matched, link same page
-                    r_dict.update({
-                        "status": "NoMatch",
-                        "links": wayback_linked[1],
-                        "reason": "Linked, no matched link"
-                    })
-            else: # * 2.0 Not dropped
-                r_dict.update({
-                    "status": "NoDrop",
-                    "links": wayback_linked[1],
-                    "reason": "Linked, never (detected) drop the old link"
-                })
+            r_dict.update({
+                "status": "Linked",
+                "url(s)": wayback_src,
+                "reason": "Linked, Only check for backlink"
+            })
+            # all_wayback_src = self.memo.wayback_index(src, policy="all")
+            # backlink_sigs = self._first_not_linked(dst, wayback_src, all_wayback_src)
+            # if backlink_sigs: # * 2.1 dropped
+            #     max_match = self._find_same_link(wayback_linked[1], backlink_sigs)
+            #     if max_match[0][2] >= self.threshold and max_match[1][2] < self.threshold: # * 3.1 matched
+            #         top_match = max_match[0]
+            #         if not sic_transit.broken(max_match[0][0], html=True)[0]: # * 4.1 work
+            #             fromm = "anchor" if isinstance(top_match[1], str) else "sig"
+            #             r_dict.update({
+            #                 "status": "found",
+            #                 "url(s)": max_match[0][0],
+            #                 "reason": (fromm, top_match[1], 'matched on backlinks')
+            #             })
+            #         else: # * 4.0 Not working
+            #             r_dict.update({
+            #                 "status":  "Broken",
+            #                 "url(s)": max_match[0][0],
+            #                 "reason": "Matched new link's URL still broken"
+            #             })
+            #     else: # * 3.0 Not matched, link same page
+            #         r_dict.update({
+            #             "status": "NoMatch",
+            #             "links": wayback_linked[1],
+            #             "reason": "Linked, no matched link"
+            #         })
+            # else: # * 2.0 Not dropped
+            #     r_dict.update({
+            #         "status": "NoDrop",
+            #         "links": wayback_linked[1],
+            #         "reason": "Linked, never (detected) drop the old link"
+            #     })
         else: # * 1.0 Not linked to dst, need to look futher
             r_dict.update({
                 "status": "loop",
@@ -273,11 +278,16 @@ class Discoverer:
 
             status, reason = r_dict['status'], r_dict['reason']
             tracer.discover(url, src, r_dict.get("wayback_src"), status, reason, r_dict.get("links"))
-            if status == 'found':
-                return r_dict['url(s)'], {'suffice': True, 'type': reason[0], 'value': reason[1]}
+            if status == 'linked':
+                return r_dict['url(s)'], {}
             elif status == 'loop':
                 out_sigs = r_dict['url(s)']
-            elif status in ['notfound', 'reorg']:
-                reason = r_dict['reason']
+            
+            # if status == 'found':
+            #     return r_dict['url(s)'], {'suffice': True, 'type': reason[0], 'value': reason[1]}
+            # elif status == 'loop':
+            #     out_sigs = r_dict['url(s)']
+            # elif status in ['notfound', 'reorg']:
+            #     reason = r_dict['reason']
 
         return None, {'suffice': 'N/A'}
