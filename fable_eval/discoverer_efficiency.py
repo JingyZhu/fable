@@ -278,7 +278,7 @@ class Discoverer:
 
             status, reason = r_dict['status'], r_dict['reason']
             tracer.discover(url, src, r_dict.get("wayback_src"), status, reason, r_dict.get("links"))
-            if status == 'linked':
+            if status == 'Linked':
                 return r_dict['url(s)'], {}
             elif status == 'loop':
                 out_sigs = r_dict['url(s)']
