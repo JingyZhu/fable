@@ -101,7 +101,7 @@ class tracer(logging.Logger):
         self.update_data[url][f"search_{typee}"][engine] = results
         self.info(f'Search results ({typee} {engine}): \n {results}', level=3)
     
-    def discover(self, url, backlink, backlink_wayback, status, reason, link=None):
+    def discover(self, url, backlink, backlink_wayback, status, reason, misc=None, link=None):
         """
         reason: orig_reason (found|notfound|loop)
         """
@@ -113,6 +113,8 @@ class tracer(logging.Logger):
             "reason": reason
         }
         if link: record.update({'link': link})
+        # TODO: mis is just the temporary var, need to be formalized
+        if misc: record.update({'misc': misc})
         self.update_data[url]['discover'].append(record)
         self.info(f"Backlink: {status} {reason} {link if link else ''}", level=3)
     
