@@ -135,6 +135,69 @@ class ReorgPageFinder:
             any_added = any_added or added
         self.tracer.flush()
 
+    def hist_redir(self, required_urls):
+        """
+        Required urls: URLs that will be run on
+        """
+        if self.similar.site is None or self.site not in self.similar.site:
+            self.similar.clear_titles()
+            if not self.similar._init_titles(self.site):
+                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
+                return
+
+        reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
+        reorg_checked = set([u['url'] for u in reorg_checked])
+        broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
+
+        self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
+        i = 0
+        while len(broken_urls) > 0:
+            url = broken_urls.pop()
+            i += 1
+            self.tracer.info(f'URL: {i} {url}')
+            method = 'wayback_alias'
+            self.tracer.info("Start wayback alias")
+            start = time.time()
+            discovered = self.discoverer.wayback_alias(url, require_neighbor=True, homepage_redir=False)
+            if discovered:
+                trace = {'type': 'wayback_alias', 'value': None}
+
+            end = time.time()
+            self.tracer.info(f'Runtime (historical redirection): {end - start}')
+            self.tracer.flush()
+            update_dict = {}
+            has_title = self.db.reorg.find_one({'url': url})
+            if has_title is None:
+                has_title = {'url': url, 'hostname': self.site}
+                self.db.reorg.update_one({'url': url}, {'$set': has_title}, upsert=True)
+            # * Get title of the URL (if available)
+            if 'title' not in has_title:
+                try:
+                    wayback_url = self.memo.wayback_index(url)
+                    html = self.memo.crawl(wayback_url)
+                    title = self.memo.extract_title(html, version='domdistiller')
+                except: # No snapthost on wayback
+                    self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
+                    title = 'N/A'
+            else:
+                title = has_title['title']
+
+            if discovered is not None:
+                self.tracer.info(f'Found reorg: {discovered}')
+                update_dict.update({'reorg_url': discovered, 'by':{
+                    "method": method
+                }})
+                by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath']}
+                update_dict['by'].update(by_discover)
+
+            # * Update dict correspondingly
+            try:
+                self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict, 'title': title}})
+            except Exception as e:
+                self.tracer.warn(f'Discover update DB: {str(e)}')
+
+
+
     def search(self, required_urls, infer=False, title=True):
         """
         infer: Infer every time when a new alias is found
@@ -235,7 +298,7 @@ class ReorgPageFinder:
                 self.tracer.info("Start wayback alias")
                 start = time.time()
                 # ! TEMP
-                # discovered = self.discoverer.wayback_alias(url)
+                # discovered = self.discoverer.wayback_alias(url, require_neighbor=True, homepage_redir=False)
                 # if discovered:
                 #     trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
                 #     break
