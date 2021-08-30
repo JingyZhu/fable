@@ -897,6 +897,7 @@ class Similar:
                 simi = self.shorttext_match(tgt_uniq_title, uniq_c)
             else:
                 simi = self.tfidf.similar(tgt_uniq_title, uniq_c)
+            tracer.debug(f'simi(title): {simi} {url}')
             simi_cand.append((url, simi))
         
         while len(simi_cand) < 2:
@@ -915,7 +916,7 @@ class Similar:
         simi_cand = []
         for url, c in candidates_contents.items():
             simi = self.tfidf.similar(target_content, c)
-            tracer.debug(f'simi: {simi}')
+            tracer.debug(f'simi(content): {simi} {url}')
             simi_cand.append((url, simi))
         
         while len(simi_cand) < 2:
@@ -1050,6 +1051,7 @@ def get_unique_token(url):
         if path == '': path = '/'
         if path[-1] == '/' and path != '/': path = path[:-1]
         path = path.split('/')
+        if 'index' in path[-1]: path = path[:-1]
         available_tokens = []
         params = {
             'output': 'json',
@@ -1057,12 +1059,25 @@ def get_unique_token(url):
             'collapse': 'urlkey',
             'filter': ['statuscode:200', 'mimetype:text/html'],
         }
+        def _collapse_index(li):
+            urls = set()
+            for url in li:
+                us = urlsplit(url)
+                path = us.path
+                if path == '': path = '/'
+                if path[-1] == '/' and path != '/': path = path[:-1]
+                path = us.path.split('/')
+                if 'index' in path[-1]: path = path[:-1]
+                url = urlunsplit(us._replace(path='/'.join(path)))
+                urls.add(url)
+            return urls
         for i in range(len(path)-1, 0, -1):
             sub_path = '/'.join(path[:i+1])
             sub_us = us._replace(path=sub_path + '*', query='', fragment='')
             sub_url = urlunsplit(sub_us)
             wayback_index, _ = crawl.wayback_index(sub_url, param_dict=params)
             # print(sub_url)
+            wayback_index = _collapse_index([w[1] for w in wayback_index])
             tracer.debug(f'_get_unique_token: {sub_url}, {len(wayback_index)}')
             if len(wayback_index) <= 1:
                 available_tokens.append(path[i])
