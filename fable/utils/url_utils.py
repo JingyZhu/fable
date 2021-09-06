@@ -269,7 +269,8 @@ def url_match(url1, url2, wayback=True, case=False):
     return len(qsl1) > 0 and qsl1 == qsl2
 
 
-def url_norm(url, wayback=False, case=False, trim_www=False, trim_slash=False, sort_query=True):
+def url_norm(url, wayback=False, case=False, ignore_scheme=False, trim_www=False,\
+                trim_slash=False, sort_query=True):
     """
     Perform URL normalization
     common: Eliminate port number, fragment
@@ -282,6 +283,8 @@ def url_norm(url, wayback=False, case=False, trim_www=False, trim_slash=False, s
     us = urlsplit(url)
     netloc, path, query = us.netloc, us.path, us.query
     netloc = netloc.split(':')[0]
+    if ignore_scheme:
+        us = us._replace(scheme='http')
     if trim_www and netloc.split('.')[0] == 'www':
         netloc = '.'.join(netloc.split('.')[1:])
     us = us._replace(netloc=netloc, fragment='')
