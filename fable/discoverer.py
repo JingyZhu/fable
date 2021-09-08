@@ -554,7 +554,7 @@ class Discoverer:
             param_dict = {
                 'from': str(ts_year) + '0101',
                 'to': str(ts_year) + '1231',
-                "filter": ['statuscode:[23][0-9]*', 'mimetype:text/html'],
+                "filter": ['statuscode:3[0-9]*', 'mimetype:text/html'],
                 'limit': 100
             }
             tracer.debug(f'Search for neighbors with query & year: {url_prefix} {ts_year}')

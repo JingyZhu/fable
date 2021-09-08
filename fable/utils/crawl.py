@@ -160,7 +160,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
         'output': 'json',
         'url': url,
         'from': 19700101,
-        'to': 20201231,
+        'to': 20211231,
     }
     params.update(param_dict)
     count = 0

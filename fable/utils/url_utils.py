@@ -106,6 +106,11 @@ class URLPatternDict:
                     token[1] = f'*{str_type}'
                     pattern[idx] = tuple(token)
             return pattern
+    
+    def _same_ext(self, url1, url2):
+        path1 = urlsplit(url1).path
+        path2 = urlsplit(url2).path
+        return os.path.splitext(path1)[1] == os.path.splitext(path2)[1]
 
     def gen_patterns(self, url):
         us = urlsplit(url)
@@ -141,9 +146,10 @@ class URLPatternDict:
         for pat in patterns:
             self.pattern_dict[pat].append(url)
     
-    def match_url(self, url, least_match=2):
+    def match_url(self, url, least_match=2, match_ext=False):
         """
         Note: A URL may appear in multiple objs due to different match reasons
+        match_ext: whether ext needs to be matched
         Return: [{
             "urls": [matched urls],
             "pattern": matched pattern
@@ -159,9 +165,11 @@ class URLPatternDict:
                     continue
                 if tuple(sorted(matched_urls)) in seen_match:
                     continue
+                if match_ext:
+                    matched_urls = [u for u in matched_urls if self._same_ext(u, url)]
                 seen_match.add(tuple(sorted(matched_urls)))
                 matched.append({
-                    "urls": self.pattern_dict[pat],
+                    "urls": matched_urls,
                     "pattern": pat
                 })
         return matched
@@ -274,6 +282,7 @@ def url_norm(url, wayback=False, case=False, ignore_scheme=False, trim_www=False
     """
     Perform URL normalization
     common: Eliminate port number, fragment
+    ignore_scheme: Normalize between http and https
     trim_slash: For non homepage path ending with slash, trim if off
     trim_www: For hostname start with www, trim if off
     sort_query: Sort query by keys

@@ -457,3 +457,46 @@ class Inferer:
                 return top_similar[0], {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
             else:
                 return return_noncompare()
+    
+    def archived_redirected_neighbor(self, url):
+        """
+        Get archived redirected similar URLs compared to URL
+        Used to perform wayback_alias for aliases
+        Goes up level by level until see some redirections available
+
+        Return: [matches]
+        """
+        cur_url = url 
+        i = 1
+        while i <= 2:
+            netdir = url_utils.netloc_dir(cur_url)
+            netdir = os.path.join(netdir[0], netdir[1][1:])
+            q = os.path.join(netdir, '*')
+            param_dict = {
+                'url': q,
+                "filter": ['mimetype:text/html', 'statuscode:3[0-9]*'],
+                'collpase': 'urlkey'
+            }
+            waybacks, _ = crawl.wayback_index(q, param_dict=param_dict)
+            waybacks = [w for w in waybacks if not url_utils.url_match(w[1], url)]
+            if len(waybacks) > 0:
+                break
+            else:
+                i += 1
+                new_url = url_utils.url_parent(cur_url)
+                if urlsplit(new_url).path == urlsplit(cur_url).path:
+                    break
+                cur_url = new_url
+        if len(waybacks) <= 0: 
+            return []
+        upd = url_utils.URLPatternDict(max_diff=2)
+        for _, wayback, _ in waybacks:
+            try:
+                upd.add_url(wayback)
+            except Exception as e:
+                continue
+        total_urls = set()
+        matches = upd.match_url(url, least_match=2, match_ext=True)
+        for match in matches: total_urls.update(match['urls'])
+        tracer.debug(f'Similar archived redirections: {len(total_urls)}')
+        return matches
