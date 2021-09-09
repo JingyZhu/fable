@@ -431,7 +431,7 @@ class Discoverer:
         """
         For same page from wayback and liveweb (still working). Find the same url from liveweb which matches to wayback
         
-        Returns: 1st & 2nd highest match
+        Returns: 1st & 2nd highest match in the form of [(URL, anchor text, Similarity)]
         """
         max_match = [('', '', 0), ('', '', 0)] # * [(URL, anchor text, Similarity)]
         # * Whehter 1st and 2nd simi are separable
@@ -648,12 +648,12 @@ class Discoverer:
         returns: 
             {
                 "status": found/loop/NoDrop/NoMatch/Broken,
-                "url(s)": found: found url,
+                "url(s)": found/Broken: found url,
                           loop: outgoing loop urls,
-                "links":  found: matched backlink
-                          Others: backlink
                 "reason": found: (from, similarity, how)
                           Others: (reason why not found)
+                "archive": archived backlinks
+                "live":   found: today's matched backlink
 
                 "wayback_src": wayback url of src
             }       
@@ -674,22 +674,21 @@ class Discoverer:
         tracer.debug(f"Check breakage of src: {src}")
 
         # *Directly check this outgoing page
-        # ! TEMP commented
-        # if not src_broken:
-        #     src_html = self.memo.crawl(src)
-        #     src_content = self.memo.extract_content(src_html, version='domdistiller')
-        #     src_title = self.memo.extract_title(src_html, version='domdistiller')
-        #     similars, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, {src: src_title}, {src: src_content})
-        #     if len(similars) > 0:
-        #         tracer.info(f'Discover: Directly found copy during looping')
-        #         top_similar = similars[0]
-        #         r_dict.update({
-        #             "status": "found",
-        #             "url(s)": top_similar[0],
-        #             "reason": (f'{fromm}', top_similar[1], 'matched on backcand page')
-        #         })
-        #         return r_dict
-        # ! End of temp commented
+        
+        if not src_broken:
+            src_html = self.memo.crawl(src)
+            src_content = self.memo.extract_content(src_html, version='domdistiller')
+            src_title = self.memo.extract_title(src_html, version='domdistiller')
+            similars, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, {src: src_title}, {src: src_content})
+            if len(similars) > 0:
+                tracer.info(f'Discover: Directly found copy during looping')
+                top_similar = similars[0]
+                r_dict.update({
+                    "status": "found",
+                    "url(s)": top_similar[0],
+                    "reason": (f'{fromm}', top_similar[1], 'matched on backcand page')
+                })
+                return r_dict
 
         # *No archive in wayback for src url (usually is guessed_url)
         if wayback_src is None:
@@ -730,11 +729,14 @@ class Discoverer:
                             r_dict.update({
                                 "status": "found",
                                 "url(s)": top_match[0],
-                                "reason": (fromm, top_match[1], 'matched on backlinks'),
-                                "misc": {
-                                    'start_ts': url_utils.get_ts(wayback_src),
-                                    'end_ts': end_ts,
-                                    'links': wayback_linked[1]
+                                "reason": (fromm, top_match[2], 'matched on backlinks'),
+                                "archive": {
+                                    "ts": url_utils.get_ts(wayback_src),
+                                    "links": wayback_linked[1],
+                                },
+                                "live": {
+                                    'ts': end_ts,
+                                    'links': top_match[1]
                                 }
                             })
                             break
@@ -742,39 +744,35 @@ class Discoverer:
                             r_dict.update({
                                 "status":  "Broken",
                                 "reason": "Matched new link's URL still broken",
-                                "misc": {
-                                    "url(s)": top_match[0],
-                                    "links": wayback_linked[1]
-                                }
+                                "url(s)": top_match[0],
+                                "archive": {"links": wayback_linked[1]}
                             })
                     else: # * 3.0 Not matched, link same page
                         top_similar, fromm = None, None
-                        # ! Temp commented
-                        # if not src_broken:
-                        #     top_similar, fromm = self._link_same_page(wayback_dst, dst_title, dst_content, src, src_html)
-                        # if top_similar is not None:
-                        #     r_dict.update({
-                        #         "status": "found",
-                        #         "url(s)": top_similar[0],
-                        #         "reason": (fromm, top_similar[1], 'matched on blind outgoing links')
-                        #     })
-                        # else:
-                        #     r_dict.update({
-                        #         "status": "NoMatch",
-                        #         "links": wayback_linked[1],
-                        #         "reason": "Linked, no matched link"
-                        #     })
-                        # ! End of temp commented
+                        if not src_broken:
+                            top_similar, fromm = self._link_same_page(wayback_dst, dst_title, dst_content, src, src_html)
+                        if top_similar is not None:
+                            r_dict.update({
+                                "status": "found",
+                                "url(s)": top_similar[0],
+                                "reason": (fromm, top_similar[2], 'matched on blind outgoing links')
+                            })
+                        else:
+                            r_dict.update({
+                                "status": "NoMatch",
+                                "reason": "Linked, no matched link",
+                                "archive": {"links": wayback_linked[1]}
+                            })
                         r_dict.update({
                             "status": "NoMatch",
-                            "links": wayback_linked[1],
-                            "reason": "Linked, no matched link"
+                            "reason": "Linked, no matched link",
+                            "archive": {"links": wayback_linked[1]}
                         })
                 else: # * 2.0 Not dropped
                     r_dict.update({
                         "status": "NoDrop",
-                        "links": wayback_linked[1],
-                        "reason": "Linked, never (detected) drop the old link"
+                        "reason": "Linked, never (detected) drop the old link",
+                        "archive": {"links": wayback_linked[1]}
                     })
                     break
         else: # * 1.0 Not linked to dst, need to look futher
@@ -881,11 +879,11 @@ class Discoverer:
                 r_dict = self.discover_backlinks(src, url, title, content, html, url_ts)
                 # print(r_dict)
                 status, reason = r_dict['status'], r_dict['reason']
-                tracer.discover(url, src, r_dict.get("wayback_src"), status, reason, r_dict.get('misc'), r_dict.get("links"))
+                tracer.discover(url, src, r_dict.get("wayback_src"), status, reason, r_dict.get('archive'), r_dict.get("live"))
                 # if early_exit(status, reason):
                 #     break
                 if status == 'found':
-                    return r_dict['url(s)'], {'suffice': True, 'type': reason[0], 'value': reason[1]}
+                    return r_dict['url(s)'], {'type': reason[0], 'value': reason[1]}
                 elif status == 'loop':
                     out_sigs = r_dict['url(s)']
                     if link_depth >= OUTGOING:
@@ -901,10 +899,6 @@ class Discoverer:
                                 scoreboard[outlink] = max(scoreboard[outlink], estimated_score(spatial, simis))
                         for outlink, score in scoreboard.items():
                             outgoing_queue.append((outlink, link_depth-OUTGOING, score))
-                elif status in ['notfound', 'reorg']:
-                    reason = r_dict['reason']
-                    if not has_snapshot:
-                        suffice = suffice or 'Linked' in reason
             
             # *Trim low-rank urls, and do deduplications
             outgoing_queue.sort(key=lambda x: x[2])
@@ -916,24 +910,5 @@ class Discoverer:
                 uniq_c += 1
             outgoing_queue = uniq_q
 
-        return None, {'suffice': suffice}
-
-    def bf_find(self, url, policy='latest'):
-        """
-        Return: If Hit, reorg_url, {'suffice': , 'type': , 'value': , 'backpath': path}
-                Else: None, {'suffice': False, 'backpath': depends} 
-        """
-        self.bf.policy = policy
-        if urlsplit(url).path in {'', '/'}:
-            return None, {'suffice': False}
-        path = self.bf.find_path(url)
-        if not path:
-            return None, {'suffice': False}
-        tracer.backpath_findpath(url, path)
-        rval = self.bf.match_path(path)
-        if rval:
-            reorg_url, (typee, value) = rval
-            return reorg_url, {'suffice': True, 'type': typee, 'value': value, 'backpath': path.to_dict()}
-        else:
-            return None, {'suffice': True, 'backpath': path.to_dict()}
+        return
         
