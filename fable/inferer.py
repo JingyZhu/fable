@@ -101,7 +101,7 @@ class Inferer:
     def infer(self, examples, urls):
         """
         Infer reorg urls of urls by learning the transformation rule in urls
-        examples: list of ((urls, (other metadata)), reorg_url)
+        examples: list of (urls, (other metadata), reorg_url)
         urls: list of (urls, other metadata)
         Two metadata should be in the same format
 

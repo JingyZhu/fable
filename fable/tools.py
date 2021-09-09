@@ -974,7 +974,7 @@ class Similar:
             return [], ""
 
 
-def is_canonical(url1, url2, resp1=None, resp2=None, use_resp=False):
+def is_canonical(url1, url2, resp1=None, resp2=None):
     """
     Decide whether two URLs are canonical of each other
     Both url1 and url2 should be good pages
@@ -987,13 +987,14 @@ def is_canonical(url1, url2, resp1=None, resp2=None, use_resp=False):
     """
     if url_utils.url_match(url1, url2):
         return True
-    if not use_resp:
+    if not resp1:
         resp1 = crawl.requests_crawl(url1, raw=True)
+    if not resp2:
         resp2 = crawl.requests_crawl(url2, raw=True)
-        if isinstance(resp1, tuple) or not resp1:
-            return False
-        if isinstance(resp2, tuple) or not resp2:
-            return False
+    if isinstance(resp1, tuple) or not resp1:
+        return False
+    if isinstance(resp2, tuple) or not resp2:
+        return False
     # * Check final url
     if url_utils.url_match(resp1.url, resp2.url):
         return True
