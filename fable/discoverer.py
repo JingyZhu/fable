@@ -910,5 +910,5 @@ class Discoverer:
                 uniq_c += 1
             outgoing_queue = uniq_q
 
-        return
+        return None, {}
         

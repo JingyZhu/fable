@@ -293,16 +293,9 @@ class ReorgPageFinder:
             url = broken_urls.pop()
             i += 1
             self.tracer.info(f'URL: {i} {url}')
-            method, suffice = 'discover', False
+            method = 'discover'
             while True: # Dummy while lloop served as goto
-                self.tracer.info("Start wayback alias")
                 start = time.time()
-                # ! TEMP
-                # discovered = self.discoverer.wayback_alias(url, require_neighbor=True, homepage_redir=False)
-                # if discovered:
-                #     trace = {'suffice': True, 'type': 'wayback_alias', 'value': None}
-                #     break
-                # ! End TEMP
 
                 # self.tracer.info("Start backpath (latest)")
                 # discovered, trace = self.discoverer.bf_find(url, policy='latest')
@@ -314,7 +307,6 @@ class ReorgPageFinder:
                 discovered, trace = self.discoverer.discover(url)
                 if discovered:
                     break
-                suffice = trace['suffice']
 
                 break
             
@@ -351,13 +343,6 @@ class ReorgPageFinder:
                 }})
                 by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath', 'suffice']}
                 update_dict['by'].update(by_discover)
-            elif not suffice:
-                try:
-                    self.db.na_urls.update_one({'_id': url}, {'$set': {
-                        'no_working_parent': True, 
-                        'hostname': self.site
-                    }}, upsert=True)
-                except:pass
 
             # * Update dict correspondingly
             try:
