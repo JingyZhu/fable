@@ -331,7 +331,7 @@ class Discoverer:
 
     def _link_same_page(self, wayback_dst, title, content, backlinked_url, backlinked_html, cut=CUT):
         """
-        See whether backedlinked_html contains links to the same page as html
+        See whether backlinked_html contains links to the same page as html
         content: content file of the original url want to find copy
         backlinked_html: html which could be linking to the html
         wayback_dst: In wayback form
@@ -755,7 +755,7 @@ class Discoverer:
                             r_dict.update({
                                 "status": "found",
                                 "url(s)": top_similar[0],
-                                "reason": (fromm, top_similar[2], 'matched on blind outgoing links')
+                                "reason": (fromm, top_similar[1], 'matched on blind outgoing links')
                             })
                         else:
                             r_dict.update({
