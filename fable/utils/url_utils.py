@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from collections import defaultdict
 import copy
 import itertools
+from dateutil import parser as dparser
 
 
 def filter_wayback(url):
@@ -341,6 +342,23 @@ def nondigit_dirname(path):
     while len(parts) and parts[-1].isdigit():
         parts = parts[:-1]
     return '/'.join(parts)
+
+def nondate_pathname(path):
+    """
+    For every token in the path, filter out dates (keep the remaining parts)
+    """
+    if path not in ['', '/'] and path[-1] == '/':
+        path = path[:-1]
+    parts = path.split('/')
+    new_parts = []
+    for p in parts:
+        try:
+            _, remaining = dparser.parse(p, fuzzy_with_tokens=True)
+            new_p = ''.join(remaining)
+        except:
+            new_p = p
+        new_parts.append(new_p)
+    return '/'.join(new_parts)
     
 
 def is_parent(parent, url):
@@ -376,48 +394,6 @@ def is_parent(parent, url):
         return us.query == ps.query
     for q2 in q2s:
         if q2 not in q1s: return False
-    return True
-
-
-def gen_path_pattern(url, dis=1):
-    """
-    Generate path patterns where all paths with same edit distance should follow
-    # TODO: Currently only support edit distance of 1,  Could have larger dis
-    """
-    us = urlsplit(url)
-    us = us._replace(netloc=us.netloc.split(':')[0])
-    if us.path == '':
-        us = us._replace(path='/')
-    if us.path[-1] == '/' and us.path != '/':
-        us = us._replace(path=us.path[:-1])
-    path_lists = list(filter(lambda x: x!= '', us.path.split('/')))
-    if us.query: 
-        path_lists.append(us.query)
-    patterns = []
-    patterns.append(tuple(['*'] + path_lists))
-    for i in range(len(path_lists)):
-        path_copy = path_lists.copy()
-        path_copy[i] = '*'
-        patterns.append(tuple([us.netloc] + path_copy))
-    return patterns
-
-
-def pattern_match(pattern, url, dis=1):
-    us = urlsplit(url)
-    us = us._replace(netloc=us.netloc.split(':')[0])
-    if us.path == '':
-        us = us._replace(path='/')
-    if us.path[-1] == '/' and us.path != '/':
-        us = us._replace(path=us.path[:-1])
-    path_lists = list(filter(lambda x: x!= '', us.path.split('/')))
-    path_lists = [us.netloc] + path_lists
-    if us.query: 
-        path_lists.append(us.query)
-    if len(pattern) != len(path_lists):
-        return False
-    for pat, path in zip(pattern, path_lists):
-        if pat == '*': continue
-        elif pat != path: return False
     return True
 
 
@@ -486,9 +462,11 @@ def common_prefix_diff(dest, src):
     return len(p1s) - i if i < len(p1s) else i - len(p2s)
 
 
-def netloc_dir(url, exclude_index=False):
+def netloc_dir(url, nondigit=True, nondate=False, exclude_index=False):
     """
     Get host, nondigit_dirname for a URL
+    nondigit: whether to perform nondigit dirname processing
+    nondate: whether to perform nondate pathname processing
     exclude_index: If set True, any filename with index (e.g. index.php)
                     will be considered directory with 1 more level up
     """
@@ -505,4 +483,8 @@ def netloc_dir(url, exclude_index=False):
         p = '/'.join(p)
     hosts = us.netloc.split(':')[0].split('.')
     if 'www' in hosts[0]: hosts = hosts[1:]
-    return ('.'.join(hosts), nondigit_dirname(p))
+    if nondigit:
+        p = nondigit_dirname(p)
+    if nondate:
+        p = nondate_pathname(p)
+    return ('.'.join(hosts), p)
