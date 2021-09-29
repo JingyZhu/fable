@@ -487,4 +487,4 @@ def netloc_dir(url, nondigit=True, nondate=False, exclude_index=False):
         p = nondigit_dirname(p)
     if nondate:
         p = nondate_pathname(p)
-    return ('.'.join(hosts), p)
+    return ('.'.join(hosts), p.lower())
