@@ -127,7 +127,8 @@ class URLPatternDict:
         path_list = list(filter(lambda x: x!= '', us.path.split('/')))
         query_list = {k: v[0] for k, v in my_parse_qs(us.query).items()}
         query_list = sorted(query_list.items())
-        pattern_list = host_list + path_list + query_list
+        # pattern_list = host_list + path_list + query_list
+        pattern_list = path_list + query_list
         patterns = []
         total = len(pattern_list)
         idxs_combination = list(itertools.combinations_with_replacement(range(total), self.max_diff))
@@ -136,6 +137,7 @@ class URLPatternDict:
         for idxs in idxs_combination:
             new_pattern = copy.deepcopy(pattern_list)
             new_pattern = self._wildcard(new_pattern, idxs)
+            new_pattern.insert(0, host)
             patterns.append(tuple(new_pattern))
         return patterns
 
