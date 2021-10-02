@@ -127,6 +127,7 @@ class URLPatternDict:
         path_list = list(filter(lambda x: x!= '', us.path.split('/')))
         query_list = {k: v[0] for k, v in my_parse_qs(us.query).items()}
         query_list = sorted(query_list.items())
+        # ! TEMP COMMENTED
         # pattern_list = host_list + path_list + query_list
         pattern_list = path_list + query_list
         patterns = []
@@ -137,6 +138,7 @@ class URLPatternDict:
         for idxs in idxs_combination:
             new_pattern = copy.deepcopy(pattern_list)
             new_pattern = self._wildcard(new_pattern, idxs)
+            # ! TEMP ADDED
             new_pattern.insert(0, host)
             patterns.append(tuple(new_pattern))
         return patterns
@@ -356,7 +358,7 @@ def nondate_pathname(path):
     for p in parts:
         try:
             _, remaining = dparser.parse(p, fuzzy_with_tokens=True)
-            new_p = ''.join(remaining)
+            new_p = '${DATE}'.join(remaining)
         except:
             new_p = p
         new_parts.append(new_p)
