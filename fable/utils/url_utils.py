@@ -180,7 +180,7 @@ class URLPatternDict:
         return matched
     
     def match_pattern(self, pattern):
-        return self.pattern_dict.get(pattern)
+        return self.pattern_dict.get(pattern, [])
 
     def pop_matches(self, least_match=2):
         """Pop all matched URL pattern in the dict"""
@@ -358,7 +358,12 @@ def nondate_pathname(path):
     for p in parts:
         try:
             _, remaining = dparser.parse(p, fuzzy_with_tokens=True)
-            new_p = '${DATE}'.join(remaining)
+            if len(remaining) == 0:
+                new_p = '${date}'
+            elif len(remaining) == 1:
+                new_p = remaining[0] + '${date}'
+            else:
+                new_p = '${date}'.join(remaining)
         except:
             new_p = p
         new_parts.append(new_p)

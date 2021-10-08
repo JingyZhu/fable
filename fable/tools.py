@@ -28,7 +28,7 @@ tracer = logging.getLogger('logger')
 logging.setLoggerClass(logging.Logger)
 
 db = config.DB
-DEFAULT_CACHE = 3600*24
+DEFAULT_CACHE = 3600*24*30
 LEAST_SITE_URLS = 20 # Least # of urls a site must try to crawl to enable title comparison
 COMMON_TITLE_SIZE = 5 # Common prefix/suffix extraction's sample number of title
 
@@ -302,7 +302,7 @@ class Memoizer:
                 except:
                     cache_age = DEFAULT_CACHE
             elif pp_in:
-                cache_age = DEFAULT_CACHE*30
+                cache_age = DEFAULT_CACHE
         ttl = time.time() + cache_age
 
         try:
