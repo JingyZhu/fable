@@ -150,6 +150,7 @@ class ReorgPageFinder:
         broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
 
         self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
+        found = []
         i = 0
         while len(broken_urls) > 0:
             url = broken_urls.pop()
@@ -184,6 +185,7 @@ class ReorgPageFinder:
 
             if discovered is not None:
                 self.tracer.info(f'Found reorg: {discovered}')
+                found.append(url)
                 update_dict.update({'reorg_url': discovered, 'by':{
                     "method": method
                 }})
@@ -195,7 +197,7 @@ class ReorgPageFinder:
                 self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict, 'title': title}})
             except Exception as e:
                 self.tracer.warn(f'Discover update DB: {str(e)}')
-
+        return found
 
 
     def search(self, required_urls, infer=False, title=True):
@@ -217,6 +219,7 @@ class ReorgPageFinder:
         broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
 
         self.tracer.info(f'Search SITE: {self.site} #URLS: {len(broken_urls)}')
+        found = []
         i = 0
         while len(broken_urls) > 0:
             url = broken_urls.pop()
@@ -257,6 +260,7 @@ class ReorgPageFinder:
             if searched is not None:
                 searched, trace = searched
                 self.tracer.info(f"HIT: {searched}")
+                found.append(url)
                 update_dict.update({'reorg_url': searched, 'by':{
                     "method": "search"
                 }})
@@ -271,6 +275,7 @@ class ReorgPageFinder:
             if infer and searched is not None:
                 new_finds = self.infer_new(url, (title,), searched)
                 broken_urls.difference_update(new_finds)
+        return found
     
     def discover(self, required_urls, infer=False,):
         """
@@ -288,6 +293,7 @@ class ReorgPageFinder:
         broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
 
         self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
+        found = []
         i = 0
         while len(broken_urls) > 0:
             url = broken_urls.pop()
@@ -338,6 +344,7 @@ class ReorgPageFinder:
 
             if discovered is not None:
                 self.tracer.info(f'Found reorg: {discovered}')
+                found.append(url)
                 update_dict.update({'reorg_url': discovered, 'by':{
                     "method": method
                 }})
@@ -354,3 +361,4 @@ class ReorgPageFinder:
             if infer and discovered is not None:
                 new_finds = self.infer_new(url, (title,), discovered)
                 broken_urls.difference_update(new_finds)
+        return found
