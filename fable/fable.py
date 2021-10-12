@@ -143,7 +143,7 @@ class ReorgPageFinder:
             self.similar.clear_titles()
             if not self.similar._init_titles(self.site):
                 self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
-                return
+                return []
 
         reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
         reorg_checked = set([u['url'] for u in reorg_checked])
@@ -212,7 +212,7 @@ class ReorgPageFinder:
             self.similar.clear_titles()
             if not self.similar._init_titles(self.site):
                 self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
-                return
+                return []
         # !_search
         reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
         reorg_checked = set([u['url'] for u in reorg_checked])
@@ -286,7 +286,7 @@ class ReorgPageFinder:
             self.similar.clear_titles()
             if not self.similar._init_titles(self.site):
                 self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
-                return
+                return []
 
         reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
         reorg_checked = set([u['url'] for u in reorg_checked])
