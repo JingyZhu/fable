@@ -513,7 +513,12 @@ class Discoverer:
         if not wayback_ts_urls or len(wayback_ts_urls) == 0:
             return
 
-        wayback_ts_urls = [(dparser.parse(c[0]), c[1]) for c in wayback_ts_urls]
+        def _safe_dparse(ts):
+            try:
+                return dparser.parse(c[0])
+            except:
+                return datetime.datetime.now()
+        wayback_ts_urls = [(_safe_dparse(c[0]), c[1]) for c in wayback_ts_urls]
         # * Count for unmatched wayback final url, and wayback_alias to same redirected fake alias
         url_match_count, same_redir = 0, 0
         it = len(wayback_ts_urls) - 1
@@ -563,7 +568,7 @@ class Discoverer:
             # *Get closest crawled urls in the same dir, which is not target itself  
             lambda_func = lambda u: not url_utils.url_match(url, url_utils.filter_wayback(u) ) # and not url_utils.filter_wayback(u)[-1] == '/'
             lambda_func2 = lambda u: url_utils.nondigit_dirname(urlsplit(url_utils.filter_wayback(u)).path[:-1]) in url_dir
-            neighbor = sorted([n for n in neighbor if lambda_func(n[1]) and lambda_func2(n[1])], key=lambda x: abs((dparser.parse(x[0]) - ts).total_seconds()))
+            neighbor = sorted([n for n in neighbor if lambda_func(n[1]) and lambda_func2(n[1])], key=lambda x: abs((_safe_dparse(x[0]) - ts).total_seconds()))
             tracer.debug(f'neightbor: {len(neighbor)}')
             match = require_neighbor
             if len(neighbor) <= 0:
