@@ -420,11 +420,14 @@ def domdistiller_extract(html, lang=None):
     except:
         return ''
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
-    try:
-        call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file, '--timeout', str(20)], timeout=25)
-    except:
+    for _ in range(3):
+        try:
+            call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=15)
+            break
+        except:
+            os.remove(html_file)
+            time.sleep(5)
         print('DomDistiller Failed')
-        os.remove(html_file)
         return ""
     content = open(html_file, 'r').read()
     os.remove(html_file)
@@ -557,11 +560,14 @@ def domdistiller_title_extract(html, lang=None):
     except:
         return ''
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
-    try:
-        call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(20)], timeout=25)
-    except:
+    for _ in range(3):
+        try:
+            call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=15)
+            break
+        except:
+            os.remove(html_file)
+            time.sleep(5)
         print('DomDistiller Failed')
-        os.remove(html_file)
         return ""
     title = open(html_file, 'r').read()
     os.remove(html_file)
@@ -648,11 +654,14 @@ def domdistiller_title_body_extract(html, lang=None):
     except:
         return '', ''
     url = 'http://localhost:{}/{}'.format(config.LOCALSERVER_PORT, html_id)
-    try:
-        call(['node', join(dirname(abspath(__file__)), 'run_title_content.js'), url, '--filename', html_file, '--timeout', str(20)], timeout=25)
-    except:
+    for _ in range(3):
+        try:
+            call(['node', join(dirname(abspath(__file__)), 'run_title_content.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=15)
+            break
+        except:
+            os.remove(html_file)
+            time.sleep(5)
         print('DomDistiller Failed')
-        os.remove(html_file)
         return "", ""
     title_content = open(html_file, 'r').read()
     title_content = title_content.split('\n')
