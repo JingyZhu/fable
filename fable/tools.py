@@ -147,7 +147,6 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
     title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
     if wayback:
         url, ts = url_utils.filter_wayback(url), url_utils.get_ts(url)
-    us = urlsplit(url)
     nd = url_utils.netloc_dir(url)
     close_idx = bisect.bisect_left(site_url_meta, [nd, []])
     if close_idx == len(site_url_meta):
@@ -157,12 +156,14 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
     itsts = set()
     striphost = lambda nd: nd[0].split(':')[0]
 
-    # * Find first candidate which is not url itself
+    # * Find first candidate which is:
+    # *   1. not url itself
+    # *   2. has same hostname (www excluded)
     upgoing = not (upidx < 0 \
-                or striphost(site_url_meta[upidx][0]) != us.netloc.split(':')[0])
+                or striphost(site_url_meta[upidx][0]) != nd[0])
     downgoing = not (downidx > len(site_url_meta) - 1 \
-                  or striphost(site_url_meta[downidx][0]) != us.netloc.split(':')[0])
-    
+                  or striphost(site_url_meta[downidx][0]) != nd[0])
+
     meta = ts if wayback else title
     while (upgoing or downgoing) and len(diffs) < 7:
         tocheck = []
@@ -198,9 +199,9 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
         upidx -= 1
         downidx += 1
         upgoing = upgoing and not (upidx < 0 \
-                        or striphost(site_url_meta[upidx][0]) != us.netloc.split(':')[0])
+                        or striphost(site_url_meta[upidx][0]) != nd[0])
         downgoing = downgoing and not (downidx > len(site_url_meta) - 1 \
-                        or striphost(site_url_meta[downidx][0]) != us.netloc.split(':')[0])
+                        or striphost(site_url_meta[downidx][0]) != nd[0])
  
     if len(itsts) <= 0:
         return title
@@ -534,7 +535,7 @@ class Memoizer:
             'collapse': 'urlkey',
             'limit': 100
         }
-        wayback_urls, _ = crawl.wayback_index(url_prefix, param_dict=param, total_link=True)
+        wayback_urls, _ = crawl.wayback_index(url_prefix + '/*', param_dict=param, total_link=True)
         wayback_urls = [wu[1] for wu in wayback_urls if url_utils.netloc_dir(wu[1]) == nd]
         if wayback:
             cand_urls = sorted(wayback_urls, key=lambda x: int(url_utils.get_ts(x)))
@@ -812,12 +813,20 @@ class Similar:
         Returns: 0 if not match. Actual similarity otherwise
         """
         text1_token, text2_token = text_utils.tokenize(text1), text_utils.tokenize(text2)
-        text1_token, text2_token = ' '.join(text1_token), ' '.join(text2_token)
+        # ! Choice 1: Consider sequence
+        # text1_token, text2_token = ' '.join(text1_token), ' '.join(text2_token)
+        # # * To match, one text must be the subset of another
+        # if text1_token not in text2_token and text2_token not in text1_token:
+        #     tracer.debug(f'shorttext_match: one text not a subset of another: \n{ text1} vs. {text2} \n {text1_token} vs. {text2_token}')
+        #     return 0
+        # ! Choice 2: No sequence
+        text1_token, text2_token = set(text1_token), set(text2_token)
         # * To match, one text must be the subset of another
-        if text1_token not in text2_token and text2_token not in text1_token:
+        if not (text1_token <= text2_token or text2_token <= text1_token):
             tracer.debug(f'shorttext_match: one text not a subset of another: \n{ text1} vs. {text2} \n {text1_token} vs. {text2_token}')
             return 0
-        tracer.debug(f'shorttext_match: simi between {text1} \n {text2}')
+       
+        tracer.debug(f'shorttext_match: simi between "{text1}" vs. "{text2}"')
         simi = self.tfidf.similar(text1, text2)
         return simi
         
@@ -859,6 +868,22 @@ class Similar:
             return check_titles()
         return True
         
+    def unique_title(self, url, title, content, site_url_meta, wayback=False):
+        """
+        Stateful unique title: If meta needs to be updated during unique title
+        
+        """
+        lw_url = url if not wayback else url_utils.filter_wayback(url)
+        nd = url_utils.netloc_dir(lw_url)
+        site_meta = self.wb_meta if wayback else self.lw_meta
+        nd_idx = bisect.bisect_left(site_meta, [nd, []])
+        if len(site_meta) <= 0 or len(site_meta[nd_idx][1]) < 2:
+            memo = Memoizer()
+            more_crawls = memo.get_more_crawls(url, wayback=wayback)
+            for more_crawl in more_crawls:
+                self._add_crawl(more_crawl['url'], more_crawl['title'], more_crawl['content'], more_crawl['html'])
+        site_url_meta = self.lw_meta if not wayback else self.wb_meta
+        return unique_title(url, title, content, site_url_meta, wayback)
 
     def title_similar(self, target_url, target_title, target_content, candidates_titles, candidates_contents, shorttext=True, fixed=True):
         """
@@ -897,7 +922,7 @@ class Similar:
                 simi = self.shorttext_match(tgt_uniq_title, uniq_c)
             else:
                 simi = self.tfidf.similar(tgt_uniq_title, uniq_c)
-            tracer.debug(f'simi(title): {simi} {url}')
+            tracer.debug(f'similarity title, (value/url): ({simi}/{url})')
             simi_cand.append((url, simi))
         
         while len(simi_cand) < 2:
@@ -916,7 +941,7 @@ class Similar:
         simi_cand = []
         for url, c in candidates_contents.items():
             simi = self.tfidf.similar(target_content, c)
-            tracer.debug(f'simi(content): {simi} {url}')
+            tracer.debug(f'similarity content, (value/url): ({simi}/{url})')
             simi_cand.append((url, simi))
         
         while len(simi_cand) < 2:
