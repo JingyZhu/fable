@@ -877,7 +877,7 @@ class Similar:
         nd = url_utils.netloc_dir(lw_url)
         site_meta = self.wb_meta if wayback else self.lw_meta
         nd_idx = bisect.bisect_left(site_meta, [nd, []])
-        if len(site_meta) <= 0 or len(site_meta[nd_idx][1]) < 2:
+        if len(site_meta) <= nd_idx or len(site_meta[nd_idx][1]) < 2:
             memo = Memoizer()
             more_crawls = memo.get_more_crawls(url, wayback=wayback)
             for more_crawl in more_crawls:
