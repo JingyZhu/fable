@@ -5,7 +5,7 @@ import re, regex, os
 from urllib.parse import urlsplit, urlunsplit
 
 from . import  tools, tracer
-from .utils import search, crawl, url_utils
+from .utils import search, crawl, url_utils, sic_transit
 
 import logging
 logging.setLoggerClass(tracer.tracer)
@@ -62,6 +62,10 @@ class Searcher:
             tracer.search_results(url, search_engine, typee, search_results)
             searched.update(search_results)
             for searched_url in search_cand:
+                # * Sanity check (SE could also got broken pages)
+                if sic_transit.broken(searched_url, html=True)[0] != False:
+                    tracer.debug(f'search_once: searched URL {searched_url} is broken')
+                    continue
                 # * Use earliest archived copy if available
                 searched_wayback = self.memo.wayback_index(searched_url, policy='earliest')
                 searched_url_rep = searched_wayback if searched_wayback else searched_url

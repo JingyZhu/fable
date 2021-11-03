@@ -529,14 +529,24 @@ class Discoverer:
         def verify_alias(url, new_urls, ts, homepage_redir, strict_filter):
             """
             Verify whether new_url is valid alias by checking:
-             1. new_urls is working 
-             2. whether there is no other url in the same form redirected to this url
+             1. new_urls is in the same site
+             2. new_urls is working 
+             3. whether there is no other url in the same form redirected to this url
             """
             global tracer
             nonlocal seen_redir_url, require_neighbor
-            
-            # *If homepage to homepage redir, no soft-404 will be checked
             new_url = new_urls[-1]
+
+            # * If new url is in the same site
+            orig_host = urlsplit(url).netloc.split(':')[0]
+            host_url = f'http://{orig_host}'
+            _, orig_host = self.memo.crawl(host_url, final_url=True)
+            _, new_final_url = self.memo.crawl(new_url, final_url=True)
+            if he.extract(new_final_url) != he.extract(orig_host):
+                tracer.debug('verify_alias: redirected URL not in the same site')
+                return False
+
+            # *If homepage to homepage redir, no soft-404 will be checked
             broken, _ = sic_transit.broken(new_url, html=True, ignore_soft_404=homepage_redir)
             if broken: return False
             if homepage_redir: return True

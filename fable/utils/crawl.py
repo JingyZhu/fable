@@ -167,10 +167,10 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
     r = None
     while True:
         try:
-            r = requests.get('http://web.archive.org/cdx/search/cdx', headers=requests_header, params=params, proxies=proxies, timeout=30)
+            r = requests.get('http://web.archive.org/cdx/search/cdx', headers=requests_header, params=params, proxies=proxies, timeout=120)
             r = r.json()
             break
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as e:
             logger.warn(f'Wayback index: unable to connect to wayback')
             time.sleep(20)
             continue
