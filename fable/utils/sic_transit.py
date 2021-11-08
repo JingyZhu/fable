@@ -206,11 +206,12 @@ def text_norm(text):
     return text
 
 
-def broken(url, html=False, ignore_soft_404=False):
+def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False):
     """
     Entry func: detect whether this url is broken
     html: Require the url to be html.
     ignore_soft_404: Whether soft-404 detection will be ignored
+    ignore_soft_404_content: Ignore only content comparison soft-404
 
     Return: True/False/"N/A", reason
     """
@@ -268,16 +269,18 @@ def broken(url, html=False, ignore_soft_404=False):
             continue
         # url_content = text_utils.extract_body(resp.text, version='domdistiller')
         # random_content = text_utils.extract_body(random_resp.text, version='domdistiller')
-        try:
-            url_content = BeautifulSoup(resp.text, 'lxml').get_text(separator=' ')
-        except: url_content = resp.text
-        try:
-            random_content = BeautifulSoup(random_resp.text, 'lxml').get_text(separator=' ')
-        except: random_content = random_resp.text
-        if text_utils.k_shingling(text_norm(url_content), text_norm(random_content)) >= 0.95:
-            broken_decision.append(True)
-            reasons.append("Similar soft 404 content")
-            continue
+        # * Content soft-404 comparison
+        if not ignore_soft_404_content:
+            try:
+                url_content = BeautifulSoup(resp.text, 'lxml').get_text(separator=' ')
+            except: url_content = resp.text
+            try:
+                random_content = BeautifulSoup(random_resp.text, 'lxml').get_text(separator=' ')
+            except: random_content = random_resp.text
+            if text_utils.k_shingling(text_norm(url_content), text_norm(random_content)) >= 0.95:
+                broken_decision.append(True)
+                reasons.append("Similar soft 404 content")
+                continue
         broken_decision.append(False)
         reasons.append("no features match")
         break

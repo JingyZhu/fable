@@ -515,7 +515,7 @@ class Discoverer:
 
         def _safe_dparse(ts):
             try:
-                return dparser.parse(c[0])
+                return dparser.parse(ts)
             except:
                 return datetime.datetime.now()
         wayback_ts_urls = [(_safe_dparse(c[0]), c[1]) for c in wayback_ts_urls]
@@ -538,7 +538,7 @@ class Discoverer:
             new_url = new_urls[-1]
 
             # * If new url is in the same site
-            orig_host = urlsplit(url).netloc.split(':')[0]
+            orig_host = he.extract(url)
             host_url = f'http://{orig_host}'
             _, orig_host = self.memo.crawl(host_url, final_url=True)
             _, new_final_url = self.memo.crawl(new_url, final_url=True)
@@ -547,7 +547,7 @@ class Discoverer:
                 return False
 
             # *If homepage to homepage redir, no soft-404 will be checked
-            broken, _ = sic_transit.broken(new_url, html=True, ignore_soft_404=homepage_redir)
+            broken, _ = sic_transit.broken(new_url, html=True, ignore_soft_404_content=homepage_redir)
             if broken: return False
             if homepage_redir: return True
             if isinstance(ts, str): ts = dparser.parse(ts)
