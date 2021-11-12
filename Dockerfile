@@ -12,7 +12,7 @@ COPY . /home/fable
 # ? USER root
 WORKDIR /home/fable
 # Prepare
-RUN mkdir /usr/share/man/man1
+# RUN mkdir /usr/share/man/man1
 RUN conda config --set changeps1 false 
 # Install Java and other basic tools
 RUN apt update && apt install -y wget \
