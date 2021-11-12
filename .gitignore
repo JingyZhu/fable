@@ -6,7 +6,7 @@ package-lock.json
 
 logs/
 *.html
-*.json
+.json
 */json/
 
 temp.py
