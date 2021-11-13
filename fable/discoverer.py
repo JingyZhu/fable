@@ -523,7 +523,7 @@ class Discoverer:
         # * Check for 400 snapshots, any redirections after it will not be counted
         param_dict = {
             'url': url,
-            'filter': ['mimetype:text/html', 'statuscode:[45][0-9]*'],
+            'filter': ['mimetype:text/html', 'statuscode:[4][0-9]*'],
             'output': 'json'
         }
         broken_archives, _ = crawl.wayback_index(url, param_dict=param_dict)
