@@ -1,10 +1,20 @@
 """ Run Fable using Azure services """
 import logging
+import json
 from fable import ReorgPageFinder
 from azure_client import AzureClient
+from azure.storage.queue import (
+        QueueClient,
+        TextBase64EncodePolicy,
+)
 
 rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.DEBUG)
 azureClient = AzureClient()
+
+
+queueURL = "https://fablestorage.queue.core.windows.net/requests"
+sasToken = "?sv=2020-08-04&ss=bfqt&srt=sco&sp=rwdlacupix&se=2021-12-02T14:42:05Z&st=2021-11-11T06:42:05Z&spr=https&sig=pbMyft6gYJ0FtyciNqMh%2FfSCt%2BmMAfeIVarq4lp1j9I%3D"
+
 
 def pkill(pattern):
     try:
@@ -14,17 +24,44 @@ def pkill(pattern):
 
 # Run Fable and upload logs on success to Azure files
 def fable_api(urlInfo: dict):
-    hostname = urlInfo['hostname']
-    urls = urlInfo['urls']
-    try:
-        rpf.init_site(hostname, urls)
-        rpf.search(required_urls=urls)
-        rpf.discover(required_urls=urls)
-    except:
-        pass
-    srcLogPath = f"logs/{hostname}.log"
-    dstLogPath = f"logs/{hostname}.log"
-    azureClient.upload_file(srcLogPath, dstLogPath)
+    email = urlInfo["email"]
+    baseURL = urlInfo["base_url"]
+    broken_links = urlInfo["broken_links"]
+    broken_link_map = {}
+
+    for domainName in broken_links:
+        hostname = domainName
+        urls = broken_links[hostname]
+        try:
+            rpf.init_site(hostname, urls)
+            rpf.search(required_urls=urls)
+            aliasMap = rpf.discover(required_urls=urls)
+            print(aliasMap)
+
+            # Add urls to broken_link_map
+            for link in aliasMap:
+                if link not in broken_link_map:
+                    alias = aliasMap[link]
+                    broken_link_map.update({link: alias})
+        except:
+            pass
+
+    # Create a request object
+    requestObject = {
+        "email": email,
+        "base_url": baseURL,
+        "broken_links": broken_link_map,
+    }
+
+    # Send to queue
+    queue = QueueClient.from_queue_url(
+                    queueURL, 
+                    credential=sasToken,
+                    message_encode_policy=TextBase64EncodePolicy()
+                )
+    
+    jsonString = json.dumps(requestObject)
+    queue.send_message(jsonString)
 
 # Read URLs from Azure Queues and run Fable on them    
 def main():

@@ -18,6 +18,7 @@ url_normalize
 cchardet
 pandas
 regex
+json
 
 azure-identity
 azure-keyvault-secrets

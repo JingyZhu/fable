@@ -400,8 +400,16 @@ class ReorgPageFinder:
         broken_urls = set([bu['url'] for bu in urls])
         self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
         i = 0
+
+        # Create the URL Map
+        url_map = {}
+
         while len(broken_urls) > 0:
             url = broken_urls.pop()
+
+            # Add to URL Map
+            url_map.update({url: ""})
+
             i += 1
             self.tracer.info(f'URL: {i} {url}')
             method, suffice = 'discover', False
@@ -464,6 +472,10 @@ class ReorgPageFinder:
                     }})
                     by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath', 'suffice']}
                     update_dict['by'].update(by_discover)
+
+                    # Add to the URL Map if we've discovered and it isn't a false positive
+                    url_map[url] = discovered
+
                 else:
                     # discover
                     try: self.db.na_urls.update_one({'_id': url}, {'$set': {
@@ -522,3 +534,5 @@ class ReorgPageFinder:
                         break
                     examples = success
                     success = self.query_inferer(examples)
+        
+        return url_map
