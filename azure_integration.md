@@ -161,7 +161,7 @@ We need a registry to house our Docker containers.
     ACR_NAME={Enter Container Registry name}
     az acr login --name $ACR_NAME
     ```
-1. Build Docker container: `docker build -t fable .`
+1. Build Docker container: `docker build --network host -t fable .`
 1. Tag container: `docker tag fable $ACR_NAME.azurecr.io/fable:v1`
 1. Push container to Azure repository: `docker push $ACR_NAME.azurecr.io/fable:v1`
     - Note: Container repository permissions should already be set up to allow for running instances
