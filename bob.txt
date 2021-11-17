@@ -1,0 +1,4 @@
+Collection(Database(MongoClient(host=['fable-database.mongo.cosmos.azure.com:10255'], document_class=dict, tz_aware=False, connect=True, ssl=True, replicaset='globaldb', retrywrites=False, maxidletimems=120000, appname='@fable-database@'), 'fable'), 'reorg')
+{'fable': ['checked', 'reorg', 'na_urls', 'wayback_rep', 'crawl', 'wayback_index', 'searched', 'traces', 'corpus']}
+here
+https://www.newscientist.com/article/dn7360-glitch-strikes-mars-expresss-radar-boom/
