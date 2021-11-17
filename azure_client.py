@@ -25,12 +25,8 @@ class AzureClient:
         """Get message from queue."""
         try:
             message = self.queue_client.receive_message()
-            print(message)
-            message = message.content.decode('utf-8')
-            print(message)
             self.queue_client.delete_message(message.id, message.pop_receipt)
             urlInfo = json.loads(message)
-            print(urlInfo)
             return urlInfo
         except:
             return None
