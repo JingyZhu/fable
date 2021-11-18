@@ -1,4 +1,5 @@
 import pymongo
+import pywikibot
 
 client = pymongo.MongoClient('mongodb://fable-database:mSMNajjnkR1R5lGXxXihhJF5DUKvyyEhrWeBUBE0Mr8mqWsCfOhpsi2zp8ihUzWGaZdHaFKD3G5qF1P6ZMQYaw==@fable-database.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@fable-database@')
 d = dict((db, [collection for collection in client[db].collection_names()])
@@ -15,6 +16,18 @@ for document in cursor:
                 if 'reorg_url' in document['achitta']:
                         print("here")
                         print(document['achitta']['reorg_url'])
+
+site = pywikibot.Site("test", "wikidata")
+repo = site.data_repository()
+page = pywikibot.Page(site, "Wikidata talk:Main Page")
+
+heading = "== Test edit =="
+content = "This is another test edit"
+message = "\n\n{}\n{} --~~~~".format(heading, content)
+
+page.save(summary="Testing", watch=None, minor=False, botflag=True,
+             force=False, callback=None,
+             apply_cosmetic_changes=None, appendtext=message)
 
 
 

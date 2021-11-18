@@ -1,0 +1,11 @@
+#LWP-Cookies-2.0
+Set-Cookie3: GeoIP="US:MI:Ann_Arbor:42.28:-83.73:v4"; path="/"; domain=".wikidata.org"; path_spec; domain_dot; secure; discard; version=0
+Set-Cookie3: WMF-Last-Access-Global="18-Nov-2021"; path="/"; domain=".wikidata.org"; path_spec; domain_dot; secure; expires="2021-12-20 00:00:00Z"; HttpOnly=None; version=0
+Set-Cookie3: UseCDNCache=false; path="/"; domain="test.wikidata.org"; path_spec; secure; expires="2021-11-18 05:54:24Z"; HttpOnly=None; version=0
+Set-Cookie3: UseDC=master; path="/"; domain="test.wikidata.org"; path_spec; secure; expires="2021-11-18 05:54:24Z"; HttpOnly=None; version=0
+Set-Cookie3: WMF-Last-Access="18-Nov-2021"; path="/"; domain="test.wikidata.org"; path_spec; secure; expires="2021-12-20 00:00:00Z"; HttpOnly=None; version=0
+Set-Cookie3: cpPosIndex="1%401637214854%2332e37cef545f502a563a1bdcad46d673"; path="/"; domain="test.wikidata.org"; path_spec; secure; expires="2021-11-18 05:54:24Z"; HttpOnly=None; version=0
+Set-Cookie3: loginnotify_prevlogins="2021-1vb8p1z-4cl91pup9xzccazxflzlz2nam50gy0l"; path="/"; domain="test.wikidata.org"; path_spec; secure; expires="2022-05-17 05:54:14Z"; HttpOnly=None; version=0
+Set-Cookie3: ss0-testwikidatawikiSession=muenoh7ubee5152275os4u11srm3vlpe; path="/"; domain="test.wikidata.org"; path_spec; secure; discard; HttpOnly=None; version=0
+Set-Cookie3: testwikidatawikiSession=muenoh7ubee5152275os4u11srm3vlpe; path="/"; domain="test.wikidata.org"; path_spec; secure; discard; HttpOnly=None; SameSite=None; version=0
+Set-Cookie3: testwikidatawiki_BPsession=k061ppfoc6rrgno53tg2h21d96hb7q6j; path="/"; domain="test.wikidata.org"; path_spec; secure; discard; HttpOnly=None; version=0

@@ -2,6 +2,7 @@
 import logging
 import json
 import pymongo
+import pywikibot
 from fable import ReorgPageFinder
 from azure_client import AzureClient
 from azure.storage.queue import (
@@ -36,6 +37,31 @@ def getAliasFromDB(broken_links):
     
     return broken_link_map
 
+def postFormatter(requestObject):
+    content = ""
+    
+    # Create Base Header
+    content += "Broken Link Aliases For {0}\n".format(requestObject["base_url"])
+
+    # Add Link Aliases
+    for link, alias in requestObject["broken_links"].items():
+        content += "{0} has the alias: {1}\n".format(link, alias)
+    
+    return content
+
+
+def postToWiki(requestObject):
+    site = pywikibot.Site("test", "wikidata")
+    repo = site.data_repository()
+    page = pywikibot.Page(site, "User talk:Anishnya123")
+
+    heading = "== Fable Bot Edit =="
+    content = postFormatter(requestObject)
+    message = "\n\n{}\n{} --~~~~".format(heading, content)
+
+    page.save(summary="Testing", watch=None, minor=False, botflag=True,
+                force=False, callback=None,
+                apply_cosmetic_changes=None, appendtext=message)
 
 def pkill(pattern):
     try:
@@ -61,7 +87,6 @@ def fable_api(urlInfo: dict):
     
     
     broken_link_map = getAliasFromDB(broken_links)
-    print(broken_link_map)
 
     # Create a request object
     requestObject = {
@@ -70,15 +95,8 @@ def fable_api(urlInfo: dict):
         "broken_links": broken_link_map,
     }
 
-    # Send to queue
-    queue = QueueClient.from_queue_url(
-                    queueURL, 
-                    credential=sasToken,
-                    message_encode_policy=TextBase64EncodePolicy()
-                )
-    
-    jsonString = json.dumps(requestObject)
-    queue.send_message(jsonString)
+    postToWiki(requestObject)
+
 
 # Read URLs from Azure Queues and run Fable on them    
 def main():
@@ -90,7 +108,7 @@ def main():
                 pkill('chrome')
 
                 urlInfo = azureClient.poll_message()
-                progress_file.write(f"Processing number {count}\tHostname: {urlInfo['hostname']}\n")
+                # progress_file.write(f"Processing number {count}\tHostname: {urlInfo['hostname']}\n")
                 fable_api(urlInfo)
                 count += 1
             except:

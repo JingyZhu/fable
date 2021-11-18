@@ -26,7 +26,7 @@ class AzureClient:
         try:
             message = self.queue_client.receive_message()
             self.queue_client.delete_message(message.id, message.pop_receipt)
-            urlInfo = json.loads(message)
+            urlInfo = json.loads(message.content)
             return urlInfo
         except:
             return None
