@@ -51,6 +51,7 @@ def postFormatter(requestObject):
 
 
 def postToWiki(requestObject):
+    print("Posting to Wiki Page")
     site = pywikibot.Site("test", "wikidata")
     repo = site.data_repository()
     page = pywikibot.Page(site, "User talk:Anishnya123")
@@ -71,6 +72,7 @@ def pkill(pattern):
 
 # Run Fable and upload logs on success to Azure files
 def fable_api(urlInfo: dict):
+    print(urlInfo)
     email = urlInfo["email"]
     baseURL = urlInfo["base_url"]
     broken_links = urlInfo["broken_links"]
@@ -87,6 +89,7 @@ def fable_api(urlInfo: dict):
     
     
     broken_link_map = getAliasFromDB(broken_links)
+    print(broken_link_map)
 
     # Create a request object
     requestObject = {
