@@ -14,7 +14,7 @@ rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.D
 azureClient = AzureClient()
 
 
-queueURL = "https://fablestorage.queue.core.windows.net/requests"
+queueURL = "https://fablestorage.queue.core.windows.net/output"
 sasToken = "?sv=2020-08-04&ss=bfqt&srt=sco&sp=rwdlacupix&se=2021-12-02T14:42:05Z&st=2021-11-11T06:42:05Z&spr=https&sig=pbMyft6gYJ0FtyciNqMh%2FfSCt%2BmMAfeIVarq4lp1j9I%3D"
 
 def getAliasFromDB(broken_links):
@@ -33,7 +33,7 @@ def getAliasFromDB(broken_links):
             for document in cursor:
                 if 'achitta' in document:
                     if 'reorg_url' in document['achitta']:
-                        broken_link_map[url] = str(document['achitta']['reorg_url'])
+                        broken_link_map[url] = str(document['achitta'])
     
     return broken_link_map
 
@@ -98,7 +98,14 @@ def fable_api(urlInfo: dict):
         "broken_links": broken_link_map,
     }
 
-    postToWiki(requestObject)
+    # postToWiki(requestObject)
+    queue = QueueClient.from_queue_url(
+                queueURL, 
+                credential=sasToken,
+            )
+    
+    jsonString = json.dumps(requestObject)
+    queue.send_message(jsonString)
 
 
 # Read URLs from Azure Queues and run Fable on them    

@@ -13,21 +13,10 @@ for document in cursor:
         if 'achitta' not in document:
                 print("lol")
         else:
+                print(document)
                 if 'reorg_url' in document['achitta']:
                         print("here")
                         print(document['achitta']['reorg_url'])
-
-site = pywikibot.Site("test", "wikidata")
-repo = site.data_repository()
-page = pywikibot.Page(site, "Wikidata talk:Main Page")
-
-heading = "== Test edit =="
-content = "This is another test edit"
-message = "\n\n{}\n{} --~~~~".format(heading, content)
-
-page.save(summary="Testing", watch=None, minor=False, botflag=True,
-             force=False, callback=None,
-             apply_cosmetic_changes=None, appendtext=message)
 
 
 
