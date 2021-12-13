@@ -69,11 +69,12 @@ class Searcher:
                 # * Use earliest archived copy if available
                 searched_wayback = self.memo.wayback_index(searched_url, policy='earliest')
                 searched_url_rep = searched_wayback if searched_wayback else searched_url
+                searched_url_rep = searched_url
                 searched_html = self.memo.crawl(searched_url_rep, proxies=self.PS.select())
                 if searched_html is None: continue
-                searched_contents[searched_url] = self.memo.extract_content(searched_html)
+                searched_contents[searched_url_rep] = self.memo.extract_content(searched_html)
                 if he.extract(url) == he.extract(searched_url) or site == he.extract(searched_url):
-                    searched_titles[searched_url] = self.memo.extract_title(searched_html)
+                    searched_titles[searched_url_rep] = self.memo.extract_title(searched_html)
             similars, fromm = self.similar.similar(wayback_url, title, content, searched_titles, searched_contents)
             if len(similars) > 0:
                 top_similar = similars[0]

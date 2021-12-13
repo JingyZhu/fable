@@ -187,7 +187,7 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
         if len(tocheck) > 1: # *Put small in front
             tocheck[0], tocheck[1] = min(tocheck, key=lambda x:x[0]), max(tocheck, key=lambda x:x[0])
         for td, cand_url, cand_title in tocheck:
-            tracer.debug(f'unique_title: compare with {cand_url} {cand_title}')
+            tracer.debug(f'unique_title: compare {url} "{title}" with {cand_url} "{cand_title}"')
             diffs.add(td)
             itsts = token_intersect(title_tokens, \
                         regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', cand_title))
