@@ -32,6 +32,35 @@ class HistRedirector:
         self.PS = crawl.ProxySelector(proxies)
         self.memo = memo if memo is not None else tools.Memoizer()
     
+    def _order_neighbors(self, target_url, neighbors, ts):
+        """Order the neighbors so that most similar neighbor (in location/format and in time) can be tested first"""
+        lambdas = []
+        def get_ext(url):
+            path = urlsplit(url).path
+            if path != '/' and path[-1] == '/': path = path[:-1]
+            return os.path.splitext(path)[1]
+        def get_qkeys(url):
+            query = urlsplit(url).query
+            qs = parse_qs(query)
+            return set(qs.keys()), query != ""
+        lambdas.append(lambda x: -(get_ext(target_url) == get_ext(x[1])) )
+        lambdas.append(lambda x: (-(get_qkeys(target_url)[1] == get_qkeys(x[1])[1]), -len(get_qkeys(target_url)[0].intersection(get_qkeys(x[1])[0])) ) )
+        lambdas.append(lambda x: abs((_safe_dparse(x[0]) - ts).total_seconds()))
+        neighbor_score = []
+        for neighbor in neighbors:
+            score = tuple(l(neighbor) for l in lambdas)
+            neighbor_score.append((neighbor, score))
+        neighbor_score.sort(key=lambda x: x[1])
+        # * dedup
+        uniq_neighbor_score, seen = [], set()
+        for neighbor, _ in neighbor_score:
+            if url_utils.filter_wayback(neighbor[1]) in seen:
+                continue
+            seen.add(url_utils.filter_wayback(neighbor[1]))
+            uniq_neighbor_score.append(neighbor)
+        tracer.debug(uniq_neighbor_score[:10])
+        return uniq_neighbor_score
+
     def _verify_alias(self, url, new_urls, ts, homepage_redir, strict_filter, require_neighbor, seen_redir_url):
         """
         Verify whether new_url is valid alias by checking:
@@ -77,7 +106,7 @@ class HistRedirector:
             'from': str(ts_year) + '0101',
             'to': str(ts_year) + '1231',
             "filter": ['statuscode:3[0-9]*', 'mimetype:text/html'],
-            'limit': 100
+            # 'limit': 1000
         }
         tracer.debug(f'Search for neighbors with query & year: {url_prefix} {ts_year}')
         neighbor, _ = crawl.wayback_index(url_prefix, param_dict=param_dict, total_link=True)
@@ -88,11 +117,11 @@ class HistRedirector:
         _path_length = lambda url: len(list(filter(lambda x: x != '', urlsplit(url).path.split('/'))))
         same_length = lambda u: _path_length(url) == _path_length(url_utils.filter_wayback(u))
 
-        neighbor = sorted([n for n in neighbor if not_match(n[1]) \
+        neighbor = [n for n in neighbor if not_match(n[1]) \
                                                 and same_netdir(n[1]) \
-                                                and same_length(n[1])], \
-                            key=lambda x: abs((_safe_dparse(x[0]) - ts).total_seconds()))
-        tracer.debug(f'neightbor: {len(neighbor)}')
+                                                and same_length(n[1]) ]
+        neighbor = self._order_neighbors(url, neighbor, ts)
+        # tracer.debug(f'neightbor: {len(neighbor)}')
         matches = []
         for i in range(min(5, len(neighbor))):
             try:
@@ -219,13 +248,14 @@ class HistRedirector:
         new_host = he.extract(alias)
         new_host_url = f'http://{new_host}'
         _, new_host = self.memo.crawl(new_host_url, final_url=True)
-        _, alias = self.memo.crawl(alias, final_url=True)
+        html, alias = self.memo.crawl(alias, final_url=True)
+        alias = crawl.get_canonical(alias, html)
         if not alias or he.extract(new_host) != he.extract(alias):
             tracer.debug(f"no alias: {alias} not in the same site as the original site {new_host}")
             return
         
         # * Check if alias is a login page
-        keywords = ['login']
+        keywords = ['login', 'subscription', 'error']
         path = urlsplit(alias).path
         if path != "/" and path[-1] == "/": path = path[:-1]
         filename = path.split("/")[-1]

@@ -17,6 +17,7 @@ from itertools import product
 from bs4 import BeautifulSoup
 import bs4
 
+from urllib.parse import urlsplit
 from urllib.robotparser import RobotFileParser
 from reppy.robots import Robots
 from reppy.cache import RobotsCache
@@ -342,6 +343,18 @@ def get_sitemaps(hostname):
         else: return [sitemap_url]
     except: return None
 
+def get_canonical(url, html):
+    """See whether there are canonical tag in the HTML. If no, return the original URL"""
+    soup = BeautifulSoup(html, 'lxml')
+    base = soup.find('base')
+    base_url = url if base is None else urljoin(url, base.get('href'))
+    cans = soup.find_all('link', {'rel': 'canonical'})
+    can = ''
+    if len(cans) > 0:
+        if urlsplit(url).path not in ['', '/']:
+            can = cans[0]['href']
+            return urljoin(base_url, can) 
+    return url
 
 def wappalyzer_analyze(url, timeout=None):
     """

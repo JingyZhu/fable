@@ -31,6 +31,7 @@ def test_waybackalias_canfind():
     """URLs that should be found alias by wayback_alias"""
     _init_large_obj()
     url_alias = [
+        ("http://www.bbc.co.uk:80/1xtra/djs/rampage/", "http://www.bbc.co.uk/1xtra/rampage/"),
         ("http://www.atlassian.com:80/company/customers/case-studies/nasa", "https://www.atlassian.com/customers/nasa")
     ]
     for url, alias in url_alias:
@@ -44,7 +45,10 @@ def test_waybackalias_notfound():
     urls = [
         "http://www.intel.com:80/cd/corporate/europe/emea/eng/belgium/358249.htm",
         "https://www.meetup.com/1-Startup-Vitoria/messages/boards/forum/16297542/?sort=ThreadReplyCount&order=DESC",
-        "http://www.att.com/accessories/es/specialty-items/gopro-gooseneck-mount-all-gopro-cameras.html?locale=es_US"
+        "http://www.att.com/accessories/es/specialty-items/gopro-gooseneck-mount-all-gopro-cameras.html?locale=es_US",
+        "https://www.att.com/audio/ua-bluetooth-wireless-headphones-engineered-by-jbl.html",
+        "http://www.skype.com:80/company/legal/terms/etiquette.html",
+        "http://www.mediafire.com/?32qrp1eht670iiu"
     ]
     for url in urls:
         print(url)
@@ -52,14 +56,15 @@ def test_waybackalias_notfound():
         assert(alias is None)
 
 unsolved = {
-    "https://www.att.com/audio/ua-bluetooth-wireless-headphones-engineered-by-jbl.html" : False
+    "http://www.bbc.co.uk/5live/programmes/genres/sport/formulaone/current": False,
+    "http://www.shopify.com:80/blog/15964292-3-common-misconceptions-about-conversion-rate-optimization-that-are-wasting-your-time?ad_signup=true&utm_source=cio&utm_medium=email&utm_campaign=digest_post_16d&utm_content=email_18": False
 }
 
 def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.att.com/audio/ua-bluetooth-wireless-headphones-engineered-by-jbl.html"
+        "http://www.shopify.com:80/blog/15964292-3-common-misconceptions-about-conversion-rate-optimization-that-are-wasting-your-time?ad_signup=true&utm_source=cio&utm_medium=email&utm_campaign=digest_post_16d&utm_content=email_18"
     ]
     for url in urls:
         print(url)
