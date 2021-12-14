@@ -19,7 +19,7 @@ logger = logging.getLogger('logger')
 sys.setrecursionlimit(1500)
 he = url_utils.HostExtractor()
 
-def send_request(url):
+def send_request(url, timeout=15):
     """Only fetch for response body when content-type is HTML"""
     resp = None
     requests_header = {'user-agent': config.config('user_agent')}
@@ -28,7 +28,7 @@ def send_request(url):
     if not rp.allowed(url, requests_header['user-agent']):
         return None, 'Not Allowed'
     try:
-        resp = requests.get(url, headers=requests_header, timeout=15, stream=True)
+        resp = requests.get(url, headers=requests_header, timeout=timeout, stream=True)
         headers = {k.lower(): v.lower() for k, v in resp.headers.items()}
         content_type = headers['content-type'] if 'content-type' in headers else ''
         if 'html' in content_type:
@@ -143,7 +143,9 @@ def construct_rand_urls(url):
         path = path[:-1]
     # Filename Random construction
     url_dir, filename = os.path.dirname(path), os.path.basename(path)
-    random_filename = similar_pattern(filename)
+    # * Keep the same file ext
+    filename, ext = os.path.splitext(filename)
+    random_filename = similar_pattern(filename) + ext
     random_url = f"{scheme}://{netloc}{os.path.join(url_dir, random_filename)}"
     if end_with_slash: random_url += '/'
     if query: random_url += '?' + query
@@ -249,8 +251,9 @@ def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False
     random_urls += change_url_digit(url)
     broken_decision, reasons = [], []
     for random_url in random_urls:
-        # print(random_url)
-        random_resp, msg = send_request(random_url)
+        print(random_url)
+        # * If original request no timeout issue, so should be this one
+        random_resp, msg = send_request(random_url, timeout=None)
         if msg == 'Not Allowed':
             continue
         random_status, _ = get_status(random_url, random_resp, msg)

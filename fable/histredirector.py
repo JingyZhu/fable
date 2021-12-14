@@ -207,6 +207,7 @@ class HistRedirector:
                 pass_check = self._verify_alias(url, inter_urls, ts, homepage_redir=is_homepage and new_is_homepage, \
                                                 strict_filter=strict_filter, require_neighbor=require_neighbor, seen_redir_url=seen_redir_url)
                 if pass_check:
+                    tracer.debug(f'found: {live_new_url}')
                     return live_new_url
             else:
                 url_match_count += 1
@@ -219,7 +220,8 @@ class HistRedirector:
         new_host_url = f'http://{new_host}'
         _, new_host = self.memo.crawl(new_host_url, final_url=True)
         _, alias = self.memo.crawl(alias, final_url=True)
-        if he.extract(new_host) != he.extract(alias):
+        if not alias or he.extract(new_host) != he.extract(alias):
+            tracer.debug(f"no alias: {alias} not in the same site as the original site {new_host}")
             return
         
         # * Check if alias is a login page
@@ -229,5 +231,6 @@ class HistRedirector:
         filename = path.split("/")[-1]
         for k in keywords:
             if k in filename.lower():
+                tracer.debug(f"no_alias: filename includes keyword '{k}'")
                 return
         return alias
