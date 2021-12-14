@@ -1,4 +1,4 @@
-from fable import discoverer, searcher, inferer, tools
+from fable import histredirector, searcher, discoverer, inferer, tools
 import pymongo
 from pymongo import MongoClient
 from urllib.parse import urlsplit, parse_qsl
@@ -29,6 +29,7 @@ class ReorgPageFinder:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
+        self.histredirer = histredirctor.HistRedirector(memo=self.memo,  proxies=proxies)
         self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar, proxies=proxies)
         self.discoverer = discoverer.Discoverer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
@@ -159,7 +160,7 @@ class ReorgPageFinder:
             method = 'wayback_alias'
             self.tracer.info("Start wayback alias")
             start = time.time()
-            discovered = self.discoverer.wayback_alias(url, require_neighbor=True, homepage_redir=False)
+            discovered = self.histredirer.wayback_alias(url, require_neighbor=True, homepage_redir=False)
             if discovered:
                 trace = {'type': 'wayback_alias', 'value': None}
 
