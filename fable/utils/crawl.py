@@ -313,7 +313,8 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
         r.encoding = r.apparent_encoding
         _ = r.content
     except:
-        logger.debug('requests_crawl: Fail to decode the content of response')
+        pass
+        # logger.debug('requests_crawl: Fail to decode the content of response')
     if raw:
         return r
     else:
@@ -345,7 +346,10 @@ def get_sitemaps(hostname):
 
 def get_canonical(url, html):
     """See whether there are canonical tag in the HTML. If no, return the original URL"""
-    soup = BeautifulSoup(html, 'lxml')
+    try:
+        soup = BeautifulSoup(html, 'lxml')
+    except:
+        return url
     base = soup.find('base')
     base_url = url if base is None else urljoin(url, base.get('href'))
     cans = soup.find_all('link', {'rel': 'canonical'})

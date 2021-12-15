@@ -76,7 +76,7 @@ class HistRedirector:
                 continue
             seen.add(url_utils.filter_wayback(neighbor[1]))
             uniq_neighbor_score.append(neighbor)
-        tracer.debug(uniq_neighbor_score[:10])
+        # tracer.debug(uniq_neighbor_score[:10])
         return uniq_neighbor_score
 
     def _verify_alias(self, url, new_urls, ts, homepage_redir, strict_filter, require_neighbor, seen_redir_url):
@@ -148,16 +148,23 @@ class HistRedirector:
 
         neighbors = self._order_neighbors(url, neighbors, ts)
         # tracer.debug(f'neightbor: {len(neighbor)}')
+        tracer.debug(neighbors[:10])
         matches = []
         for i in range(min(5, len(neighbors))):
             try:
-                tracer.debug(f'Choose closest neighbor: {neighbor[i][1]}')
-                response = crawl.requests_crawl(neighbor[i][1], raw=True)
+                tracer.debug(f'Choose closest neighbor: {neighbors[i][1]}')
+                response = crawl.requests_crawl(neighbors[i][1], raw=True)
                 neighbor_urls = [r.url for r in response.history[1:]] + [response.url]
-                if (url_utils.url_match(neighbor[i][1], response.url, wayback=True)):
+                if (url_utils.url_match(neighbors[i][1], response.url, wayback=True)):
                     tracer.debug(f'No actual redirection')
                     continue
                 match = False
+
+                live_neighor_response = crawl.requests_crawl(url_utils.filter_wayback(response.url), raw=True)
+                live_neighor_url, html = live_neighor_response.url, live_neighor_response.text
+                live_neighor_url = crawl.get_canonical(live_neighor_url, html)
+                neighbor_urls.append(live_neighor_url)
+
                 for neighbor_url in neighbor_urls:
                     for new_url in new_urls:    
                         thismatch = url_utils.url_match(new_url, neighbor_url)
@@ -165,6 +172,9 @@ class HistRedirector:
                             match = True
                             seen_redir_url.add(new_url)
                 matches.append(match)
+                if True in matches:
+                    tracer.debug(f'url in same dir: {neighbor[0][1]} redirects to the same url')
+                    return False
                 if len(matches) > 1: # * Chech for two neighbors
                     break
             except Exception as e:
@@ -172,9 +182,6 @@ class HistRedirector:
                 continue
         if require_neighbor and len(matches) == 0:
             tracer.debug(f'require_neighbor is set to True, but there are no neighbors that can be checked')
-            return False
-        if True in matches:
-            tracer.debug(f'url in same dir: {neighbor[0][1]} redirects to the same url')
             return False
         return True
 
@@ -258,6 +265,7 @@ class HistRedirector:
                 live_new_url = self.na_alias(live_new_url)
                 if live_new_url is None:
                     continue
+                inter_urls.append(live_new_url)
                 # //pass_check, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
                 # //ass_check = not pass_check
                 if len(inter_urls) > 1:
@@ -286,7 +294,7 @@ class HistRedirector:
         # * Check if alias is a login page
         keywords = ['login', 'subscription', 'error', 'notfound', '404']
         path = urlsplit(alias).path
-        if path != "/" and path[-1] == "/": path = path[:-1]
+        if path not in ["/", ""] and path[-1] == "/": path = path[:-1]
         filename = path.split("/")[-1]
         for k in keywords:
             if k in filename.lower():

@@ -27,7 +27,7 @@ def _init_large_obj():
     if hist is None:
         hist = histredirector.HistRedirector(memo=memo)
 
-def test_waybackalias_canfind():
+def test_waybackalias_withalias():
     """URLs that should be found alias by wayback_alias"""
     _init_large_obj()
     url_alias = [
@@ -41,7 +41,7 @@ def test_waybackalias_canfind():
         alias = hist.wayback_alias(url)
         assert(alias is not None)
 
-def test_waybackalias_notfound():
+def test_waybackalias_noalias():
     """URLs that should not be found alias by wayback_alias"""
     _init_large_obj()
     urls = [
@@ -52,7 +52,9 @@ def test_waybackalias_notfound():
         "http://www.skype.com:80/company/legal/terms/etiquette.html",
         "http://www.mediafire.com/?32qrp1eht670iiu",
         "http://www.dartmouth.edu:80/wellness/get_help/anthem_nurseline.html",
-        "http://www.bbc.co.uk/5live/programmes/genres/sport/formulaone/current"
+        "http://www.bbc.co.uk/5live/programmes/genres/sport/formulaone/current",
+        "http://www.rollingstone.com:80/artists/default.asp?oid=2228",
+        "http://www.forrester.com/rb/search/results.jsp?SortType=Date&nb=1&dAg=10000&N=50117+133001+50662"
     ]
     for url in urls:
         print(url)
@@ -60,15 +62,16 @@ def test_waybackalias_notfound():
         assert(alias is None)
 
 unsolved = {
-    "http://www.cdc.gov/24-7/savinglives/chickenpox/": False,
-    "http://www.shopify.com:80/blog/15964292-3-common-misconceptions-about-conversion-rate-optimization-that-are-wasting-your-time?ad_signup=true&utm_source=cio&utm_medium=email&utm_campaign=digest_post_16d&utm_content=email_18": False
+    "http://www.shopify.com:80/blog/15964292-3-common-misconceptions-about-conversion-rate-optimization-that-are-wasting-your-time?ad_signup=true&utm_source=cio&utm_medium=email&utm_campaign=digest_post_16d&utm_content=email_18": False, 
+    ("https://www.cloudera.com/content/cloudera-content/cloudera-docs/CDH5/latest/CDH5-Security-Guide/cdh5sg_yarn_container_exec_errors.html", "http://www.cloudera.com/content/www/en-us/documentation/enterprise/latest/topics/cdh_sg_yarn_container_exec_errors.html"): 
+        True
 }
 
 def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.cdc.gov/24-7/savinglives/chickenpox/"
+        "http://www.att.com/accessories/es/specialty-items/gopro-gooseneck-mount-all-gopro-cameras.html?locale=es_US"
     ]
     for url in urls:
         print(url)
