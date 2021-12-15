@@ -11,6 +11,7 @@ db = config.DB
 def test_sictransit_isbroken():
     """URLs that should be broken"""
     urls = [
+        "https://www.dartmouth.edu/wellness/new-location.html",
         "http://www.shopify.com/enterprise/44340803-3-common-misconceptions-about-conversion-rate-optimization-that-are-wasting-your-time?ad_signup=true&utm_source=cio&utm_medium=email&utm_campaign=digest_post_16d&utm_content=email_18",
         "https://www.att.com/es-us/accessories/specialty-items/gopro-gooseneck-mount-all-gopro-cameras.html"
     ]

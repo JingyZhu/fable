@@ -43,8 +43,26 @@ class HistRedirector:
             query = urlsplit(url).query
             qs = parse_qs(query)
             return set(qs.keys()), query != ""
+        def _detect_file_alnum(url):
+            """Detect whether string has alpha and/or numeric char"""
+            path = urlsplit(url).path
+            if path != '/' and path[-1] == '/': path = path[:-1]
+            filename = os.path.basename(path)
+            typee = ''
+            alpha_char = [c for c in filename if c.isalpha()]
+            num_char = [c for c in filename if c.isdigit()]
+            if len(alpha_char) > 0:
+                typee += 'A'
+            if len(num_char) > 0:
+                typee += 'N'
+            return set(typee)
+        # * Same ext?
         lambdas.append(lambda x: -(get_ext(target_url) == get_ext(x[1])) )
+        # * Has query? Same Key?
         lambdas.append(lambda x: (-(get_qkeys(target_url)[1] == get_qkeys(x[1])[1]), -len(get_qkeys(target_url)[0].intersection(get_qkeys(x[1])[0])) ) )
+        # * Format similarity
+        lambdas.append(lambda x: -len(_detect_file_alnum(target_url).intersection(_detect_file_alnum(x[1]))))
+        # * ts diff
         lambdas.append(lambda x: abs((_safe_dparse(x[0]) - ts).total_seconds()))
         neighbor_score = []
         for neighbor in neighbors:
@@ -98,36 +116,47 @@ class HistRedirector:
         
         # *If url ended with / (say /dir/), consider both /* and /dir/*
         url_prefix = urlsplit(url)
-        url_dir = [url_utils.nondigit_dirname(url_prefix.path)]
-        # // if url_prefix.path[-1] == '/': url_dir.append(os.path.dirname(url_dir[0]))
-        url_prefix = url_prefix._replace(path=url_dir[-1] + '/*', query='')
-        url_prefix = urlunsplit(url_prefix)
-        param_dict = {
-            'from': str(ts_year) + '0101',
-            'to': str(ts_year) + '1231',
-            "filter": ['statuscode:3[0-9]*', 'mimetype:text/html'],
-            # 'limit': 1000
-        }
-        tracer.debug(f'Search for neighbors with query & year: {url_prefix} {ts_year}')
-        neighbor, _ = crawl.wayback_index(url_prefix, param_dict=param_dict, total_link=True)
-
-        # *Get closest crawled urls in the same dir, which is not target itself  
+        url_dir = url_utils.nondigit_dirname(url_prefix.path)
+        count = 0
         not_match = lambda u: not url_utils.url_match(url, url_utils.filter_wayback(u) ) # and not url_utils.filter_wayback(u)[-1] == '/'
-        same_netdir = lambda u: url_utils.nondigit_dirname(urlsplit(url_utils.filter_wayback(u)).path[:-1]) in url_dir
         _path_length = lambda url: len(list(filter(lambda x: x != '', urlsplit(url).path.split('/'))))
         same_length = lambda u: _path_length(url) == _path_length(url_utils.filter_wayback(u))
+        neighbors, neighbor_set = [], set()
+        while count < 3 and url_dir != "/" and len(neighbor_set) < 5:
+        # // if url_prefix.path[-1] == '/': url_dir.append(os.path.dirname(url_dir[0]))
+            url_prefix = url_prefix._replace(path=os.path.join(url_dir, '*'), query='')
+            url_prefix_str = urlunsplit(url_prefix)
+            param_dict = {
+                'from': str(ts_year) + '0101',
+                'to': str(ts_year) + '1231',
+                "filter": ['statuscode:3[0-9]*', 'mimetype:text/html'],
+                # 'limit': 1000
+            }
+            tracer.debug(f'Search for neighbors with query & year: {os.path.join(url_dir, "*")} {ts_year}')
+            neighbor, _ = crawl.wayback_index(url_prefix_str, param_dict=param_dict, total_link=True)
 
-        neighbor = [n for n in neighbor if not_match(n[1]) \
-                                                and same_netdir(n[1]) \
-                                                and same_length(n[1]) ]
-        neighbor = self._order_neighbors(url, neighbor, ts)
+            # *Get closest crawled urls in the same dir, which is not target itself  
+            same_netdir = lambda u: url_dir in url_utils.nondigit_dirname(urlsplit(url_utils.filter_wayback(u)).path[:-1])
+            neighbor = [n for n in neighbor if not_match(n[1]) \
+                                                    and same_netdir(n[1]) \
+                                                    and same_length(n[1]) ]
+            neighbor_set.update([url_utils.filter_wayback(n[1]) for n in neighbor])
+
+            neighbors += neighbor
+            count += 1
+            url_dir = url_utils.nondigit_dirname(url_dir)
+
+        neighbors = self._order_neighbors(url, neighbors, ts)
         # tracer.debug(f'neightbor: {len(neighbor)}')
         matches = []
-        for i in range(min(5, len(neighbor))):
+        for i in range(min(5, len(neighbors))):
             try:
                 tracer.debug(f'Choose closest neighbor: {neighbor[i][1]}')
                 response = crawl.requests_crawl(neighbor[i][1], raw=True)
                 neighbor_urls = [r.url for r in response.history[1:]] + [response.url]
+                if (url_utils.url_match(neighbor[i][1], response.url, wayback=True)):
+                    tracer.debug(f'No actual redirection')
+                    continue
                 match = False
                 for neighbor_url in neighbor_urls:
                     for new_url in new_urls:    
@@ -136,10 +165,10 @@ class HistRedirector:
                             match = True
                             seen_redir_url.add(new_url)
                 matches.append(match)
-                if i > 0: # * Chech for two neighbors
+                if len(matches) > 1: # * Chech for two neighbors
                     break
             except Exception as e:
-                tracer.debug(f'Cannot check neighbor on wayback_alias')
+                tracer.debug(f'Cannot check neighbor on wayback_alias: {str(e)}')
                 continue
         if require_neighbor and len(matches) == 0:
             tracer.debug(f'require_neighbor is set to True, but there are no neighbors that can be checked')
@@ -255,7 +284,7 @@ class HistRedirector:
             return
         
         # * Check if alias is a login page
-        keywords = ['login', 'subscription', 'error']
+        keywords = ['login', 'subscription', 'error', 'notfound', '404']
         path = urlsplit(alias).path
         if path != "/" and path[-1] == "/": path = path[:-1]
         filename = path.split("/")[-1]
