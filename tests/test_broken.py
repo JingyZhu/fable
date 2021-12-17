@@ -8,14 +8,30 @@ from fable.utils import url_utils, sic_transit
 he = url_utils.HostExtractor()
 db = config.DB
 
+unsolved = {
+  "http://www.shopify.com/enterprise/44340803-3-common-misconceptions-about-conversion-rate-optimization-that-are-wasting-your-time?ad_signup=true&utm_source=cio&utm_medium=email&utm_campaign=digest_post_16d&utm_content=email_18"\
+      : False  # ! Only previously existed URLs will redirect to the homepage
+}
+
 def test_sictransit_isbroken():
     """URLs that should be broken"""
     urls = [
+        "https://www.vevo.com/watch/k-ci-and-jojo/you-bring-me-up-remix/USUV70601491",
         "https://www.dartmouth.edu/wellness/new-location.html",
-        "http://www.shopify.com/enterprise/44340803-3-common-misconceptions-about-conversion-rate-optimization-that-are-wasting-your-time?ad_signup=true&utm_source=cio&utm_medium=email&utm_campaign=digest_post_16d&utm_content=email_18",
         "https://www.att.com/es-us/accessories/specialty-items/gopro-gooseneck-mount-all-gopro-cameras.html"
+    ]
+    for i, url in enumerate(urls):
+        print(i, url)
+        broken, _ = sic_transit.broken(url, html=True)
+        assert(broken == True)
+
+def test_sictransit_notbroken():
+    """URLs that should not be broken"""
+    urls = [
+        "http://ionicframework.com/docs/api/directive/ionNavView/",
+        "http://www.tennisfame.com/hall-of-famers/inductees/maud-barger-wallach"
     ]
     for url in urls:
         print(url)
         broken, _ = sic_transit.broken(url, html=True)
-        assert(broken == True)
+        assert(broken == False)

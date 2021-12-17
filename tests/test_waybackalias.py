@@ -7,13 +7,12 @@ from fable.utils import url_utils
 
 he = url_utils.HostExtractor()
 memo = tools.Memoizer()
-simi = None
 db = config.DB
 hist = None
 tr = None
 
 def _init_large_obj():
-    global simi, hist, tr
+    global hist, tr
     if tr is None:
         try:
             os.remove(os.path.basename(__file__).split(".")[0] + '.log')
@@ -22,8 +21,6 @@ def _init_large_obj():
         tr = logging.getLogger('logger')
         tr._unset_meta()
         tr._set_meta(os.path.basename(__file__).split(".")[0], db=db, loglevel=logging.DEBUG)
-    if simi is None:
-        simi = tools.Similar()
     if hist is None:
         hist = histredirector.HistRedirector(memo=memo)
 
@@ -64,14 +61,18 @@ def test_waybackalias_noalias():
 unsolved = {
     "http://www.shopify.com:80/blog/15964292-3-common-misconceptions-about-conversion-rate-optimization-that-are-wasting-your-time?ad_signup=true&utm_source=cio&utm_medium=email&utm_campaign=digest_post_16d&utm_content=email_18": False, 
     ("https://www.cloudera.com/content/cloudera-content/cloudera-docs/CDH5/latest/CDH5-Security-Guide/cdh5sg_yarn_container_exec_errors.html", "http://www.cloudera.com/content/www/en-us/documentation/enterprise/latest/topics/cdh_sg_yarn_container_exec_errors.html"): 
-        True
+        True,
+
+    # ! All other neighors are not broken except this one
+    "http://www.hollywood.com/?p=60227863": False,
+    "http://econsultancy.com:80/ca/events/the-top-8-trends-in-social-media-marketing-opportunities-for-2014": False
 }
 
 def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.att.com/accessories/es/specialty-items/gopro-gooseneck-mount-all-gopro-cameras.html?locale=es_US"
+        "http://econsultancy.com:80/ca/events/the-top-8-trends-in-social-media-marketing-opportunities-for-2014"
     ]
     for url in urls:
         print(url)

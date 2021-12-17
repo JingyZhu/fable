@@ -251,7 +251,7 @@ def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False
     random_urls += change_url_digit(url)
     broken_decision, reasons = [], []
     for random_url in random_urls:
-        # print(random_url)
+        print(random_url)
         # * If original request no timeout issue, so should be this one
         random_resp, msg = send_request(random_url, timeout=None)
         if msg == 'Not Allowed':
@@ -278,10 +278,16 @@ def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False
             try:
                 url_content = BeautifulSoup(resp.text, 'lxml').get_text(separator=' ')
             except: url_content = resp.text
+            # ? Try to filter case for js oriented page loading
+            if len(text_norm(url_content).split(' ')) < 10:
+                broken_decision.append(False)
+                reasons.append("no features match")
+                continue
             try:
                 random_content = BeautifulSoup(random_resp.text, 'lxml').get_text(separator=' ')
             except: random_content = random_resp.text
             if text_utils.k_shingling(text_norm(url_content), text_norm(random_content)) >= 0.95:
+                # print(text_norm(url_content), text_norm(random_content))
                 broken_decision.append(True)
                 reasons.append("Similar soft 404 content")
                 continue

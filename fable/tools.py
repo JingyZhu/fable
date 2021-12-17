@@ -528,6 +528,7 @@ class Memoizer:
             year = dparser.parse(year).year
         else:
             year = 2022
+        # * Set year limit to avoid getting "alias" title/content as non-unique
         param = {
             'from': year - 2,
             'to': year + 2,
@@ -536,7 +537,11 @@ class Memoizer:
             'limit': 100
         }
         wayback_urls, _ = crawl.wayback_index(url_prefix + '/*', param_dict=param, total_link=True)
-        wayback_urls = [wu[1] for wu in wayback_urls if url_utils.netloc_dir(wu[1]) == nd]
+        wayback_urls = [wu[1] for wu in wayback_urls if not url_utils.url_match(wu[1], url, wayback=wayback) and url_utils.netloc_dir(wu[1]) == nd]
+        # * Also looking for its direct parent if no siblings is archived
+        if len(wayback_urls) == 0:
+            wayback_urls, _ = crawl.wayback_index(url_prefix, param_dict=param, total_link=True)
+            wayback_urls = [wu[1] for wu in wayback_urls if not url_utils.url_match(wu[1], url, wayback=wayback)]
         if wayback:
             cand_urls = sorted(wayback_urls, key=lambda x: int(url_utils.get_ts(x)))
         else:
@@ -666,7 +671,8 @@ class Similar:
         self.lw_titles = defaultdict(list) # * {title: {list(crawls)}}
         self.wb_titles = defaultdict(list)
         lw_crawl = []
-        for ssite in self.site:
+        start = time.time()
+        for ssite in set(self.site):
             lw_crawl += list(self.db.crawl.find({'site': ssite, 'url': re.compile('^((?!web\.archive\.org).)*$')}))
         wb_crawl = list(self.db.crawl.find({'site': site, 'url': re.compile('\/\/web.archive.org')}))
         # lw_crawl = [lw for lw in lw_crawl if 'title' in lw] + [lw for lw in lw_crawl if 'title' not in lw]
@@ -674,7 +680,8 @@ class Similar:
         lw_crawl = [lw for lw in lw_crawl if 'title' in lw]
         wb_crawl = [wb for wb in wb_crawl if 'title' in wb]
         # lw_path, wb_path = defaultdict(int), defaultdict(int)
-        
+        tracer.debug(f'find crawls in db: {time.time() - start:.2f}')
+
         self.lw_seen = set()
         start = time.time()
         # * Get more urls from search engine
@@ -823,11 +830,11 @@ class Similar:
         text1_token, text2_token = set(text1_token), set(text2_token)
         # * To match, one text must be the subset of another
         if not (text1_token <= text2_token or text2_token <= text1_token):
-            tracer.debug(f'shorttext_match: one text not a subset of another: \n{ text1} vs. {text2} \n {text1_token} vs. {text2_token}')
+            tracer.debug(f'shorttext_match: one text not a subset of another: "{text1}" vs. "{text2}"')
             return 0
        
-        tracer.debug(f'shorttext_match: simi between "{text1}" vs. "{text2}"')
         simi = self.tfidf.similar(text1, text2)
+        # tracer.debug(f'shorttext_match: simi between "{text1}" vs. "{text2}": {simi}')
         return simi
         
     def _is_title_unique(self, url, title, content, wayback=False):

@@ -355,7 +355,7 @@ def get_canonical(url, html):
     cans = soup.find_all('link', {'rel': 'canonical'})
     can = ''
     if len(cans) > 0:
-        if urlsplit(url).path not in ['', '/']:
+        if urlsplit(url).path not in ['', '/'] and 'href' in cans[0]:
             can = cans[0]['href']
             return urljoin(base_url, can) 
     return url
