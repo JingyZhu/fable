@@ -28,21 +28,21 @@ def _init_large_obj():
         search = searcher.Searcher(memo=memo, similar=simi)
 
 def test_search_withalias():
-    """URLs that should be found alias by wayback_alias"""
+    """URLs that should be found alias by search"""
     _init_large_obj()
     url_alias = [
         ("http://rpgvault.ign.com/articles/875/875540p1.html", "https://www.ign.com/articles/2008/05/21/rpg-vault-focus-russia-part-1")
     ]
     for url, alias in url_alias:
         print(url)
-        alias = search(url, search_engine='bing')
+        alias = search.search(url, search_engine='bing')
         if alias is None:
-            alias = search(url, search_engine='google')
+            alias = search.search(url, search_engine='google')
         assert(alias is not None)
 
 
 def test_search_noalias():
-    """URLs that should not be found alias by wayback_alias"""
+    """URLs that should not be found alias by search"""
     _init_large_obj()
     urls = [
         "http://toxnet.nlm.nih.gov/cgi-bin/sis/htmlgen?HSDB",

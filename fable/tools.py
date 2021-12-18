@@ -530,8 +530,8 @@ class Memoizer:
             year = 2022
         # * Set year limit to avoid getting "alias" title/content as non-unique
         param = {
-            'from': year - 2,
-            'to': year + 2,
+            'from': year - 4,
+            'to': int(f"{year}1231"),
             'filter': ['mimetype:text/html', 'statuscode:200'],
             'collapse': 'urlkey',
             'limit': 100
@@ -847,6 +847,7 @@ class Similar:
         """
         if not title:
             return False
+        self._add_crawl(url, title, content)
         lw_url = url_utils.filter_wayback(url)
         site_titles = self.wb_titles if wayback else self.lw_titles
         site_meta = self.wb_meta if wayback else self.lw_meta
@@ -863,15 +864,15 @@ class Similar:
                         tracer.debug(f"_is_title_unique: title {title} is not unique amoung site with {site_crawl['url']}")
                         return False
             return True
-        unique = check_titles()
-        if not unique: return unique
+        # unique = check_titles()
+        # if not unique: return unique
         nd_idx = bisect.bisect_left(site_meta, [nd, []])
         # * Get more samples if nd's URL is not enough
         if wayback and len(site_meta[nd_idx][1]) < 2:
             memo = Memoizer()
             more_crawls = memo.get_more_crawls(url, wayback=True)
             for more_crawl in more_crawls:
-                self._add_crawl(more_crawl['url'], more_crawl['title'], more_crawl['content'], more_crawl['html'],)
+                self._add_crawl(more_crawl['url'], more_crawl['title'], more_crawl['content'], more_crawl['html'])
             return check_titles()
         return True
         

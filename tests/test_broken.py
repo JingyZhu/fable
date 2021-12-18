@@ -28,6 +28,8 @@ def test_sictransit_isbroken():
 def test_sictransit_notbroken():
     """URLs that should not be broken"""
     urls = [
+        "https://developer.chrome.com/extensions/contentSecurityPolicy.html",
+        "https://www.jesmine.com.au/collections/summer-new-arrivals/products/royal-floral-elephant-bedding-set",
         "http://ionicframework.com/docs/api/directive/ionNavView/",
         "http://www.tennisfame.com/hall-of-famers/inductees/maud-barger-wallach"
     ]

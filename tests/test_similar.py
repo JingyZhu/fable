@@ -24,6 +24,10 @@ def _init_large_obj():
     if simi is None:
         simi = tools.Similar()
 
+unsolved = {
+    # ! Domdistiller is getting title from <meta "title"> instead of the actual title
+    "https://www.archives.gov/exhibits/featured_documents/emancipation_proclamation/": True
+}
 
 def test_is_title_unique_notunique():
     _init_large_obj()
@@ -42,4 +46,22 @@ def test_is_title_unique_notunique():
         is_unique = simi._is_title_unique(target_url, title, content='', wayback=wayback)
         assert(is_unique == False)
 
-# test_is_title_unique_notunique()
+
+def test_is_title_unique_temp():
+    _init_large_obj()
+    urls = {
+        "https://www.archives.gov/exhibits/featured_documents/emancipation_proclamation/": True
+    }
+    for url, wayback in urls.items():
+        site = he.extract(url)
+        simi._init_titles(site)
+        if wayback:
+            target_url = memo.wayback_index(url)
+        else:
+            target_url = url
+        html = memo.crawl(target_url)
+        title = memo.extract_title(html)
+        is_unique = simi._is_title_unique(target_url, title, content='', wayback=wayback)
+        assert(is_unique == False)
+
+# test_is_title_unique_temp()
