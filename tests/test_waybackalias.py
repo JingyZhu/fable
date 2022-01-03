@@ -65,7 +65,11 @@ unsolved = {
 
     # ! All other neighors are not broken except this one
     "http://www.hollywood.com/?p=60227863": False,
-    "http://econsultancy.com:80/ca/events/the-top-8-trends-in-social-media-marketing-opportunities-for-2014": False
+    "http://econsultancy.com:80/ca/events/the-top-8-trends-in-social-media-marketing-opportunities-for-2014": False,
+
+    # ! Suspicious from ground truth
+    "http://www.mckinsey.com:80/careers/join_us/university_recruiting/internships_at_mckinsey": False,
+    "http://aspn.activestate.com:80/ASPN/Cookbook/Python/Recipe/511508": False,
 }
 
 def test_waybackalias_temp():

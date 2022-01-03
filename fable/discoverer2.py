@@ -39,220 +39,6 @@ def estimated_score(spatial, simi):
     k = 1
     return k*p + (1-k*p)*spatial
 
-def _safe_dparse(ts):
-    try:
-        return dparser.parse(ts)
-    except:
-        return datetime.datetime.now()
-
-
-class Path:
-    def __init__(self, url, wayback_url=None, link_sig=('', ('', '')), ss=None):
-        self.url = url
-        self.path = ss.path + [url] if ss else [url]
-        self.wayback_path = ss.wayback_path + [wayback_url] if ss else [wayback_url]
-        self.sigs = ss.sigs + [link_sig] if ss else [link_sig]
-        self.length = ss.length + 1 if ss else 0
-    
-    def from_dict(self, d):
-        self.url = d['url']
-        self.path = d['path']
-        self.sigs = d['sigs']
-        self.length = len(self.path)
-    
-    def update_wayback(self, wayback_url):
-        """
-        Update the last array of wayback
-        """
-        self.wayback_path[-1] = wayback_url
-
-    def calc_priority(self, dst, dst_rep, similar=None):
-        """
-        similar must be initialized to contain dst_rep and sigs
-        """
-        c1 = url_utils.tree_diff(dst, self.url)
-        c2 = len(self.path)
-        if similar:
-            anchor, sig = self.sigs[-1]
-            simis = (similar.tfidf.similar(anchor, dst_rep), similar.tfidf.similar(' '.join(sig), dst_rep))
-            simi = wsum_simi(simis)
-            self.priority = c1 + c2 - simi
-        else:
-            self.priority = c1 + c2
-        return self
-    
-    def __str__(self, wayback_dump=False):
-        d = {
-            'url': self.url,
-            'path': self.path
-        }
-        if wayback_dump: d.update({'wayback_path': self.wayback_path})
-        return json.dumps(d, indent=2)
-    
-    def to_dict(self):
-        return {
-            'url': self.url,
-            'path': self.path,
-            'sigs': self.sigs,
-            'wayback_path': self.wayback_path
-        }
-
-
-class Backpath_Finder:
-    def __init__(self, policy='earliest', memo=None, similar=None):
-        """
-        Policy: earliest/latest
-        """
-        self.policy = policy
-        self.memo = memo if memo is not None else tools.Memoizer()
-        self.similar = similar if similar is not None else tools.Similar()
-        policy_map = {
-            'earliest': 'closest-later',
-            'latest': 'closest-earlier'
-        }
-        self.memo_policy = policy_map[self.policy]
-
-    def find_path(self, url, homepage=None):
-        policy = self.policy
-        trim_size = 20
-        try:
-            wayback_url = self.memo.wayback_index(url, policy=policy)
-            html = self.memo.crawl(wayback_url)
-            content = self.memo.extract_content(html, version='domdistiller')
-            title = self.memo.extract_title(html, version='domdistiller')
-            url_rep = title if title != '' else content
-        except Exception as e:
-            tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
-            # Generate repr text from url given no wayback snapshot
-            html, title, content = '', '', ''
-            us = urlsplit(url)
-            url_rep = re.sub('[^0-9a-zA-Z]+', ' ', us.path)
-            trim_size = 10
-            if us.query:
-                values = [u[1] for u in parse_qsl(us.query)]
-                url_rep += f" {' '.join(values)}"
-        # TODO: Consider cases where there is no snapshot
-        ts = url_utils.get_ts(wayback_url) if wayback_url else 20200101
-        tracer.wayback_url(url, wayback_url)
-        us = urlsplit(url)
-        homepage = urlunsplit(us._replace(path='', query='', fragment='')) if not homepage else homepage
-        MAX_DEPTH = len(us.path.split('/')) + len(parse_qs(us.query))
-        search_queue = [Path(homepage)]
-        seen = set()
-        while len(search_queue) > 0:
-            path = search_queue.pop(0)
-            tracer.info(f'BackPath: {path.url} outgoing_queue:{len(search_queue)}')
-            if len(path.path) > MAX_DEPTH or url_utils.url_norm(path.url) in seen:
-                continue
-            seen.add(url_utils.url_norm(path.url))
-            if url_utils.url_match(url, path.url):
-                return path
-
-            wayback_url = self.memo.wayback_index(path.url, policy=self.memo_policy, ts=ts)
-            path.update_wayback(wayback_url)
-            tracer.info(wayback_url)
-
-            if wayback_url is None:
-                continue
-            wayback_html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
-            if wayback_html is None:
-                continue
-            outgoing_sigs = crawl.outgoing_links_sig(wayback_url, wayback_html, wayback=True)
-            self.similar.tfidf._clear_workingset()
-            corpus = [s[1] for s in outgoing_sigs] + [' '.join(s[2]) for s in outgoing_sigs] + [url_rep]
-            self.similar.tfidf.add_corpus(corpus)
-            for wayback_outgoing_link, anchor, sib_text in outgoing_sigs:
-                outgoing_link = url_utils.filter_wayback(wayback_outgoing_link)
-                new_path = Path(outgoing_link, link_sig=(anchor, sib_text), ss=path)
-                if url_utils.url_match(wayback_outgoing_link, url, wayback=True):
-                    return new_path
-                if outgoing_link not in seen:
-                    new_path.calc_priority(url, url_rep, self.similar)
-                    seen.add(url_utils.url_norm(outgoing_link))
-                    search_queue.append(new_path)
-            search_queue.sort(key=lambda x: x.priority)
-            search_queue = search_queue[:trim_size] if len(search_queue) > trim_size else search_queue
-    
-    def wayback_alias(self, url):
-        """
-        Utilize wayback's archived redirections to find the alias/reorg of the page
-
-        Returns: reorg_url is latest archive is an redirection to working page, else None
-        """
-        us = urlsplit(url)
-        is_homepage = us.path in ['/', ''] and not us.query
-        try:
-            wayback_url = self.memo.wayback_index(url, policy='latest', all_none_400=True)
-            _, wayback_url = self.memo.crawl(wayback_url, final_url=True)
-            match = url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
-        except:
-            return
-        if not match:
-            new_url = url_utils.filter_wayback(wayback_url)
-            new_us = urlsplit(new_url)
-            new_is_homepage = new_us.path in ['/', ''] and not new_us.query
-            broken, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
-            if not broken:
-                return new_url
-        return
-
-    def _find_same_link(self, link_sigs, liveweb_url, liveweb_html):
-        """
-        For same page from wayback and liveweb (still working). Find the same url from liveweb which matches to wayback
-        
-        Returns: If there is a match on the url, return sig, similarity, by
-                 Else: return None
-        """
-        live_outgoing_sigs = crawl.outgoing_links_sig(liveweb_url, liveweb_html)
-        for link_sig in link_sigs:
-            matched_vals = self.similar.match_url_sig(link_sig, live_outgoing_sigs)
-            if matched_vals is not None:
-                return matched_vals
-        return
-
-    def match_path(self, path):
-        """
-        Match reorganized url with the prev given path
-        Return: If hit, matched_urls, by 
-        """
-        o_pointer, i_pointer = 0, 0
-        curr_url = path.path[o_pointer]
-        matched = False
-        while o_pointer < len(path.path) - 1:
-            i_pointer = max(i_pointer, o_pointer)
-            curr_url = path.path[o_pointer] if not matched else curr_url
-            tracer.info(f'curr_url: {curr_url} {matched}')
-            curr_us = urlsplit(curr_url)
-            is_homepage = curr_us.path in ['/', ''] and not curr_us.query
-            broken, reason = sic_transit.broken(curr_url, html=True, ignore_soft_404=is_homepage)
-            if broken: # Has to be not homepage to 
-                new_url = self.wayback_alias(curr_url)
-                if not new_url:
-                    o_pointer += 1
-                    matched = False
-                    continue
-                curr_url = new_url
-            html = self.memo.crawl(curr_url)
-            for compare in range(i_pointer+1, len(path.path)):
-                link_match = self._find_same_link([(path.path[compare], path.sigs[compare][0], path.sigs[compare][1])], curr_url, html) # TODO, explicit list of wayback_sig mayn
-                if link_match:
-                    matched = True
-                    matched_sig, simi, by = link_match
-                    if compare == len(path.path) - 1: # Last path
-                        if not sic_transit.broken(matched_sig[0])[0]:
-                            return matched_sig[0], (f'link_{by}', simi)
-                        else:
-                            return
-                    else:
-                        curr_url = matched_sig[0]
-                        i_pointer = compare
-                        break
-                else:
-                    matched = False
-            o_pointer += not matched
-        return  
-
-
 class Discoverer:
     def __init__(self, depth=DEPTH, corpus=[], proxies={}, memo=None, similar=None):
         self.depth = depth
@@ -262,11 +48,10 @@ class Discoverer:
         self.crawled = {} # {url: html}
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
-        self.bf = Backpath_Finder(policy='latest', memo=self.memo, similar=self.similar)
         self.threshold = 0.8
 
 
-    def guess_backlinks(self, url, num):
+    def guess_backlinks(self, url, num, ts=None):
         """
         Retrieve closest neighbors for url archived by wayback
         num: Number of neighbors required
@@ -295,10 +80,17 @@ class Discoverer:
             score += len(set(q1s.keys()).intersection(set(q2s.keys())))
             score -= max(0, len(q2s.keys()) - len( set(q1s.keys()).union( set(q2s.keys()) ) ))
             return score
-
+        
+        if ts:
+            year = dparser.parse(ts).year
+            start = year - 2
+            end = year + 2
+        else:
+            start = 1997
+            end = 2022
         param_dict = {
-            'from': 1997,
-            'to': 2021,
+            'from': start,
+            'to': end,
             'filter': ['mimetype:text/html', 'statuscode:200'],
             'collapse': 'urlkey',
             'limit': 10000
@@ -326,11 +118,11 @@ class Discoverer:
         else:
             # TODO Think about this
             return []
-        parents = [w[1] for w in wayback_urls if url_utils.is_parent(w[1], url) and \
-             not url_utils.url_match(w[1], url) and not url_utils.is_parent(w[1], explicit_parent)]
+        parents = list(set([url_utils.url_norm(w[1]) for w in wayback_urls if url_utils.is_parent(w[1], url) and \
+             not url_utils.url_match(w[1], url) and not url_utils.is_parent(w[1], explicit_parent)]))
         cands += parents
-        closest_urls = [w[1] for w in wayback_urls if not url_utils.url_match(w[1], url) \
-            and not url_utils.url_match(w[1], explicit_parent) and w[1] not in parents and self.loop_cand(url, w[1])]
+        closest_urls = list(set([url_utils.url_norm(w[1]) for w in wayback_urls if not url_utils.url_match(w[1], url) \
+            and not url_utils.url_match(w[1], explicit_parent) and w[1] not in parents and self.loop_cand(url, w[1])]))
         closest_urls.sort(key=lambda x: closeness(url, x), reverse=True)
         cands += closest_urls[:max(0, num-len(parents))] if len(closest_urls) > max(0, num-len(parents)) else closest_urls
         return cands
@@ -447,6 +239,7 @@ class Discoverer:
         for wayback_sig in wayback_sigs:
             matched_vals = self.similar.match_url_sig(wayback_sig, backlink_sigs)
             anchor_vals = sorted(matched_vals["anchor"].values(), key=lambda x: x[2], reverse=True)
+            tracer.debug(f'_find_same_link: {anchor_vals}')
             while len(anchor_vals) < 2: anchor_vals.append(('', '', 0))
             if separable(anchor_vals):
                 max_match = anchor_vals[:2] if anchor_vals[0][2] > max_match[0][2] else max_match
@@ -584,11 +377,14 @@ class Discoverer:
             drop_versions = [all_wayback_src, []] # * Check 2 versions: 1). Wayback drop, 2). Liveweb drop
             for dv in drop_versions:
                 backlink_sigs, end_ts = self._first_not_linked(dst, wayback_src, dv)
-                if backlink_sigs: # * 2.1 dropped
+                # * 2.1 dropped
+                if backlink_sigs:
                     max_match = self._find_same_link(wayback_linked[1], backlink_sigs)
-                    if max_match[0][2] >= self.threshold and max_match[1][2] < self.threshold: # * 3.1 matched
+                    # * 3.1 matched
+                    if max_match[0][2] >= self.threshold and max_match[1][2] < self.threshold:
                         top_match = max_match[0]
-                        if not sic_transit.broken(max_match[0][0], html=True)[0]: # * 4.1 work
+                        # * 4.1 work
+                        if not sic_transit.broken(max_match[0][0], html=True)[0]:
                             fromm = "anchor" if isinstance(top_match[1], str) else "sig"
                             r_dict.update({
                                 "status": "found",
@@ -612,6 +408,7 @@ class Discoverer:
                                 "archive": {"links": wayback_linked[1]}
                             })
                     else: # * 3.0 Not matched, link same page
+                        continue
                         top_similar, fromm = None, None
                         if not src_broken:
                             top_similar, fromm = self._link_same_page(wayback_dst, dst_title, dst_content, src, src_html)
@@ -652,14 +449,12 @@ class Discoverer:
         Discover the potential reorganized site
         Trim size: The largest size of outgoing queue
 
-        Return: If Found: URL, Trace (whether it information got suffice, how copy is found, etc)
-                else: None, {'suffice': Bool, 'trace': traces}
+        Return: If Found: URL, Trace (how copy is found)
+                else: None, Trace
         """
         if depth is None: depth = self.depth
         has_snapshot = False
         url_ts = None
-        suffice = False # *Only used for has_snapshot=False. See whehter url sufice restrictions. (Parent sp&linked&not broken today)
-        # traces = [] # *Used for tracing the discovery process
         repr_text = [] # *representitive text for url, composed with [title, content, url]
         ### *First try with wayback alias
         try:
@@ -673,8 +468,7 @@ class Discoverer:
         except Exception as e:
             tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             html, title, content = '', '', ''
-        suffice = has_snapshot or suffice
-
+        
         # *Get repr_text
         repr_text += [title, content]
         us = urlsplit(url)
@@ -717,15 +511,6 @@ class Discoverer:
             outgoing_queue.sort(key=lambda x: x[2])
             outgoing_queue = outgoing_queue[: trim_size+1] if len(outgoing_queue) >= trim_size else outgoing_queue
 
-        # ee_count = 2 * (not has_snapshot) # Early exit satisfy condition score
-        # def early_exit(status, reason):
-        #     """Determine whether it is ok to early exit"""
-        #     nonlocal ee_count
-        #     if status != "notfound":
-        #         return False
-        #     if reason == "backlink no snapshot":
-        #         ee_count += 1
-        #     return ee_count > 2
 
         tracer.debug(f'backlink guess total: {guess_total}')
         tracer.debug(f'backlink outgoing queue: {outgoing_queue}')

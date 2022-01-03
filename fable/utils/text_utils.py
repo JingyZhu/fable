@@ -1,19 +1,6 @@
 """
 Utils for text
 """
-import justext
-from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from langcodes import Language
-from langdetect import detect_langs
-from goose3 import Goose
-from newspaper import Article
-import brotli
-import bs4
-from bs4 import BeautifulSoup
-from dateutil import parser as dparser
-from dateparser.search import search_dates
-import dateparser, difflib
 from os.path import join, dirname, abspath, splitext
 from subprocess import call
 import re, os, time
@@ -25,14 +12,81 @@ import numpy as np
 from collections import defaultdict
 import functools
 from subprocess import Popen, PIPE
+
+from langcodes import Language
+from langdetect import detect_langs
+
+import justext
+from goose3 import Goose
+from newspaper import Article
+
 import textwrap
+from dateutil import parser as dparser
+from dateparser.search import search_dates
+import dateparser, difflib
+
+import brotli
+import bs4
+from bs4 import BeautifulSoup
+
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem.snowball import SnowballStemmer
+from nltk.stem import WordNetLemmatizer
 
 from .. import config
 
 sys.setrecursionlimit(1500)
 tmp_path = config.TMP_PATH
-vectorizer_kwargs = {'stop_words': 'english'}
 
+def prepare_nltk():
+    try:
+        nltk.data.find('tokenizers/punkt')
+    except:
+        nltk.download('punkt')
+    try:
+        nltk.data.find('corpora/stopwords')
+    except:
+        nltk.download('stopwords')
+
+prepare_nltk()
+stemmer = SnowballStemmer('english')
+lemmatizer = WordNetLemmatizer()
+
+stem_cache = {}
+def tokenize(texts):
+    """
+    Simple function for tokenizing a text. Extracted from sklearn src code
+    
+    Returns: list of features in the original order
+    """
+    texts = texts.replace('_', ' ')
+    # # ? Tokenize: Scikit-Learn version
+    cv = CountVectorizer(stop_words='english') # TODO: Not necessary english
+    analyze = cv.build_analyzer()
+    texts = analyze(texts)
+    # ? Tokenize: nltk version
+    # texts = nltk.word_tokenize(texts)
+    def cached_transform(t, func, cache):
+        if t in cache:
+            return cache[t]
+        tt = func(t)
+        cache[t] = tt
+        return tt
+    # * Stemming
+    texts = [cached_transform(t, stemmer.stem, stem_cache) for t in texts]
+    # * Lemmatization
+    # texts = [lemmatizer.lemmatize(t) for t in texts]
+    return texts
+
+vectorizer_kwargs = {
+    # 'stop_words': [stemmer.stem(s) for s in stopwords.words('english')], 
+    'stop_words': 'english', 
+    'tokenizer': tokenize, 
+    'token_pattern': None
+}
 class TFidfDynamic:
     def re_init(self):
         """
@@ -197,18 +251,6 @@ def find_complement_string(A, B):
             complement.append(A[ida])
             ida += 1
     return ' '.join(complement)
-
-
-def tokenize(texts):
-    """
-    Simple function for tokenizing a text. Extracted from sklearn src code
-    
-    Returns: list of features in the original order
-    """
-    texts = texts.replace('_', ' ')
-    cv = CountVectorizer(**vectorizer_kwargs) # TODO: Not necessary english
-    analyze = cv.build_analyzer()
-    return analyze(texts)
 
 
 def article_date(html, url=""):

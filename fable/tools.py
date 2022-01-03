@@ -33,6 +33,7 @@ LEAST_SITE_URLS = 20 # Least # of urls a site must try to crawl to enable title 
 COMMON_TITLE_SIZE = 5 # Common prefix/suffix extraction's sample number of title
 
 VERTICAL_BAR_SET = '\u007C\u00A6\u2016\uFF5C\u2225\u01C0\u01C1\u2223\u2502\u0964\u0965'
+OTHER_DELIMITER_SET = '::'
 
 he = url_utils.HostExtractor()
 
@@ -144,7 +145,7 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
     
     Returns: prefix/suffix filtered title, prefix/suffix if return_common_part is True
     """
-    title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
+    title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}| ({OTHER_DELIMITER_SET}) |({OTHER_DELIMITER_SET})', title)
     if wayback:
         url, ts = url_utils.filter_wayback(url), url_utils.get_ts(url)
     nd = url_utils.netloc_dir(url)
@@ -190,7 +191,7 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
             tracer.debug(f'unique_title: compare {url} "{title}" with {cand_url} "{cand_title}"')
             diffs.add(td)
             itsts = token_intersect(title_tokens, \
-                        regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', cand_title))
+                        regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}| ({OTHER_DELIMITER_SET}) |({OTHER_DELIMITER_SET})', cand_title))
             if len(itsts) > 0:
                 break
         if len(itsts) > 0:
