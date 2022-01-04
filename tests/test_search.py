@@ -67,7 +67,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.zope.org:80/Members/struktur/zamino"
+        "http://www.wintellect.com:80/devcenter/jcarroll/why-you-should-be-writing-ecma-script-6-now"
     ]
     for url in urls:
         site = he.extract(url)

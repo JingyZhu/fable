@@ -16,6 +16,7 @@ from collections import defaultdict
 from itertools import product
 from bs4 import BeautifulSoup
 import bs4
+import re
 
 from urllib.parse import urlsplit
 from urllib.robotparser import RobotFileParser
@@ -355,7 +356,7 @@ def get_canonical(url, html):
     cans = soup.find_all('link', {'rel': 'canonical'})
     can = ''
     if len(cans) > 0:
-        if urlsplit(url).path not in ['', '/'] and 'href' in cans[0]:
+        if urlsplit(url).path not in ['', '/'] and cans[0].get('href'):
             can = cans[0]['href']
             return urljoin(base_url, can) 
     return url
@@ -455,19 +456,19 @@ def outgoing_links(url, html, wayback=False):
 
     return outlinks
 
+def wayback_join(url, link):
+    link = urljoin(url, link)
+    link = link.replace('http:/', 'http://')
+    link = link.replace('http:///', 'http://')
+    link = link.replace('https:/', 'https://')
+    link = link.replace('https:///', 'https://')
+    return link
 
 def outgoing_links_sig(url, html, wayback=False):
     """
     Given the html, return all the (outgoing links, anchor text, signature) pairs
     wayback: Whether the page is crawled from wayback
     """
-    def wayback_join(url, link):
-        link = urljoin(url, link)
-        link = link.replace('http:/', 'http://')
-        link = link.replace('http:///', 'http://')
-        link = link.replace('https:/', 'https://')
-        link = link.replace('https:///', 'https://')
-        return link
     outsigs = set()
     try:
         soup = BeautifulSoup(html, 'lxml')
@@ -552,3 +553,43 @@ def outgoing_links_sig(url, html, wayback=False):
     # for form_tag in soup.find_all('tag'):
 
     return outsigs
+
+def get_breadcrumb(url, html, wayback=False):
+    try:
+        soup = BeautifulSoup(html, 'lxml')
+    except:
+        logger.warn("Failed to construct soup")
+        return []
+    base = soup.find('base')
+    base_url = url if base is None else urljoin(url, base.get('href'))
+    breadcrumb_tags = soup.find_all(None, {'class': re.compile('breadcrumb')})
+    top_breadcrumb_tags = []
+    # * Only get top-level satisfied tag
+    for bc in breadcrumb_tags:
+        if bc.find_parent(None, {'class': re.compile('breadcrumb')}):
+            continue
+        top_breadcrumb_tags.append(bc)
+    breadcrumb = []
+    for tbc in top_breadcrumb_tags:
+        links = []
+        for a_tag in tbc.find_all('a'):
+            if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
+                continue
+            link = a_tag.attrs['href']
+            anchor_text = a_tag.text.strip()
+            if len(link) == 0 or link[0] == '#': #Anchor ignore
+                continue
+            try:
+                if wayback:
+                    link = wayback_join(base_url, link)
+                else:
+                    link = urljoin(base_url, link)
+            except:
+                continue
+            if urlparse(filter_wayback(link)).scheme not in {'http', 'https'}:
+                continue
+            links.append((link, anchor_text))
+        if len(links) > 0:
+            breadcrumb.append(links)
+    # TODO: Is this OK?    
+    return max(breadcrumb, key=lambda x: len(x))

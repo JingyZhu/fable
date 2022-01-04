@@ -70,6 +70,9 @@ unsolved = {
     # ! Suspicious from ground truth
     "http://www.mckinsey.com:80/careers/join_us/university_recruiting/internships_at_mckinsey": False,
     "http://aspn.activestate.com:80/ASPN/Cookbook/Python/Recipe/511508": False,
+    "http://careers.jpmorgan.com:80/careers/programs/research-fulltime-analyst": False, # ? Merged/Renamed to another page?
+    "http://www.developer.com/feedback/ws/android/development-tools/the-9-most-anticipated-features-in-android-gingerbread-2.3.html": False, # ? 200 after 300
+    
 }
 
 def test_waybackalias_temp():

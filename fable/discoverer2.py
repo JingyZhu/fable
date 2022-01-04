@@ -239,7 +239,6 @@ class Discoverer:
         for wayback_sig in wayback_sigs:
             matched_vals = self.similar.match_url_sig(wayback_sig, backlink_sigs)
             anchor_vals = sorted(matched_vals["anchor"].values(), key=lambda x: x[2], reverse=True)
-            tracer.debug(f'_find_same_link: {anchor_vals}')
             while len(anchor_vals) < 2: anchor_vals.append(('', '', 0))
             if separable(anchor_vals):
                 max_match = anchor_vals[:2] if anchor_vals[0][2] > max_match[0][2] else max_match
@@ -444,6 +443,20 @@ class Discoverer:
             })
         return r_dict
 
+    def _check_archive_canonical(self, url, html):
+        """
+        Check whether archive has the working canonical
+        url: wayback form
+
+        Return: alias if found, else None
+        """
+        canonical = crawl.get_canonical(url, html)
+        if not url_utils.url_match(url, canonical, wayback=True):
+            canonical = url_utils.filter_wayback(canonical)
+            if sic_transit.broken(canonical)[0] is False:
+                return canonical
+        return
+
     def discover(self, url, depth=None, seen=None, trim_size=TRIM_SIZE):
         """
         Discover the potential reorganized site
@@ -469,6 +482,12 @@ class Discoverer:
             tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             html, title, content = '', '', ''
         
+        # * Check archived canoncial to find alias
+        canonical_alias = self._check_archive_canonical(wayback_url, html)
+        tracer.debug(f'_check_archive_canonical: {canonical_alias}')
+        if canonical_alias:
+            return canonical_alias, {'type': 'archive_canonical', 'value': 'N/A'}
+
         # *Get repr_text
         repr_text += [title, content]
         us = urlsplit(url)

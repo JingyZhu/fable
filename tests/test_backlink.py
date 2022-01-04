@@ -31,7 +31,8 @@ def test_backlink_withalias():
     """URLs that should be found alias by backlink"""
     _init_large_obj()
     url_alias = [
-        ("http://www.hubspot.com:80/company-news/author/Juliette%20Kopecky", "http://www.hubspot.com:80/company-news/author/Juliette-Kopecky")
+        ("http://www.hubspot.com:80/company-news/author/Juliette%20Kopecky", "http://www.hubspot.com:80/company-news/author/Juliette-Kopecky"),
+        ("http://www.byui.edu:80/automotive-technology/vehicle-repair", "https://www.byui.edu/program/automotive/vehicle-repairs")
     ]
     for url, alias in url_alias:
         print(url)
@@ -62,7 +63,7 @@ def test_backlink_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.byui.edu:80/automotive-technology/vehicle-repair"
+        "https://www.edx.org/node/1022"
     ]
     for url in urls:
         site = he.extract(url)
