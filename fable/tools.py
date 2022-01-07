@@ -71,20 +71,25 @@ def different_page(url, meta, content, crawls, wayback=False):
     if left_idx >= len(crawls): left_idx -= 1
     right_idx = left_idx + 1
     left, right = left_idx >= 0, right_idx < len(crawls)
+    max_content_simi = 0
     while left or right:
         if left:
             crawl_left = crawls[left_idx]
             # TODO: Content comparison slows the process a lot
+            content_simi = text_utils.k_shingling(content, crawl_left.get('content', ''))
             if not url_utils.url_match(url, crawl_left['url']) \
-              and text_utils.k_shingling(content, crawl_left.get('content', '')) < 0.9:
-                return crawl_left 
+              and (content_simi < 0.9 or max_content_simi >= 0.9): # * If three pages all have similar content, something wrong
+                return crawl_left
+            max_content_simi = max(max_content_simi, content_simi)
             left_idx -= 1
             left = left_idx >= 0
         if right:
             crawl_right = crawls[right_idx]
+            content_simi = text_utils.k_shingling(content, crawl_right.get('content', ''))
             if not url_utils.url_match(url, crawl_right['url']) \
-              and text_utils.k_shingling(content, crawl_right.get('content', '')) < 0.9:
+              and (content_simi < 0.9 or max_content_simi >= 0.9): # * If three pages all have similar content, something wrong
                 return crawl_right
+            max_content_simi = max(max_content_simi, content_simi)
             right_idx += 1
             right = right_idx < len(crawls)
     
@@ -145,7 +150,8 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
     
     Returns: prefix/suffix filtered title, prefix/suffix if return_common_part is True
     """
-    title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}| ({OTHER_DELIMITER_SET}) |({OTHER_DELIMITER_SET})', title)
+    title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}| (?:{OTHER_DELIMITER_SET}) |(?:{OTHER_DELIMITER_SET})', title)
+    title_tokens = [t.strip() for t in title_tokens]
     if wayback:
         url, ts = url_utils.filter_wayback(url), url_utils.get_ts(url)
     nd = url_utils.netloc_dir(url)
@@ -188,10 +194,10 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
         if len(tocheck) > 1: # *Put small in front
             tocheck[0], tocheck[1] = min(tocheck, key=lambda x:x[0]), max(tocheck, key=lambda x:x[0])
         for td, cand_url, cand_title in tocheck:
-            tracer.debug(f'unique_title: compare {url} "{title}" with {cand_url} "{cand_title}"')
             diffs.add(td)
-            itsts = token_intersect(title_tokens, \
-                        regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}| ({OTHER_DELIMITER_SET}) |({OTHER_DELIMITER_SET})', cand_title))
+            cand_title_tokens = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}| (?:{OTHER_DELIMITER_SET}) |(?:{OTHER_DELIMITER_SET})', cand_title)
+            cand_title_tokens = [t.strip() for t in cand_title_tokens]
+            itsts = token_intersect(title_tokens, cand_title_tokens)
             if len(itsts) > 0:
                 break
         if len(itsts) > 0:
@@ -204,12 +210,15 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
         downgoing = downgoing and not (downidx > len(site_url_meta) - 1 \
                         or striphost(site_url_meta[downidx][0]) != nd[0])
  
+    utitle = ''
     if len(itsts) <= 0:
-        return title
-    if len(title_tokens) > 1:
-        return ' '.join([tt for tt in title_tokens if tt not in itsts])
+        utitle = title
+    elif len(title_tokens) > 1:
+        utitle = ' '.join([tt for tt in title_tokens if tt not in itsts])
     else:
-        return ' '.join([tt for tt in title_tokens[0].split() if tt not in itsts])
+        utitle = ' '.join([tt for tt in title_tokens[0].split() if tt not in itsts])
+    tracer.debug(f'unique_title: {url} --> "{utitle}"')
+    return utitle
 
 
 def norm_path(url):
@@ -499,18 +508,25 @@ class Memoizer:
         # * Looking at outgoing links of url to see whether there are ones in the same  
         html = self.crawl(url)
         nd = url_utils.netloc_dir(url)
+        def na_url(url):
+            keywords = ['login', 'subscription', 'error', 'notfound', '404', 'register']
+            for k in keywords:
+                if k in url: return True
+            return False
         if html:
             outlinks = crawl.outgoing_links(url, html, wayback=wayback)
             for outlink in outlinks:
                 ond = url_utils.netloc_dir(outlink)
                 if ond != nd or url_utils.url_match(outlink, url) or outlink in seen_urls:
                     continue
+                if naurl(outlink):
+                    continue
                 try:
                     out_html = self.crawl(outlink)
                     out_title = self.extract_title(out_html, handle_exception=False)
                     out_content = self.extract_content(out_html, handle_exception=False)
                 except: continue
-                tracer.debug(f"get_more_crawls: Got new sample from outlinks {out_title} {out_html is None}")
+                tracer.debug(f"get_more_crawls: Got new sample from outlinks: {outlink} {out_title}")
                 new_crawl = {
                     'url': outlink,
                     'html': out_html,

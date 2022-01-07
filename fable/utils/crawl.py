@@ -28,7 +28,7 @@ import sys
 sys.path.append('../')
 from .. import config
 from .. import tracer
-from .url_utils import filter_wayback
+from .url_utils import filter_wayback, is_prefix
 
 import logging
 # if not isinstance(logging.getLoggerClass(), tracer.tracer):
@@ -456,13 +456,12 @@ def outgoing_links(url, html, wayback=False):
 
     return outlinks
 
+def _norm_scheme(link):
+    return link
+
 def wayback_join(url, link):
     link = urljoin(url, link)
-    link = link.replace('http:/', 'http://')
-    link = link.replace('http:///', 'http://')
-    link = link.replace('https:/', 'https://')
-    link = link.replace('https:///', 'https://')
-    return link
+    return _norm_scheme(link)
 
 def outgoing_links_sig(url, html, wayback=False):
     """
@@ -554,7 +553,84 @@ def outgoing_links_sig(url, html, wayback=False):
 
     return outsigs
 
-def get_breadcrumb(url, html, wayback=False):
+def __extract_breadcrumb(tag):
+    cur_tag = tag
+    while cur_tag:
+        neighbor_a = cur_tag.find_previous_siblings('a') + cur_tag.find_next_siblings('a')
+        if len(neighbor_a) > 0:
+            return cur_tag.parent
+        cur_tag = cur_tag.parent
+    return
+
+def __breadcrumb_tolinks(tbc, base_url, wayback):
+    links = []
+    for a_tag in tbc.find_all('a'):
+        if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
+            continue
+        link = a_tag.attrs['href']
+        anchor_text = a_tag.text.strip()
+        if len(link) == 0 or link[0] == '#': #Anchor ignore
+            continue
+        try:
+            if wayback:
+                link = wayback_join(base_url, link)
+            else:
+                link = urljoin(base_url, link)
+        except:
+            continue
+        if urlparse(filter_wayback(link)).scheme not in {'http', 'https'}:
+            continue
+        links.append((link, anchor_text))
+    return links
+
+def _breadcrumb_vague(url, html, wayback):
+    """Vague_version: With no tag named breadcrumb, try to extract a version"""
+    # * Find all potential breadcrumb links (links are prefix)
+    outlinks = outgoing_links(url, html, wayback=wayback)
+    ancestors = []
+    for outlink in outlinks:
+        # print(outlink, is_prefix(filter_wayback(outlink),  filter_wayback(url)))
+        if is_prefix(filter_wayback(outlink),  filter_wayback(url)):
+            ancestors.append(outlink)
+    if len(ancestors) == 0:
+        return []
+    # * Choose longest ancestor
+    # ancestor = max(ancestors, key=lambda x: len(x))
+
+    # * Match back to the a tags
+    try:
+        soup = BeautifulSoup(html, 'lxml')
+    except:
+        return []
+    atags = []
+    for ancestor in ancestors:
+        base = soup.find('base')
+        base_url = url if base is None else urljoin(url, base.get('href'))
+        q = filter_wayback(ancestor)
+        q = _norm_scheme(q).replace('http://', '')
+        q = re.escape(q)
+        atags += [a for a in soup.find_all('a', href=True) if re.compile(q+'$').search(a.get('href'))]
+    # print(atags)
+    
+    # * For each prefix, try to extract the breadcrumb
+    pathlen = len(urlsplit(filter_wayback(url)).path.split('/')[1:])
+    breadcrumb = []
+    for a_tag in atags:
+        breadcrumb_tag = __extract_breadcrumb(a_tag)
+        if breadcrumb_tag is None:
+            continue
+        links = __breadcrumb_tolinks(breadcrumb_tag, base_url, wayback=wayback)
+        # print(links)
+        if len(links) > 0 and len(links) <= pathlen:
+            breadcrumb.append(links)
+    # TODO: Is this OK?    
+    if len(breadcrumb) > 0:
+        return max(breadcrumb, key=lambda x: len(x))
+    else:
+        return []
+    
+
+def _breadcrumb(url, html, wayback):
     try:
         soup = BeautifulSoup(html, 'lxml')
     except:
@@ -562,34 +638,32 @@ def get_breadcrumb(url, html, wayback=False):
         return []
     base = soup.find('base')
     base_url = url if base is None else urljoin(url, base.get('href'))
-    breadcrumb_tags = soup.find_all(None, {'class': re.compile('breadcrumb')})
+    identifiler = 'class'
+    breadcrumb_tags = soup.find_all(None, {identifiler: re.compile('breadcrumb')})
+    if len(breadcrumb_tags) == 0:
+        identifiler = 'id'
+        breadcrumb_tags = soup.find_all(None, {identifiler: re.compile('breadcrumb')})
+        print(breadcrumb_tags)
     top_breadcrumb_tags = []
     # * Only get top-level satisfied tag
     for bc in breadcrumb_tags:
-        if bc.find_parent(None, {'class': re.compile('breadcrumb')}):
+        if bc.find_parent(None, {identifiler: re.compile('breadcrumb')}):
             continue
         top_breadcrumb_tags.append(bc)
     breadcrumb = []
     for tbc in top_breadcrumb_tags:
-        links = []
-        for a_tag in tbc.find_all('a'):
-            if 'href' not in a_tag.attrs or a_tag.text.strip() == '':
-                continue
-            link = a_tag.attrs['href']
-            anchor_text = a_tag.text.strip()
-            if len(link) == 0 or link[0] == '#': #Anchor ignore
-                continue
-            try:
-                if wayback:
-                    link = wayback_join(base_url, link)
-                else:
-                    link = urljoin(base_url, link)
-            except:
-                continue
-            if urlparse(filter_wayback(link)).scheme not in {'http', 'https'}:
-                continue
-            links.append((link, anchor_text))
+        links = __breadcrumb_tolinks(tbc, base_url, wayback=wayback)
         if len(links) > 0:
             breadcrumb.append(links)
     # TODO: Is this OK?    
-    return max(breadcrumb, key=lambda x: len(x))
+    if len(breadcrumb) > 0:
+        return max(breadcrumb, key=lambda x: len(x))
+    else:
+        return []
+
+def get_breadcrumb(url, html, wayback=False):
+    breadcrumb = _breadcrumb(url, html, wayback)
+    if len(breadcrumb) > 0:
+        return breadcrumb
+    logger.debug(f'get_breadcrumb: No clear breadcrumb, run vague version')
+    return _breadcrumb_vague(url, html, wayback) 

@@ -51,7 +51,9 @@ def test_waybackalias_noalias():
         "http://www.dartmouth.edu:80/wellness/get_help/anthem_nurseline.html",
         "http://www.bbc.co.uk/5live/programmes/genres/sport/formulaone/current",
         "http://www.rollingstone.com:80/artists/default.asp?oid=2228",
-        "http://www.forrester.com/rb/search/results.jsp?SortType=Date&nb=1&dAg=10000&N=50117+133001+50662"
+        "http://www.forrester.com/rb/search/results.jsp?SortType=Date&nb=1&dAg=10000&N=50117+133001+50662",
+        "http://www.forrester.com/rb/search/results.jsp?SortType=Date&nb=1&dAg=10000&N=50060+133001+12662",
+        "http://www.onjava.com:80/pub/a/onjava/2003/11/19/filters.html?page=1"
     ]
     for url in urls:
         print(url)
@@ -79,9 +81,11 @@ def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://econsultancy.com:80/ca/events/the-top-8-trends-in-social-media-marketing-opportunities-for-2014"
+        "http://people.com/?p=5564756"
     ]
     for url in urls:
         print(url)
         alias = hist.wayback_alias(url)
         assert(alias is None)
+
+# test_waybackalias_temp()

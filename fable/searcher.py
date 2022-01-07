@@ -67,8 +67,8 @@ class Searcher:
                     tracer.debug(f'search_once: searched URL {searched_url} is broken')
                     continue
                 # * Use earliest archived copy if available
-                searched_wayback = self.memo.wayback_index(searched_url, policy='earliest')
-                searched_url_rep = searched_wayback if searched_wayback else searched_url
+                # searched_wayback = self.memo.wayback_index(searched_url, policy='earliest')
+                # searched_url_rep = searched_wayback if searched_wayback else searched_url
                 searched_url_rep = searched_url
                 searched_html = self.memo.crawl(searched_url_rep, proxies=self.PS.select())
                 if searched_html is None: continue

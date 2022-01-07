@@ -9,9 +9,10 @@ from collections import defaultdict
 import re, json
 from dateutil import parser as dparser
 import datetime
+import regex
 
 from . import config, tools, tracer
-from .utils import crawl, url_utils, sic_transit
+from .utils import crawl, url_utils, sic_transit, search
 
 import logging
 logging.setLoggerClass(tracer.tracer)
@@ -19,13 +20,14 @@ tracer = logging.getLogger('logger')
 logging.setLoggerClass(logging.Logger)
 
 he = url_utils.HostExtractor()
+VERTICAL_BAR_SET = '\u007C\u00A6\u2016\uFF5C\u2225\u01C0\u01C1\u2223\u2502\u0964\u0965'
 
-DEPTH = 4 # Depth for searching backlinks
-TRIM_SIZE = 10 # trim size for the queue
+DEPTH = 4 # * Depth for searching backlinks
+TRIM_SIZE = 10 # * trim size for the queue
 GUESS_DEPTH = 3
-OUTGOING = 1 # Single cost if a an iteration
+OUTGOING = 1 # * Single cost if a an iteration
 MIN_GUESS = 6
-CUT = 10
+CUT = 10 # * Maximum outlinks to check to similarities
 
 def wsum_simi(simi):
     return 3/4*simi[0] + 1/4*simi[1]
@@ -38,6 +40,11 @@ def estimated_score(spatial, simi):
     p = 3/4*simi[0] + 1/4*simi[1]
     k = 1
     return k*p + (1-k*p)*spatial
+
+def merge_dict(d1, d2):
+    d = d1.copy()
+    d.update(d2)
+    return d
 
 class Discoverer:
     def __init__(self, depth=DEPTH, corpus=[], proxies={}, memo=None, similar=None):
@@ -141,9 +148,11 @@ class Discoverer:
             return None, None
         backlinked_content = self.memo.extract_content(backlinked_html, version='domdistiller')
         backlinked_title = self.memo.extract_title(backlinked_html, version='domdistiller')
-        similars, fromm = self.similar.similar(wayback_dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})
-        if len(similars) > 0:
-            return similars[0], fromm
+        title_cands = merge_dict(self.high_similar_pages['title'], {backlinked_url: backlinked_title})
+        content_cands = merge_dict(self.high_similar_pages['content'], {backlinked_url: backlinked_content})
+        similars, fromm = self.similar.similar(wayback_dst, title, content, title_cands, content_cands)
+        if len(similars) > 0 and url_utils.url_match(similars[0][0], backlinked_url):
+            return backlinked_url, fromm
 
         # outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
         global he
@@ -173,9 +182,11 @@ class Discoverer:
             tracer.info(f'Test if outgoing link same: {outgoing_link}')
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
             outgoing_title = self.memo.extract_title(html, version='domdistiller')
-            similars, fromm = self.similar.similar(wayback_dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
-            if len(similars) > 0:
-                return similars[0], fromm
+            title_cands = merge_dict(self.high_similar_pages['title'], {outgoing_link: outgoing_title})
+            content_cands = merge_dict(self.high_similar_pages['content'], {outgoing_link: outgoing_content})
+            similars, fromm = self.similar.similar(wayback_dst, title, content, title_cands, content_cands)
+            if len(similars) > 0 and url_utils.url_match(similars[0][0], outgoing_link):
+                return outgoing_link, fromm
         return None, None
     
     def _first_not_linked(self, dst, src, waybacks):
@@ -335,8 +346,10 @@ class Discoverer:
             src_html = self.memo.crawl(src)
             src_content = self.memo.extract_content(src_html, version='domdistiller')
             src_title = self.memo.extract_title(src_html, version='domdistiller')
-            similars, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, {src: src_title}, {src: src_content})
-            if len(similars) > 0:
+            title_cands = merge_dict(self.high_similar_pages['title'], {src: src_title})
+            content_cands = merge_dict(self.high_similar_pages['content'], {src: src_content})
+            similars, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, title_cands, content_cands)
+            if len(similars) > 0 and url_utils.url_match(similars[0][0], src):
                 tracer.info(f'Discover: Directly found copy during looping')
                 top_similar = similars[0]
                 r_dict.update({
@@ -407,7 +420,6 @@ class Discoverer:
                                 "archive": {"links": wayback_linked[1]}
                             })
                     else: # * 3.0 Not matched, link same page
-                        continue
                         top_similar, fromm = None, None
                         if not src_broken:
                             top_similar, fromm = self._link_same_page(wayback_dst, dst_title, dst_content, src, src_html)
@@ -456,6 +468,45 @@ class Discoverer:
             if sic_transit.broken(canonical)[0] is False:
                 return canonical
         return
+    
+    def _easy_search(self, url, wayback_url, title, content):
+        """
+        Two purposes:
+        1. Get most similar title pages in order to avoid wrong backcand title match
+        2. If there are easy to find cands, go get it
+
+        Returns: (alias, reason), similar pages
+        """
+         # * Bing Title
+        site_str = f'site:{self.similar.site[-1]}'
+        bing_title = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
+        bing_title = ' '.join(bing_title)
+        tracer.info(f'search title: {bing_title} {site_str}')
+        search_results = search.bing_search(f'{bing_title} {site_str}', use_db=True)
+        
+        searched_contents = {}
+        searched_titles = {}
+        search_cand = search_results[:min(len(search_results), 5)]
+        tracer.info(f'Search results (title bing): \n {search_cand}')
+        for searched_url in search_cand:
+            # * Sanity check (SE could also got broken pages)
+            # if sic_transit.broken(searched_url, html=True)[0] != False:
+            #     tracer.debug(f'search_once: searched URL {searched_url} is broken')
+            #     continue
+            searched_url_rep = searched_url
+            searched_html = self.memo.crawl(searched_url_rep, proxies=self.PS.select())
+            if searched_html is None: continue
+            searched_contents[searched_url_rep] = self.memo.extract_content(searched_html)
+            
+            if he.extract(url) == he.extract(searched_url) or self.similar.site[-1] == he.extract(searched_url):
+                searched_titles[searched_url_rep] = self.memo.extract_title(searched_html)
+        similars, fromm = self.similar.similar(wayback_url, title, content, searched_titles, searched_contents)
+        searched_info = {'title': searched_titles, 'content': searched_contents}
+        if len(similars) > 0:
+            top_similar = similars[0]
+            return (top_similar[0], {'type': fromm, 'value': top_similar[1]}), searched_info
+        return None, searched_info
+        
 
     def discover(self, url, depth=None, seen=None, trim_size=TRIM_SIZE):
         """
@@ -469,6 +520,7 @@ class Discoverer:
         has_snapshot = False
         url_ts = None
         repr_text = [] # *representitive text for url, composed with [title, content, url]
+        self.high_similar_pages = []
         ### *First try with wayback alias
         try:
             wayback_url = self.memo.wayback_index(url, policy='latest-rep')
@@ -487,6 +539,12 @@ class Discoverer:
         tracer.debug(f'_check_archive_canonical: {canonical_alias}')
         if canonical_alias:
             return canonical_alias, {'type': 'archive_canonical', 'value': 'N/A'}
+
+        # * Easy search
+        alias, self.high_similar_pages = self._easy_search(url, wayback_url, title, content)
+        tracer.debug(f'_easy_search: {alias}')
+        if alias is not None:
+            return alias
 
         # *Get repr_text
         repr_text += [title, content]

@@ -44,6 +44,8 @@ def test_backlink_noalias():
     """URLs that should not be found alias by backlink"""
     _init_large_obj()
     urls = [
+        "http://www.icann.org:80/en/tlds/agreements/name/registry-agmt-appc-03jul01.htm",
+        "https://www.maxmind.com/de/company/contact-us"
     ]
     for url in urls:
         print(url)
@@ -63,7 +65,7 @@ def test_backlink_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.edx.org/node/1022"
+        "http://arduino.cc:80/forum/index.php?action=quickmod2;topic=48342.0"
     ]
     for url in urls:
         site = he.extract(url)

@@ -406,6 +406,42 @@ def is_parent(parent, url):
     return True
 
 
+def is_prefix(prf, url):
+    """
+    Check whether ans is the prefix of url (prefix including indentical URLs)
+    filename with ^index is considered as /
+
+    Return Boolean
+    """
+    us, ps = urlsplit(url), urlsplit(prf)
+    h1s, h2s = us.netloc.split(':')[0].split('.'), ps.netloc.split(':')[0].split('.')
+    if h1s[0] == 'www': h1s = h1s[1:]
+    if h2s[0] == 'www': h2s = h2s[1:]
+    for h1, h2 in zip(reversed(h1s), reversed(h2s)):
+        if h1 != h2: return False
+    p1s, p2s = us.path, ps.path
+    if p1s == '': p1s = '/'
+    if p2s == '': p2s = '/'
+    if p1s != '/' and p1s[-1] == '/': p1s = p1s[:-1]
+    if p2s != '/' and p2s[-1] == '/': p2s = p2s[:-1]
+    if len(h2s) != len(h1s):
+        if len(h1s) - len(h2s) not in [0, 1] or p1s != p2s or us.query != ps.query:
+            return False
+    p1s, p2s = p1s.split('/')[1:], p2s.split('/')[1:]
+    if re.compile('^index').match(p2s[-1]):
+        p2s = p2s[:-1]
+    for p1, p2 in zip(p1s, p2s):
+        if p1 != p2: return False
+    if len(p1s) - len(p2s) < 0:
+        return False
+    q1s, q2s = set(parse_qsl(us.query)), set(parse_qsl(ps.query))
+    if len(q1s) == 0 and us.query or (len(q2s) == 0 and ps.query):
+        return us.query == ps.query
+    for q2 in q2s:
+        if q2 not in q1s: return False
+    return True
+
+
 def path_edit_distance(url1, url2):
     us1, us2 = urlsplit(url1), urlsplit(url2)
     dis = 0

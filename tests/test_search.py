@@ -67,7 +67,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.wintellect.com:80/devcenter/jcarroll/why-you-should-be-writing-ecma-script-6-now"
+        "https://www.visualstudio.com/en-us/get-started/test/load-test-your-app-vs"
     ]
     for url in urls:
         site = he.extract(url)
