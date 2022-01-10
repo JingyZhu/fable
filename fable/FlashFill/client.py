@@ -11,7 +11,8 @@ inputs = []
 # each dict is in the format of {'sheet_name': str, 'csv': dict}
 # Output column that want to flashfill to infer on must be in the name of "Output"
 for path in files:
-    csv = pd.read_csv(path).to_dict(orient='list')
+    # csv = pd.read_csv(path).to_dict(orient='list')
+    csv = pd.read_csv(path)
     d = {
         'sheet_name': os.path.splitext(path)[0],
         'csv': csv
@@ -19,6 +20,6 @@ for path in files:
     inputs.append(pickle.dumps(d))
 
 outputs = proxy.handle(inputs, 'AHA_' + str(os.getpid()))
-outputs = [pickle.loads(o.data) for o in outputs]
+outputs = pickle.loads(outputs.data)
 print([o['sheet_name'] for o in outputs])
 print([pd.DataFrame(o['csv']) for o in outputs])
