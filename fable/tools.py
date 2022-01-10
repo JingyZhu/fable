@@ -519,7 +519,7 @@ class Memoizer:
                 ond = url_utils.netloc_dir(outlink)
                 if ond != nd or url_utils.url_match(outlink, url) or outlink in seen_urls:
                     continue
-                if naurl(outlink):
+                if na_url(outlink):
                     continue
                 try:
                     out_html = self.crawl(outlink)

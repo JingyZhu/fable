@@ -2,6 +2,7 @@
 Implementation of detection of broken pages from sic transit 
 """
 import requests
+from urllib.request import urlopen, Request
 import re
 import os
 from urllib.parse import urlparse, parse_qsl, urlsplit, urlunsplit
@@ -18,6 +19,19 @@ logger = logging.getLogger('logger')
 
 sys.setrecursionlimit(1500)
 he = url_utils.HostExtractor()
+
+def alternative_request(url, timeout=15):
+    httprequest = Request(url, headers={"user-agent": config.config('user_agent')})
+    with urlopen(httprequest, timeout=timeout) as response:
+        r = requests.Response()
+        r.status_code = response.status
+        if isinstance(response.url, bytes):
+            r.url = response.url.decode('utf-8')
+        else:
+            r.url = response.url
+        r.headers = dict(response.headers)
+        r._content = response.read()
+        return r
 
 def send_request(url, timeout=15):
     """Only fetch for response body when content-type is HTML"""
@@ -53,10 +67,14 @@ def send_request(url, timeout=15):
         error_msg = 'MissingSchema'
     except requests.exceptions.InvalidSchema:
         error_msg = 'InvalidSchema'
+    except requests.exceptions.TooManyRedirects:
+        try:
+            resp = alternative_request(url)
+            req_failed = False
+        except:
+            error_msg = 'TooManyRedirects'
     except requests.exceptions.RequestException:
         error_msg = 'RequestException'
-    except requests.exceptions.TooManyRedirects:
-        error_msg = 'TooManyRedirects'
     except UnicodeError:
         error_msg = 'ERROR_UNICODE'
     except Exception as _:

@@ -67,7 +67,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.visualstudio.com/en-us/get-started/test/load-test-your-app-vs"
+        "http://www.mensjournal.com:80/gear/electronics/newtown-2016s-most-intriguing-indie-films-so-far-20160204"
     ]
     for url in urls:
         site = he.extract(url)

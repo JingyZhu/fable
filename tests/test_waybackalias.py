@@ -53,7 +53,9 @@ def test_waybackalias_noalias():
         "http://www.rollingstone.com:80/artists/default.asp?oid=2228",
         "http://www.forrester.com/rb/search/results.jsp?SortType=Date&nb=1&dAg=10000&N=50117+133001+50662",
         "http://www.forrester.com/rb/search/results.jsp?SortType=Date&nb=1&dAg=10000&N=50060+133001+12662",
-        "http://www.onjava.com:80/pub/a/onjava/2003/11/19/filters.html?page=1"
+        "http://www.onjava.com:80/pub/a/onjava/2003/11/19/filters.html?page=1",
+        "http://www.ubc.ca/okanagan/vod/?f=http://cdn.ok.ubc.ca/_ubc_clf/_clf7_assets/video/I2.flv",
+        "http://www.technologyreview.com:80/articles/04/11/talbot1104.asp?p=2"
     ]
     for url in urls:
         print(url)
@@ -81,7 +83,7 @@ def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://people.com/?p=5564756"
+        "http://aspn.activestate.com:80/ASPN/Cookbook/Python/Recipe/511508"
     ]
     for url in urls:
         print(url)

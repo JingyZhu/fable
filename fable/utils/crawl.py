@@ -2,7 +2,8 @@
 Utilities for crawling a page
 """
 from subprocess import call, check_output
-import requests 
+import requests
+from urllib.request import urlopen, Request
 import os
 import time
 from os.path import abspath, dirname, join
@@ -261,6 +262,18 @@ def wayback_year_links(prefix, years, NUM_THREADS=3, max_limit=0, param_dict={},
 
     return {k: list(v) for k, v in total_r.items()}
 
+def alternative_request(url, timeout=15):
+    httprequest = Request(url, headers={"user-agent": config.config('user_agent')})
+    with urlopen(httprequest, timeout=timeout) as response:
+        r = requests.Response()
+        r.status_code = response.status
+        if isinstance(response.url, bytes):
+            r.url = response.url.decode('utf-8')
+        else:
+            r.url = response.url
+        r.headers = dict(response.headers)
+        r._content = response.read()
+        return r
 
 def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False):
     """
@@ -297,6 +310,13 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
                 proxies = {}
             else:
                 logger.warn(f"There is an ConnectionError exception with requests_crawl")
+                return
+        except requests.exceptions.TooManyRedirects:
+            logger.warn(f'requests too many redirects, try alternative crawl')
+            try:
+                r = alternative_request(url, timeout=timeout)
+                break
+            except Exception as e:
                 return
         except Exception as e:
             logger.warn(f"There is an exception with requests_crawl: {str(e)}")
@@ -356,7 +376,8 @@ def get_canonical(url, html):
     cans = soup.find_all('link', {'rel': 'canonical'})
     can = ''
     if len(cans) > 0:
-        if urlsplit(url).path not in ['', '/'] and cans[0].get('href'):
+        # ! Why is urlsplit(url).path not in ['', '/'] previously useful?
+        if cans[0].get('href'):
             can = cans[0]['href']
             return urljoin(base_url, can) 
     return url
