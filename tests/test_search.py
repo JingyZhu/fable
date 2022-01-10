@@ -20,6 +20,7 @@ def _init_large_obj():
         except: pass
         logging.setLoggerClass(tracer.tracer)
         tr = logging.getLogger('logger')
+        logging.setLoggerClass(logging.Logger)
         tr._unset_meta()
         tr._set_meta(os.path.basename(__file__).split(".")[0], db=db, loglevel=logging.DEBUG)
     if simi is None:
@@ -77,3 +78,5 @@ def test_search_temp():
             alias = search.search(url, search_engine='google')
         tr.info(f'alias: {alias}')
         assert(alias is not None)
+
+test_search_temp()

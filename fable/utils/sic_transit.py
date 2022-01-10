@@ -295,7 +295,8 @@ def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False
         if not ignore_soft_404_content:
             try:
                 url_content = BeautifulSoup(resp.text, 'lxml').get_text(separator=' ')
-            except: url_content = resp.text
+            except Exception as e:
+                url_content = resp.text
             # ? Try to filter case for js oriented page loading
             if len(text_norm(url_content).split(' ')) < 10:
                 broken_decision.append(False)
