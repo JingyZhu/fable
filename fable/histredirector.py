@@ -297,10 +297,12 @@ class HistRedirector:
         # * If today's url is not in the same site, not a valid redirection
         new_host = he.extract(alias)
         new_host_url = f'http://{new_host}'
-        _, new_host = self.memo.crawl(new_host_url, final_url=True)
+        _, new_host_url = self.memo.crawl(new_host_url, final_url=True)
+        if new_host_url is None:
+            new_host_url = f'http://{new_host}'
         html, alias = self.memo.crawl(alias, final_url=True)
         alias = crawl.get_canonical(alias, html)
-        if not alias or he.extract(new_host) != he.extract(alias):
+        if not alias or he.extract(new_host_url) != he.extract(alias):
             tracer.debug(f"no alias: {alias} not in the same site as the original site {new_host}")
             return
         

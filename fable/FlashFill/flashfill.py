@@ -25,10 +25,6 @@ def time_limit(seconds, msg=''):
         timer.cancel()
 
 class FlashFillHandler:
-    def __init__(self):
-        # self.app = xw.App(visible=False)
-        pass
-
     def handle(self, inputs, identifier):
         """
         csvs: list of pickled dict with {'sheet_name': str, 'csv': dict for flashfill
@@ -50,16 +46,17 @@ class FlashFillHandler:
         wb = xw.Book(xlsx_path)
         try:
             with time_limit(20):
-                for cols, ws in zip(output_cols, wb.sheets): 
+                for ws in wb.sheets: 
+                    cols = output_cols[ws.name]
                     assert(cols[-1] < 26)
                     for col in cols:
                         idx = string.ascii_uppercase[col]
                         try:
                             r = ws.range(f'{idx}1')
                             r.api.FlashFill()
-                            wb.save()
                         except Exception as e:
                             print('Flashfill:', str(e))
+            wb.save()
             wb.close()
         except:
             wb.close() 
@@ -76,7 +73,7 @@ class FlashFillHandler:
         self.app = xw.App(visible=False)
         wb = xw.Book()
         # csvs = [pd.DataFrame(csv) for csv in csvs]
-        output_cols, self.headers = [], {}
+        output_cols, self.headers = {}, {}
         for name, df in zip(sheet_names, csvs):
             cols = df.columns.tolist()
             # assert(output_name in cols)
@@ -85,7 +82,7 @@ class FlashFillHandler:
             cols = input_col + output_col
             self.headers[name] = cols
             df = df[cols]
-            output_cols.append(list(range(len(input_col), len(cols))))
+            output_cols[name] = list(range(len(input_col), len(cols)))
             row, col = df.shape
             try:
                 wb.sheets.add(name)

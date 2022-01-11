@@ -18,6 +18,10 @@ def filter_wayback(url):
     url = url.replace('https://web.archive.org/web/', '')
     slash = url.find('/')
     url = url[slash + 1:]
+    url = url.replace('http:/', 'http://')
+    url = url.replace('http:///', 'http://')
+    url = url.replace('https:/', 'https://')
+    url = url.replace('https:///', 'https://')
     return url
 
 def constr_wayback(url, ts):

@@ -268,6 +268,8 @@ class Discoverer:
         global he
         if 'web.archive.org' in outgoing_url:
             outgoing_url = url_utils.filter_wayback(outgoing_url)
+        if url_utils.url_match(url, outgoing_url):
+            return False
         if he.extract(url) != he.extract(outgoing_url):
             return False
         if urlsplit(url).path in urlsplit(outgoing_url).path and urlsplit(url).path != urlsplit(outgoing_url).path:
@@ -334,11 +336,12 @@ class Discoverer:
             "status": None
         }
         wayback_src = self.memo.wayback_index(src, policy=policy, ts=dst_ts, all_none_400=True)
+        tracer.debug(f'wayback_src: {wayback_src}')
         r_dict['wayback_src'] = wayback_src
 
         # TODO(eff): Taking long time, due to crawl
         src_broken, reason = sic_transit.broken(src, html=True)
-        tracer.debug(f"Check breakage of src: {src}")
+        tracer.debug(f"Check breakage of src: {src} {src_broken}")
 
         # *Directly check this outgoing page
         

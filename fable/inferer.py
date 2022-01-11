@@ -149,7 +149,7 @@ class Inferer:
             """Insert alias part into the sheet"""
             us_reorg = urlsplit(reorg)
             path_reorg_list = list(filter(lambda x: x != '', us_reorg.path.split('/')))
-            url_reorg_inputs = [f"https://{normal_hostname(us_reorg.netloc)}"] + path_reorg_list
+            url_reorg_inputs = [f"http://{normal_hostname(us_reorg.netloc)}"] + path_reorg_list
             for j, reorg_url_piece in enumerate(url_reorg_inputs):
                 sheet.loc[row, f'Output_{j}'] = reorg_url_piece
                 qs_reorg = url_utils.my_parse_qs(us_reorg.query)
@@ -191,7 +191,7 @@ class Inferer:
         # * RPC formatted dataframe to FlashFill
         sheets = [sheet1, sheet2, sheet3]
         sheets = [pickle.dumps({
-            'sheet_name': f'sheet{i+1}',
+            'sheet_name': f'Sheet{i+1}',
             'csv': sheet
         }) for i, sheet in enumerate(sheets)]
         count = 0
@@ -246,7 +246,7 @@ class Inferer:
                     tracer.inference(url, meta, examples, reorg_url)
                     seen_reorg.add(reorg_url)
                 poss_infer[url].add(reorg_url)
-        return {k: list(v) for k, v in poss_infer.items()}
+        return {k: self._order_alias(v, [examples[0][2]]) for k, v in poss_infer.items()}
     
     def _construct_input_output(self, match):
         """
@@ -275,7 +275,6 @@ class Inferer:
                 toinfer.append(cell)
         # * Construct examples (intput)
         good_outputs = output_upd.pop_matches()
-        print(good_outputs)
         good_outputs.sort(key=lambda x: len(x['urls']), reverse=True)
         if len(good_outputs) == 0:
             return [], []
@@ -373,6 +372,57 @@ class Inferer:
                     found_alias[infer_url] = (alias, reason)
         return found_alias
        
+    def _order_alias(self, reorg_urls, example_aliases):
+        """Order reorg_urls so that most similar aliases will be tested first"""
+        # TODO: example_alias to aliases
+        example_alias = example_aliases[0]
+        def get_ext(url):
+            path = urlsplit(url).path
+            if path != '/' and path[-1] == '/': path = path[:-1]
+            return os.path.splitext(path)[1]
+        def query_score(url):
+            scores = []
+            target_query = urlsplit(example_alias).query
+            query = urlsplit(url).query
+            # * Has query?
+            scores.append(-((target_query != "") == (query != "")))
+            target_qs = parse_qs(target_query)
+            qs = parse_qs(query)
+            # * How many same keys?
+            same_keys = set(target_qs.keys()).intersection(qs.keys())
+            scores.append(-len(same_keys))
+            # * How many same values
+            same_values = 0
+            for k in same_keys:
+                same_values += len(set(target_qs[k]).intersection(qs[k]))
+            scores.append(-same_values)
+            return tuple(scores)
+        def _detect_file_alnum(url):
+            """Detect whether string has alpha and/or numeric char"""
+            path = urlsplit(url).path
+            if path != '/' and path[-1] == '/': path = path[:-1]
+            filename = os.path.basename(path)
+            typee = ''
+            alpha_char = [c for c in filename if c.isalpha()]
+            num_char = [c for c in filename if c.isdigit()]
+            if len(alpha_char) > 0:
+                typee += 'A'
+            if len(num_char) > 0:
+                typee += 'N'
+            return set(typee)
+        lambdas = []
+        # * Same ext?
+        lambdas.append(lambda x: -(get_ext(example_alias) == get_ext(x)) )
+        # * Has query? Same Key? Same Value?
+        lambdas.append(lambda x: query_score(x))
+        # * Format similarity
+        lambdas.append(lambda x: -len(_detect_file_alnum(example_alias).intersection(_detect_file_alnum(x))))
+        reorg_score = []
+        for reorg in reorg_urls:
+            score = tuple(l(reorg) for l in lambdas)
+            reorg_score.append((reorg, score))
+        reorg_score.sort(key=lambda x: x[1])
+        return [r[0] for r in reorg_score]
 
     def _verify_alias(self, url, reorg_urls, compare=True):
         """
@@ -382,7 +432,7 @@ class Inferer:
         """
         reorg_content = {}
         reorg_title = {}
-        working_aliases = set()
+        working_aliases = []
         # * 1. Check breakage of inferred candidates
         new_reorg = False
         for reorg_url in reorg_urls:
@@ -390,9 +440,6 @@ class Inferer:
             if urlsplit(url).path not in ['', '/'] and urlsplit(reorg_url).path in ['', '/']:
                 continue
             # End of Try
-            # match = [url_utils.url_match(reorg_url, fp_url) for fp_url in fp_urls]
-            # if True in match:
-            #     continue
             new_reorg = True
             if reorg_url in self.not_workings:
                 tracer.debug(f'Inferred URL already checked broken: {reorg_url}')
@@ -401,14 +448,14 @@ class Inferer:
             if reorg_broken == True and not soft_404_content(reason): # * Broken
                 self.not_workings.add(reorg_url)
             else:
-                working_aliases.add(reorg_url)
+                working_aliases.append(reorg_url)
 
         def return_noncompare():
             """No more information available than whether URLs are working or not"""
             nonlocal working_aliases, new_reorg
             if len(working_aliases) > 0:
-                # TODO: What if len(working_aliases) > 1?
-                return list(working_aliases)[0], {'type': "nocomp_check", "value": 'N/A'}
+                # ? If len(working_aliases) > 1, pick the closest one
+                return working_aliases[0], {'type': "nocomp_check", "value": 'N/A'}
             elif not new_reorg:
                 return None, {'reason': 'No new reorg actually inferred'}
             else:
