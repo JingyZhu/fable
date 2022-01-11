@@ -14,7 +14,7 @@ for path in files:
     # csv = pd.read_csv(path).to_dict(orient='list')
     csv = pd.read_csv(path)
     d = {
-        'sheet_name': os.path.splitext(path)[0],
+        'sheet_name': os.path.splitext(path)[0].capitalize(),
         'csv': csv
     }
     inputs.append(pickle.dumps(d))

@@ -25,6 +25,10 @@ def time_limit(seconds, msg=''):
         timer.cancel()
 
 class FlashFillHandler:
+    def __init__(self):
+        # self.app = xw.App(visible=False)
+        pass
+
     def handle(self, inputs, identifier):
         """
         csvs: list of pickled dict with {'sheet_name': str, 'csv': dict for flashfill
@@ -43,8 +47,7 @@ class FlashFillHandler:
         xlsx can have multiple sheet for higher throughput
         output_col: list(list), len=length of sheet. The #col for flashfill to be run
         """
-        app = xw.App(visible=False)
-        wb = app.books.open(xlsx_path)
+        wb = xw.Book(xlsx_path)
         try:
             with time_limit(20):
                 for cols, ws in zip(output_cols, wb.sheets): 
@@ -57,9 +60,10 @@ class FlashFillHandler:
                             wb.save()
                         except Exception as e:
                             print('Flashfill:', str(e))
-        except: 
+            wb.close()
+        except:
+            wb.close() 
             print('Flashfill: Timeout')
-        app.kill()
 
     def csv_xlsx(self, csvs, sheet_names, identifier, output_name='Output'):
         """
@@ -68,8 +72,9 @@ class FlashFillHandler:
         csvs: dict representing csv
 
         return: xlsx_path, output_cols
-        """ 
-        writer = pd.ExcelWriter(f'output\\{identifier}.xlsx')
+        """
+        self.app = xw.App(visible=False)
+        wb = xw.Book()
         # csvs = [pd.DataFrame(csv) for csv in csvs]
         output_cols, self.headers = [], {}
         for name, df in zip(sheet_names, csvs):
@@ -81,8 +86,18 @@ class FlashFillHandler:
             self.headers[name] = cols
             df = df[cols]
             output_cols.append(list(range(len(input_col), len(cols))))
-            df.to_excel(writer, sheet_name=name, index=False, header=False)
-        writer.save()
+            row, col = df.shape
+            try:
+                wb.sheets.add(name)
+            except: pass
+            sheet = wb.sheets[name]
+            for i in range(row):
+                for j in range(col):
+                    range_str = string.ascii_uppercase[j] + str(i+1)
+                    sheet.range(range_str).number_format = '@'
+                    sheet.range(range_str).value = df.iloc[i, j]
+        wb.save(f'output\\{identifier}.xlsx')
+        wb.close()
         return f"output\\{identifier}.xlsx", output_cols
 
     def xlsx_csv(self, xlsx_path):
@@ -91,6 +106,7 @@ class FlashFillHandler:
 
         returns: Same as input of csv_xlsx
         """ 
+        self.app.kill()
         outputs = []
         with open(xlsx_path, 'rb') as xlsx_file:
             excel = pd.read_excel(xlsx_file, header=None, sheet_name=None, engine='openpyxl', dtype=str)
