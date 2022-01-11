@@ -78,5 +78,3 @@ def test_search_temp():
             alias = search.search(url, search_engine='google')
         tr.info(f'alias: {alias}')
         assert(alias is not None)
-
-test_search_temp()

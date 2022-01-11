@@ -74,7 +74,8 @@ unsolved = {
 
     # ! Suspicious from ground truth
     "http://www.mckinsey.com:80/careers/join_us/university_recruiting/internships_at_mckinsey": False,
-    "http://aspn.activestate.com:80/ASPN/Cookbook/Python/Recipe/511508": False,
+    "http://aspn.activestate.com:80/ASPN/Cookbook/Python/Recipe/511508": False, # ! Only this one redirects to parent page
+    "http://www.commerce.gov/blog/2013/11/06/nist-issues-new-standard-handheld-chemical-detectors-aid-first-responders": False, # ! Only this one redirects to parent page
     "http://careers.jpmorgan.com:80/careers/programs/research-fulltime-analyst": False, # ? Merged/Renamed to another page?
     "http://www.developer.com/feedback/ws/android/development-tools/the-9-most-anticipated-features-in-android-gingerbread-2.3.html": False, # ? 200 after 300
     
@@ -84,7 +85,7 @@ def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://aspn.activestate.com:80/ASPN/Cookbook/Python/Recipe/511508"
+        "http://www.commerce.gov/blog/2013/11/06/nist-issues-new-standard-handheld-chemical-detectors-aid-first-responders"
     ]
     for url in urls:
         print(url)
