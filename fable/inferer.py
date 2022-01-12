@@ -378,7 +378,7 @@ class Inferer:
         example_alias = example_aliases[0]
         def get_ext(url):
             path = urlsplit(url).path
-            if path != '/' and path[-1] == '/': path = path[:-1]
+            if path not in ['/', ''] and path[-1] == '/': path = path[:-1]
             return os.path.splitext(path)[1]
         def query_score(url):
             scores = []
@@ -400,7 +400,7 @@ class Inferer:
         def _detect_file_alnum(url):
             """Detect whether string has alpha and/or numeric char"""
             path = urlsplit(url).path
-            if path != '/' and path[-1] == '/': path = path[:-1]
+            if path not in ['/', ''] and path[-1] == '/': path = path[:-1]
             filename = os.path.basename(path)
             typee = ''
             alpha_char = [c for c in filename if c.isalpha()]

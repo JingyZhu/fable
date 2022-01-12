@@ -231,6 +231,8 @@ class HistRedirector:
         if len(broken_archives):
             broken_ts = _safe_dparse(broken_archives[0][0])
             wayback_ts_urls = [w for w in wayback_ts_urls if w[0] < broken_ts]
+            if len(wayback_ts_urls) == 0:
+                return
             it = len(wayback_ts_urls) - 1
         
         # * Count for unmatched wayback final url, and wayback_alias to same redirected fake alias
@@ -307,7 +309,7 @@ class HistRedirector:
             return
         
         # * Check if alias is a login page
-        keywords = ['login', 'subscription', 'error', 'notfound', '404']
+        keywords = ['login', 'subscription', 'error', 'notfound', '404', 'badpage']
         path = urlsplit(alias).path
         if path not in ["/", ""] and path[-1] == "/": path = path[:-1]
         filename = path.split("/")[-1]

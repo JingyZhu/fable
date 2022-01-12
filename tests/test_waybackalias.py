@@ -85,7 +85,7 @@ def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.commerce.gov/blog/2013/11/06/nist-issues-new-standard-handheld-chemical-detectors-aid-first-responders"
+        "http://docs.openstack.org:80/havana/install-guide/install/apt/content/install-neutron.dedicated-controller-node.html"
     ]
     for url in urls:
         print(url)
