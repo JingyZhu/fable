@@ -1082,19 +1082,6 @@ def is_canonical(url1, url2, resp1=None, resp2=None):
         return True
     return False
 
-def tokenize_url(url):
-        path = urlsplit(url).path
-        if path == '': path = '/'
-        if path[-1] == '/' and path != '/': path = path[:-1]
-        path = path.split('/')
-        tokens = []
-        for p in path:
-            token = os.path.splitext(p)[0]
-            token = regex.split("[^a-zA-Z1-9]", token)
-            token = ' '.join(token)
-            tokens.append(token)
-        return tokens
-
 def get_unique_token(url):
         """Given a URL, return which tokens should be put into search engine"""
         us = urlsplit(url)

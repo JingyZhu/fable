@@ -503,7 +503,7 @@ class Discoverer:
             
             if he.extract(url) == he.extract(searched_url) or self.similar.site[-1] == he.extract(searched_url):
                 searched_titles[searched_url_rep] = self.memo.extract_title(searched_html)
-        similars, fromm = self.similar.similar(wayback_url, title, content, searched_titles, searched_contents)
+        similars, fromm = self.similar.similar(wayback_url, title, content, searched_titles, searched_contents, shorttext=False)
         searched_info = {'title': searched_titles, 'content': searched_contents}
         if len(similars) > 0:
             top_similar = similars[0]

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import pickle
 from urllib.parse import urlsplit, parse_qsl, parse_qs
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import string
 import time
 import socket
@@ -210,7 +210,7 @@ class Inferer:
             return {}
         outputs = pickle.loads(outputs.data)
         outputs = [o['csv'] for o in outputs]
-        poss_infer = defaultdict(set) # * Any results inferred from 3 sheets
+        poss_infer = defaultdict(list) # * Any results inferred from 3 sheets
         seen_reorg = set()
         for output in outputs:
             for url, meta in urls:
@@ -245,7 +245,7 @@ class Inferer:
                 if reorg_url not in seen_reorg:
                     tracer.inference(url, meta, examples, reorg_url)
                     seen_reorg.add(reorg_url)
-                poss_infer[url].add(reorg_url)
+                poss_infer[url].append(reorg_url)
         return {k: self._order_alias(v, [examples[0][2]]) for k, v in poss_infer.items()}
     
     def _construct_input_output(self, match):
@@ -375,6 +375,9 @@ class Inferer:
     def _order_alias(self, reorg_urls, example_aliases):
         """Order reorg_urls so that most similar aliases will be tested first"""
         # TODO: example_alias to aliases
+        d = OrderedDict()
+        for reorg_url in reorg_urls: d[reorg_url] = ''
+        reorg_urls = list(d.keys())
         example_alias = example_aliases[0]
         def get_ext(url):
             path = urlsplit(url).path
@@ -422,6 +425,7 @@ class Inferer:
             score = tuple(l(reorg) for l in lambdas)
             reorg_score.append((reorg, score))
         reorg_score.sort(key=lambda x: x[1])
+        print(reorg_score)
         return [r[0] for r in reorg_score]
 
     def _verify_alias(self, url, reorg_urls, compare=True):
@@ -448,6 +452,8 @@ class Inferer:
             if reorg_broken == True and not soft_404_content(reason): # * Broken
                 self.not_workings.add(reorg_url)
             else:
+                reorg_url_html = crawl.requests_crawl(reorg_url)
+                reorg_url = crawl.get_canonical(reorg_url, reorg_url_html)
                 working_aliases.append(reorg_url)
 
         def return_noncompare():
@@ -499,7 +505,7 @@ class Inferer:
             alias_tokens = {}
             available_tokens = tools.get_unique_token(url)
             for alias in working_aliases:
-                alias_tokens[alias] = tools.tokenize_url(alias)
+                alias_tokens[alias] = url_utils.tokenize_url(alias, process=True)
             token_simi = self.similar.token_similar(url, available_tokens, alias_tokens)[:2]
             if self.similar._separable(token_simi):
                 top_similar = token_simi[0]

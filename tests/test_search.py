@@ -68,7 +68,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.mensjournal.com:80/gear/electronics/newtown-2016s-most-intriguing-indie-films-so-far-20160204"
+        "http://docs.openstack.org:80/networking-guide/common/app_support.html"
     ]
     for url in urls:
         site = he.extract(url)

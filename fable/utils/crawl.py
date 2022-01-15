@@ -299,7 +299,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
         try:
             r = requests.get(url, timeout=timeout, proxies=proxies, headers=requests_header, stream=True)
             if wait and (r.status_code == 429 or r.status_code == 504) and count < 3:  # Requests limit
-                logger.debug(f'requests_crawl: get status code {r.status_code}')
+                logger.debug(f'requests_crawl: {url} get status code {r.status_code}')
                 count += 1
                 time.sleep(10)
                 continue
@@ -322,7 +322,7 @@ def requests_crawl(url, timeout=20, wait=True, html=True, proxies={}, raw=False)
             logger.warn(f"There is an exception with requests_crawl: {str(e)}")
             return
     if r.status_code >= 400:
-        if r.status_code in [401, 403, 404]: logger.debug(f'requests_crawl: Get status code {r.status_code}')
+        if r.status_code in [401, 403, 404]: logger.debug(f'requests_crawl: {url} Get status code {r.status_code}')
         return
     logger.debug(f'requests_crawl: got response {url}')
     headers = {k.lower(): v.lower() for k, v in r.headers.items()}

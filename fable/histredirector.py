@@ -35,56 +35,22 @@ class HistRedirector:
     def _order_neighbors(self, target_url, neighbors, ts):
         """Order the neighbors so that most similar neighbor (in location/format and in time) can be tested first"""
         lambdas = []
-        def get_ext(url):
+        def directory_close(target_url, url):
             path = urlsplit(url).path
-            if path != '/' and path[-1] == '/': path = path[:-1]
-            return os.path.splitext(path)[1]
-        def query_score(url):
-            scores = []
-            target_query = urlsplit(target_url).query
-            query = urlsplit(url).query
-            # * Has query?
-            scores.append(-((target_query != "") == (query != "")))
-            target_qs = parse_qs(target_query)
-            qs = parse_qs(query)
-            # * How many same keys?
-            same_keys = set(target_qs.keys()).intersection(qs.keys())
-            scores.append(-len(same_keys))
-            # * How many same values
-            same_values = 0
-            for k in same_keys:
-                same_values += len(set(target_qs[k]).intersection(qs[k]))
-            scores.append(-same_values)
-            return tuple(scores)
-        def _detect_file_alnum(url):
-            """Detect whether string has alpha and/or numeric char"""
-            path = urlsplit(url).path
-            if path != '/' and path[-1] == '/': path = path[:-1]
-            filename = os.path.basename(path)
-            typee = ''
-            alpha_char = [c for c in filename if c.isalpha()]
-            num_char = [c for c in filename if c.isdigit()]
-            if len(alpha_char) > 0:
-                typee += 'A'
-            if len(num_char) > 0:
-                typee += 'N'
-            return set(typee)
-        # * Same ext?
-        lambdas.append(lambda x: -(get_ext(target_url) == get_ext(x[1])) )
-        # * Has query? Same Key? Same Value?
-        lambdas.append(lambda x: query_score(x[1]))
-        # * Format similarity
-        lambdas.append(lambda x: -len(_detect_file_alnum(target_url).intersection(_detect_file_alnum(x[1]))))
-        # * ts diff
-        lambdas.append(lambda x: abs((_safe_dparse(x[0]) - ts).total_seconds()))
-        neighbor_score = []
-        for neighbor in neighbors:
-            score = tuple(l(neighbor) for l in lambdas)
-            neighbor_score.append((neighbor, score))
-        neighbor_score.sort(key=lambda x: x[1])
+            directory = url_utils.nondigit_dirname(path)
+            directory = directory.split('/')[1:]
+            target_path = urlsplit(target_url).path
+            target_directory = url_utils.nondigit_dirname(target_path)
+            target_directory = target_directory.split('/')[1:]
+            return len(set(target_directory).intersection(directory)) /  len(set(target_directory).union(directory))           
+
+        # * Directory closeness
+        lambdas.append(lambda x: -directory_close(target_url, x))
+        neighbor_score = url_utils.order_neighbors(target_url, neighbors, 
+                            urlgetter=lambda x: x[1], ts=ts, prefix_funcs=lambdas)
         # * dedup
         uniq_neighbor_score, seen = [], set()
-        for neighbor, _ in neighbor_score:
+        for neighbor in neighbor_score:
             if url_utils.filter_wayback(neighbor[1]) in seen:
                 continue
             seen.add(url_utils.filter_wayback(neighbor[1]))

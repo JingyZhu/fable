@@ -9,7 +9,14 @@ from collections import defaultdict
 import copy
 import itertools
 from dateutil import parser as dparser
+import regex
+import difflib
 
+def _safe_dparse(ts):
+    try:
+        return dparser.parse(ts)
+    except:
+        return datetime.datetime.now()
 
 def filter_wayback(url):
     if 'web.archive.org/web' not in url:
@@ -537,3 +544,121 @@ def netloc_dir(url, nondigit=True, nondate=False, exclude_index=False):
     if nondate:
         p = nondate_pathname(p)
     return ('.'.join(hosts), p.lower())
+
+def tokenize_url(url, include_all=False, process=False):
+    """
+    include_all: if host & query will be included in the tokens
+    process: if each token of URL will be further tokenized (like text tokenize)
+    """
+    us = urlsplit(url)
+    path = us.path
+    if path == '': path = '/'
+    if path[-1] == '/' and path != '/': path = path[:-1]
+    path = path.split('/')[1:]
+    tokens = []
+    if include_all:
+        host = us.netloc.split(':')[0].lower()
+        host = host.split('.')
+        if host[0] == 'www': host = host[1:]
+        tokens.append('.'.join(host))
+    for p in path:
+        token = p
+        if process:
+            token = os.path.splitext(token)[0]
+            token = regex.split("[^a-zA-Z1-9]", token)
+            token = ' '.join(token)
+        tokens.append(token.lower())
+    return tokens
+
+def url_token_diffs(url1_tokens, url2_tokens):
+    """
+    return: [(index, operation(C:change,A:add,D:delete), text)]
+    """
+    tokendiffs = []
+    diffs = [d for d in difflib.ndiff(url1_tokens, url2_tokens) if d[0] != '?']
+    # print(diffs)
+    i = 0
+    counter = 0
+    while i < len(diffs):
+        diff = diffs[i]
+        if diff[0] == ' ': # * No Change
+            i += 1
+            counter += 1
+        elif diff[0] == '+': # * Only adding
+            tokendiffs.append((counter, 'A', diff[2:]))
+            i += 1
+        elif diff[0] == '-': # * Either deletion or change
+            if (i+1) < len(diffs) and diffs[i+1][0] == '+': # * Change
+                tokendiffs.append((counter, 'C', diffs[i+1][2:]))
+                counter += 1
+                i += 1
+            else: # * Delete
+                tokendiffs.append((counter, 'D', diff[2:]))
+                counter += 1
+            i += 1
+        else:
+            raise
+    return tokendiffs
+
+def order_neighbors(target_url, neighbors, urlgetter=None,
+                    ts=None, prefix_funcs=[], suffix_funcs=[]):
+        """
+        Order neighbors so that most similar neighbor will be ranked first
+        urlgetter: lambda to get url from neighbors
+        ts: str/datetime. If set, neighbors url needs to be in the wayback form
+        """
+        if urlgetter is None:
+            urlgetter = lambda x: x
+        def get_ext(url):
+            path = urlsplit(url).path
+            if path not in ['/', ''] and path[-1] == '/': path = path[:-1]
+            return os.path.splitext(path)[1]
+        def query_score(url):
+            scores = []
+            target_query = urlsplit(target_url).query
+            query = urlsplit(url).query
+            # * Has query?
+            scores.append(-((target_query != "") == (query != "")))
+            target_qs = parse_qs(target_query)
+            qs = parse_qs(query)
+            # * How many same keys?
+            same_keys = set(target_qs.keys()).intersection(qs.keys())
+            scores.append(-len(same_keys))
+            # * How many same values
+            same_values = 0
+            for k in same_keys:
+                same_values += len(set(target_qs[k]).intersection(qs[k]))
+            scores.append(-same_values)
+            return tuple(scores)
+        def _detect_file_alnum(url):
+            """Detect whether string has alpha and/or numeric char"""
+            path = urlsplit(url).path
+            if path not in ['/', ''] and path[-1] == '/': path = path[:-1]
+            filename = os.path.basename(path)
+            typee = ''
+            alpha_char = [c for c in filename if c.isalpha()]
+            num_char = [c for c in filename if c.isdigit()]
+            if len(alpha_char) > 0:
+                typee += 'A'
+            if len(num_char) > 0:
+                typee += 'N'
+            return set(typee)
+        lambdas = prefix_funcs
+        # * Same ext?
+        lambdas.append(lambda x: -(get_ext(target_url) == get_ext(x)) )
+        # * Has query? Same Key? Same Value?
+        lambdas.append(lambda x: query_score(x))
+        # * Format similarity
+        lambdas.append(lambda x: -len(_detect_file_alnum(target_url).intersection(_detect_file_alnum(x))))
+        if ts:
+            if isinstance(ts, str):
+                ts = _safe_dparse(ts)
+            # * ts diff
+            lambdas.append(lambda x: abs((_safe_dparse(get_ts(x)) - ts).total_seconds()))
+        lambdas += suffix_funcs
+        neighbor_score = []
+        for neighbor in neighbors:
+            score = tuple(l(urlgetter(neighbor)) for l in lambdas)
+            neighbor_score.append((neighbor, score))
+        neighbor_score.sort(key=lambda x: x[1])
+        return [r[0] for r in neighbor_score]

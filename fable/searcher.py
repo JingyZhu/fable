@@ -129,7 +129,7 @@ class Searcher:
                 tracer.search_results(url, 'google', f"token_{i}", search_results)
             search_tokens = {}
             for sr in search_results:
-                tokens = tools.tokenize_url(sr)
+                tokens = url_utils.tokenize_url(sr, process=True)
                 search_tokens[sr] = tokens
             token_simi = self.similar.token_similar(url, token, search_tokens)[:2]
             if self.similar._separable(token_simi):
