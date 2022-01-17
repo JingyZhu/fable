@@ -275,12 +275,7 @@ class HistRedirector:
             return
         
         # * Check if alias is a login page
-        keywords = ['login', 'subscription', 'error', 'notfound', '404', 'badpage']
-        path = urlsplit(alias).path
-        if path not in ["/", ""] and path[-1] == "/": path = path[:-1]
-        filename = path.split("/")[-1]
-        for k in keywords:
-            if k in filename.lower():
-                tracer.debug(f"no_alias: filename includes keyword '{k}'")
-                return
+        if url_utils.na_url(alias):
+            tracer.debug(f"no_alias: filename includes unwanted keyword")
+            return
         return alias

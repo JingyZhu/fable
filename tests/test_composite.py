@@ -73,8 +73,8 @@ def _inference(urlmeta, examples, site, ifr):
 def test_composite_once():
     _init_large_obj()
     data = {
-        'url': 'http://www.redcross.org.uk:80/en/What-we-do/First-aid/Mobile-app',
-        'example_file': 'redcross.org.uk_0.json'
+        'url': 'http://www.ox.ac.uk:80/admissions/postgraduate_courses/course_guide/oriental_studies.html',
+        'example_file': 'ox.ac.uk'
     }
     toinfer = False
     try:

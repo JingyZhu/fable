@@ -16,9 +16,11 @@ unsolved = {
 def test_sictransit_isbroken():
     """URLs that should be broken"""
     urls = [
+        "https://careers.unilever.com/job/north-rocks/assistant-procurement-manager/34155/19983463008",
         "https://www.vevo.com/watch/k-ci-and-jojo/you-bring-me-up-remix/USUV70601491",
         "https://www.dartmouth.edu/wellness/new-location.html",
-        "https://www.att.com/es-us/accessories/specialty-items/gopro-gooseneck-mount-all-gopro-cameras.html"
+        "https://www.att.com/es-us/accessories/specialty-items/gopro-gooseneck-mount-all-gopro-cameras.html",
+        "http://antigua.impacthub.net/es/"
     ]
     for i, url in enumerate(urls):
         print(i, url)

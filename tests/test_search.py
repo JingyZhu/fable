@@ -68,7 +68,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://docs.openstack.org:80/networking-guide/common/app_support.html"
+        "https://asciinema.org/a/2znuSiyoonwpDB7QriovrrC0V"
     ]
     for url in urls:
         site = he.extract(url)
@@ -77,4 +77,4 @@ def test_search_temp():
         if alias is None:
             alias = search.search(url, search_engine='google')
         tr.info(f'alias: {alias}')
-        assert(alias is not None)
+        assert(alias is None)

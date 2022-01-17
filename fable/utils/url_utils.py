@@ -662,3 +662,15 @@ def order_neighbors(target_url, neighbors, urlgetter=None,
             neighbor_score.append((neighbor, score))
         neighbor_score.sort(key=lambda x: x[1])
         return [r[0] for r in neighbor_score]
+
+
+def na_url(url):
+    """Check whether the URL (either broken or alias) is n/a for study (including unwanted keywords)"""
+    keywords = ['login', 'subscription', 'error', 'notfound', '404', 'badpage']
+    path = urlsplit(url).path
+    if path not in ["/", ""] and path[-1] == "/": path = path[:-1]
+    filename = path.split("/")[-1]
+    for k in keywords:
+        if k in filename.lower():
+            return True
+    return False

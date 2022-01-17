@@ -29,11 +29,16 @@ class Searcher:
         self.use_db = use_db
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
+        self.searched_results = {} # * URL: {title: {}, content: {}}
 
     def search(self, url, search_engine='bing'):
         global he
         if search_engine not in ['google', 'bing']:
             raise Exception("Search engine could support for google and bing")
+        if url_utils.na_url(url):
+            return
+        if url not in self.searched_results:
+            self.searched_results[url] ={'title': {}, 'content': {}}
         site = he.extract(url)
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
@@ -75,7 +80,9 @@ class Searcher:
                 searched_contents[searched_url_rep] = self.memo.extract_content(searched_html)
                 if he.extract(url) == he.extract(searched_url) or site == he.extract(searched_url):
                     searched_titles[searched_url_rep] = self.memo.extract_title(searched_html)
-            similars, fromm = self.similar.similar(wayback_url, title, content, searched_titles, searched_contents)
+                self.searched_results[url]['title'].update(searched_titles)
+                self.searched_results[url]['content'].update(searched_contents)
+            similars, fromm = self.similar.similar(wayback_url, title, content, self.searched_results[url]['title'], self.searched_results[url]['content'])
             if len(similars) > 0:
                 top_similar = similars[0]
                 return top_similar[0], {'type': fromm, 'value': top_similar[1]}
@@ -132,7 +139,8 @@ class Searcher:
                 tokens = url_utils.tokenize_url(sr, process=True)
                 search_tokens[sr] = tokens
             token_simi = self.similar.token_similar(url, token, search_tokens)[:2]
-            if self.similar._separable(token_simi):
+            token_simi = [s for s in token_simi if s[0] != "" and sic_transit.broken(s[0],  html=True)[0] == False]
+            if len(token_simi) >= 2 and self.similar._separable(token_simi):
                 top_similar = token_simi[0]
                 return top_similar[0], {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
 

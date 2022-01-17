@@ -973,7 +973,7 @@ class Similar:
             simi_cand.append(("", 0))
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
-    def token_similar(self, url, target_token, candidates_tokens):
+    def token_similar(self, url, target_token, candidates_tokens, shorttext=True):
         """
         For each candidate, get most similar token
         Candidates_token: {url: [tokens]}
@@ -988,7 +988,11 @@ class Similar:
         for can, tokens in candidates_tokens.items():
             max_token = (can, '', 0)
             for t in tokens:
-                simi = self.tfidf.similar(target_token, t)
+                if shorttext:
+                    simi = self.shorttext_match(target_token, t)
+                else:
+                    simi = self.tfidf.similar(target_token, t)
+                tracer.debug(f'similarity title, (value/url): ({simi}/{target_token} vs. {t})')
                 if simi > max_token[2]:
                     max_token = (can, t, simi)
             simi_cand.append(max_token)

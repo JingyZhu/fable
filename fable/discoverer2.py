@@ -519,11 +519,13 @@ class Discoverer:
         Return: If Found: URL, Trace (how copy is found)
                 else: None, Trace
         """
+        if url_utils.na_url(url):
+            return None, {}
         if depth is None: depth = self.depth
         has_snapshot = False
         url_ts = None
         repr_text = [] # *representitive text for url, composed with [title, content, url]
-        self.high_similar_pages = []
+        self.high_similar_pages = {'title': {}, 'content': {}}
         ### *First try with wayback alias
         try:
             wayback_url = self.memo.wayback_index(url, policy='latest-rep')
@@ -537,17 +539,18 @@ class Discoverer:
             tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             html, title, content = '', '', ''
         
-        # * Check archived canoncial to find alias
-        canonical_alias = self._check_archive_canonical(wayback_url, html)
-        tracer.debug(f'_check_archive_canonical: {canonical_alias}')
-        if canonical_alias:
-            return canonical_alias, {'type': 'archive_canonical', 'value': 'N/A'}
+        if wayback_url:
+            # * Check archived canoncial to find alias
+            canonical_alias = self._check_archive_canonical(wayback_url, html)
+            tracer.debug(f'_check_archive_canonical: {canonical_alias}')
+            if canonical_alias:
+                return canonical_alias, {'type': 'archive_canonical', 'value': 'N/A'}
 
-        # * Easy search
-        alias, self.high_similar_pages = self._easy_search(url, wayback_url, title, content)
-        tracer.debug(f'_easy_search: {alias}')
-        if alias is not None:
-            return alias
+            # * Easy search
+            alias, self.high_similar_pages = self._easy_search(url, wayback_url, title, content)
+            tracer.debug(f'_easy_search: {alias}')
+            if alias is not None:
+                return alias
 
         # *Get repr_text
         repr_text += [title, content]
