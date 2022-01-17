@@ -35,10 +35,13 @@ class Searcher:
         global he
         if search_engine not in ['google', 'bing']:
             raise Exception("Search engine could support for google and bing")
+        # TODO: Not ideal
+        elif search_engine == 'bing':
+            self.searched_results = {}
         if url_utils.na_url(url):
             return
         if url not in self.searched_results:
-            self.searched_results[url] ={'title': {}, 'content': {}}
+            self.searched_results[url] ={'title': {}, 'content': {}, 'html': {}}
         site = he.extract(url)
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
@@ -66,6 +69,7 @@ class Searcher:
             search_cand = [s for s in search_results if s not in searched]
             tracer.search_results(url, search_engine, typee, search_results)
             searched.update(search_results)
+            searched_htmls = {}
             for searched_url in search_cand:
                 # * Sanity check (SE could also got broken pages)
                 if sic_transit.broken(searched_url, html=True)[0] != False:
@@ -76,13 +80,16 @@ class Searcher:
                 # searched_url_rep = searched_wayback if searched_wayback else searched_url
                 searched_url_rep = searched_url
                 searched_html = self.memo.crawl(searched_url_rep, proxies=self.PS.select())
+                searched_htmls[searched_url_rep] = searched_html
                 if searched_html is None: continue
                 searched_contents[searched_url_rep] = self.memo.extract_content(searched_html)
                 if he.extract(url) == he.extract(searched_url) or site == he.extract(searched_url):
                     searched_titles[searched_url_rep] = self.memo.extract_title(searched_html)
-                self.searched_results[url]['title'].update(searched_titles)
-                self.searched_results[url]['content'].update(searched_contents)
-            similars, fromm = self.similar.similar(wayback_url, title, content, self.searched_results[url]['title'], self.searched_results[url]['content'])
+            self.searched_results[url]['title'].update(searched_titles)
+            self.searched_results[url]['content'].update(searched_contents)
+            self.searched_results[url]['html'].update(searched_htmls)
+            similars, fromm = self.similar.similar(wayback_url, title, content, self.searched_results[url]['title'], self.searched_results[url]['content'],
+                                                    self.searched_results[url]['html'])
             if len(similars) > 0:
                 top_similar = similars[0]
                 return top_similar[0], {'type': fromm, 'value': top_similar[1]}

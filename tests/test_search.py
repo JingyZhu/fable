@@ -49,6 +49,8 @@ def test_search_noalias():
     urls = [
         "http://toxnet.nlm.nih.gov/cgi-bin/sis/htmlgen?HSDB",
         "https://www.tensorflow.org/api_docs/python/tf/keras/layers/CuDNNLSTM",
+        "https://asciinema.org/a/2znuSiyoonwpDB7QriovrrC0V",
+        "https://jobs.cigna.com/us/en/job/21011897/Senior-Supplemental-Health-Compliance-Analyst"
     ]
     for url in urls:
         print(url)
@@ -61,14 +63,14 @@ def test_search_noalias():
 
 unsolved = {
     # ! Title tweaked, no subset
-    "http://www.consumerreports.org:80/cro/appliances/kitchen-appliances/coffeemakers/pod-coffeemaker-ratings/models/price-and-shop/buy-keurig-k45-elite-brewing-system-99048951.htm": True
+    "http://www.consumerreports.org:80/cro/appliances/kitchen-appliances/coffeemakers/pod-coffeemaker-ratings/models/price-and-shop/buy-keurig-k45-elite-brewing-system-99048951.htm": True,
 }
 
 def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://asciinema.org/a/2znuSiyoonwpDB7QriovrrC0V"
+        "http://www.wiley.com:80/cda/product/0,,0471357278,00.html"
     ]
     for url in urls:
         site = he.extract(url)

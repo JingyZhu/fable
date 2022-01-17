@@ -491,7 +491,7 @@ class Memoizer:
         except Exception as e: tracer.warn(f'extract title content: {str(e)}')
         return title, content
     
-    def get_more_crawls(self, url, wayback=False):
+    def get_more_crawls(self, url, html=None, year_range=None, wayback=False):
         """
         Getting more samples from the same netloc_dir with url
         Process can look for different src:
@@ -500,26 +500,24 @@ class Memoizer:
          - search for more urls
 
         url: full url
+        year_range: tuple, years thats want to be searched on
         Return: new crawls
         """
         tracer.debug(f'Getting more crawls from {url}')
         new_crawls = []
         seen_urls = set()
         # * Looking at outgoing links of url to see whether there are ones in the same  
-        html = self.crawl(url)
+        if not html:
+            html = self.crawl(url)
         nd = url_utils.netloc_dir(url)
-        def na_url(url):
-            keywords = ['login', 'subscription', 'error', 'notfound', '404', 'register']
-            for k in keywords:
-                if k in url: return True
-            return False
+
         if html:
             outlinks = crawl.outgoing_links(url, html, wayback=wayback)
             for outlink in outlinks:
                 ond = url_utils.netloc_dir(outlink)
                 if ond != nd or url_utils.url_match(outlink, url) or outlink in seen_urls:
                     continue
-                if na_url(outlink):
+                if url_utils.na_url(outlink):
                     continue
                 try:
                     out_html = self.crawl(outlink)
@@ -540,15 +538,20 @@ class Memoizer:
                     return new_crawls
         
         url_prefix = ''.join(nd)
-        if wayback:
-            year = url_utils.get_ts(url)
-            year = dparser.parse(year).year
+        if not year_range:
+            if wayback:
+                year = url_utils.get_ts(url)
+                year = dparser.parse(year).year
+            else:
+                year = 2022
+            start = year -4,
+            end = int(f'{year}1231')
         else:
-            year = 2022
+            start, end = year_range
         # * Set year limit to avoid getting "alias" title/content as non-unique
         param = {
-            'from': year - 4,
-            'to': int(f"{year}1231"),
+            'from':start,
+            'to': end,
             'filter': ['mimetype:text/html', 'statuscode:200'],
             'collapse': 'urlkey',
             'limit': 100
@@ -971,6 +974,25 @@ class Similar:
         
         while len(simi_cand) < 2:
             simi_cand.append(("", 0))
+        simi_cand = sorted(simi_cand, key=lambda x: x[1], reverse=True)
+        # * Check if top similar URL is in its own pattern, if not, look at 
+        # * This is mainly to compensate search engines' index incompleteness
+        netdir_urls = defaultdict(list)
+        for cand in candidates_contents: netdir_urls[url_utils.netloc_dir(cand)].append(cand)
+        memo = Memoizer()
+        for i in range(2):
+            cand, cand_simi = simi_cand[i]
+            cand_nd = url_utils.netloc_dir(cand)
+            if cand and cand_simi >= self.threshold and len(netdir_urls[cand_nd]) < 2:
+                if candidates_html and cand in candidates_html:
+                    html = candidates_html[cand]
+                    more_crawls = memo.get_more_crawls(cand, html, year_range=('20210101', '20211231'))
+                    more_contents = {c['url']: c['content'] for c in more_crawls}
+                    self.tfidf.add_corpus([target_content] + list(more_contents.values()))
+                    for u, c in more_contents.items():
+                        u_simi = self.tfidf.similar(target_content, c)
+                        simi_cand.append((u, u_simi))
+        
         return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def token_similar(self, url, target_token, candidates_tokens, shorttext=True):
