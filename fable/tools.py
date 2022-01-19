@@ -1022,8 +1022,9 @@ class Similar:
             simi_cand.append(("", "", 0))
         return sorted(simi_cand, key=lambda x: x[2], reverse=True)
     
-    def _separable(self, simi):
-        return simi[0][-1] >= self.threshold and simi[1][-1] < self.threshold
+    def _separable(self, simi, threshold=None):
+        threshold = self.threshold if not threshold else threshold
+        return simi[0][-1] >= threshold and simi[1][-1] < threshold
 
     def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, \
                 cand_htmls={}, fixed=True, **kwargs):

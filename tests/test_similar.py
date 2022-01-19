@@ -87,7 +87,7 @@ def test_unique_title():
 def test_unique_title_temp():
     _init_large_obj()
     urls = {
-        "http://arduino.cc:80/forum/index.php?action=quickmod2;topic=48342.0": (True, "An Error Has Occurred!")
+        "https://ubwp.buffalo.edu/selfandmotivationlab/": (False, "Self and Motivation Lab")
     }
     for url, (wayback, uniq_title) in urls.items():
         site = he.extract(url, wayback=wayback)

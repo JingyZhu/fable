@@ -47,13 +47,13 @@ class HistRedirector:
         # * Directory closeness
         lambdas.append(lambda x: -directory_close(target_url, x))
         neighbor_score = url_utils.order_neighbors(target_url, neighbors, 
-                            urlgetter=lambda x: x[1], ts=ts, prefix_funcs=lambdas)
+                            urlgetter=lambda x: x[1], ts=ts, prefix_funcs=[])
         # * dedup
         uniq_neighbor_score, seen = [], set()
-        for neighbor in neighbor_score:
-            if url_utils.filter_wayback(neighbor[1]) in seen:
+        for i, neighbor in enumerate(neighbor_score):
+            if url_utils.url_norm(neighbor[1], wayback=True, trim_slash=True, trim_www=True) in seen:
                 continue
-            seen.add(url_utils.filter_wayback(neighbor[1]))
+            seen.add(url_utils.url_norm(neighbor[1], wayback=True, trim_slash=True, trim_www=True))
             uniq_neighbor_score.append(neighbor)
         # tracer.debug(uniq_neighbor_score[:10])
         return uniq_neighbor_score
@@ -106,13 +106,14 @@ class HistRedirector:
             url_prefix = url_prefix._replace(path=os.path.join(url_dir, '*'), query='')
             url_prefix_str = urlunsplit(url_prefix)
             param_dict = {
-                'from': str(ts_year) + '0101',
-                'to': str(ts_year) + '1231',
+                # 'from': str(ts_year) + '0101',
+                # 'to': str(ts_year) + '1231',
                 "filter": ['statuscode:3[0-9]*', 'mimetype:text/html'],
                 # 'limit': 1000
             }
-            tracer.debug(f'Search for neighbors with query & year: {os.path.join(url_dir, "*")} {ts_year}')
             neighbor, _ = crawl.wayback_index(url_prefix_str, param_dict=param_dict, total_link=True)
+            tracer.debug(f'Search for neighbors with query & year: {url_prefix_str} {ts_year}. Count: {len(neighbor)}')
+
 
             # *Get closest crawled urls in the same dir, which is not target itself  
             same_netdir = lambda u: url_dir in url_utils.nondigit_dirname(urlsplit(url_utils.filter_wayback(u)).path[:-1])

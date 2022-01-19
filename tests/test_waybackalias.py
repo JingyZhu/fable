@@ -57,7 +57,8 @@ def test_waybackalias_noalias():
         "http://www.onjava.com:80/pub/a/onjava/2003/11/19/filters.html?page=1",
         "http://www.ubc.ca/okanagan/vod/?f=http://cdn.ok.ubc.ca/_ubc_clf/_clf7_assets/video/I2.flv",
         "http://www.technologyreview.com:80/articles/04/11/talbot1104.asp?p=2",
-        "http://www.airbnb.com:80/manhattan/monthly-houses"
+        "http://www.airbnb.com:80/manhattan/monthly-houses",
+        "http://cms.clevelandclinic.org:80/breastcenter/default.cfm?oTopID=108&source=breastcenterurl"
     ]
     for url in urls:
         print(url)
@@ -80,17 +81,18 @@ unsolved = {
     "http://careers.jpmorgan.com:80/careers/programs/research-fulltime-analyst": False, # ? Merged/Renamed to another page?
     "http://www.developer.com/feedback/ws/android/development-tools/the-9-most-anticipated-features-in-android-gingerbread-2.3.html": False, # ? 200 after 300
     
+    "https://www.docusign.com/esignature/electronically-sign": False # ! Found another neighbor with the same redirected URL (only from inferback)
 }
 
 def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.zope.org:80/Members/sspickle/Zwiff"
+        "http://www.ox.ac.uk:80/admissions/postgraduate_courses/course_guide/oriental_studies.html"
     ]
     for url in urls:
         print(url)
         alias = hist.wayback_alias(url)
-        assert(alias is not None)
+        assert(alias is None)
 
 # test_waybackalias_temp()

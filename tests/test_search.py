@@ -1,6 +1,7 @@
 import pytest
 import logging
 import os
+import json
 
 from fable import tools, searcher, tracer, config
 from fable.utils import url_utils
@@ -64,14 +65,17 @@ def test_search_noalias():
 unsolved = {
     # ! Title tweaked, no subset
     "http://www.consumerreports.org:80/cro/appliances/kitchen-appliances/coffeemakers/pod-coffeemaker-ratings/models/price-and-shop/buy-keurig-k45-elite-brewing-system-99048951.htm": True,
+    # ! URL Token same (after tokenization)
+    "http://www.abc.net.au:80/100years/EP2_4.htm": False
 }
 
 def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.wiley.com:80/cda/product/0,,0471357278,00.html"
+        "http://support.apple.com/kb/HT5467"
     ]
+    results = []
     for url in urls:
         site = he.extract(url)
         search.similar._init_titles(site)
@@ -79,4 +83,6 @@ def test_search_temp():
         if alias is None:
             alias = search.search(url, search_engine='google')
         tr.info(f'alias: {alias}')
-        assert(alias is None)
+        # assert(alias is None)
+        results.append({'url': url, 'alias': alias})
+        json.dump(results, open('test_search.json', 'w+'), indent=2)

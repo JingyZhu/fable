@@ -606,6 +606,8 @@ def order_neighbors(target_url, neighbors, urlgetter=None,
         Order neighbors so that most similar neighbor will be ranked first
         urlgetter: lambda to get url from neighbors
         ts: str/datetime. If set, neighbors url needs to be in the wayback form
+
+        return: Sorted neighbors
         """
         if urlgetter is None:
             urlgetter = lambda x: x
@@ -674,3 +676,9 @@ def na_url(url):
         if k in filename.lower():
             return True
     return False
+
+def suspicious_alias(url, alias):
+    is_home = lambda u: urlsplit(u).path in ['', '/']
+    # * Non home to home page
+    if not is_home(url) and is_home(alias):
+        return True
