@@ -452,7 +452,8 @@ class Inferer:
             if reorg_broken == True and not soft_404_content(reason): # * Broken
                 self.not_workings.add(reorg_url)
             else:
-                reorg_url_html = crawl.requests_crawl(reorg_url)
+                reorg_url_resp = crawl.requests_crawl(reorg_url, raw=True)
+                reorg_url, reorg_url_html = reorg_url_resp.url, reorg_url_resp.text
                 reorg_url = crawl.get_canonical(reorg_url, reorg_url_html)
                 working_aliases.append(reorg_url)
 

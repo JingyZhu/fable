@@ -469,7 +469,9 @@ class Discoverer:
         if not url_utils.url_match(url, canonical, wayback=True):
             canonical = url_utils.filter_wayback(canonical)
             if sic_transit.broken(canonical)[0] is False:
-                return canonical
+                live_canonical = crawl.requests_crawl(canonical, raw=True)
+                live_canonical = crawl.get_canonical(live_canonical.url, live_canonical.text)
+                return live_canonical
         return
     
     def _easy_search(self, url, wayback_url, title, content):
@@ -497,7 +499,7 @@ class Discoverer:
             #     tracer.debug(f'search_once: searched URL {searched_url} is broken')
             #     continue
             searched_url_rep = searched_url
-            searched_html = self.memo.crawl(searched_url_rep, proxies=self.PS.select())
+            searched_html, searched_url_rep = self.memo.crawl(searched_url_rep, final_url=True, proxies=self.PS.select())
             if searched_html is None: continue
             searched_contents[searched_url_rep] = self.memo.extract_content(searched_html)
             

@@ -88,7 +88,7 @@ def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.ox.ac.uk:80/admissions/postgraduate_courses/course_guide/oriental_studies.html"
+        "http://www.activestate.com:80/ruby.plex"
     ]
     for url in urls:
         print(url)

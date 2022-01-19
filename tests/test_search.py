@@ -73,7 +73,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://support.apple.com/kb/HT5467"
+        "https://www.icann.org/cctlds/bi/mou-attd-16may02.htm"
     ]
     results = []
     for url in urls:
@@ -83,6 +83,6 @@ def test_search_temp():
         if alias is None:
             alias = search.search(url, search_engine='google')
         tr.info(f'alias: {alias}')
-        # assert(alias is None)
-        results.append({'url': url, 'alias': alias})
-        json.dump(results, open('test_search.json', 'w+'), indent=2)
+        assert(alias is None)
+        # results.append({'url': url, 'alias': alias})
+        # json.dump(results, open('test_search.json', 'w+'), indent=2)

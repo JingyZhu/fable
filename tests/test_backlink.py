@@ -68,7 +68,7 @@ def test_backlink_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://arduino.cc:80/forum/index.php?action=quickmod2;topic=48342.0"
+        "https://www.icann.org/cctlds/bi/mou-attd-16may02.htm"
     ]
     for url in urls:
         site = he.extract(url)

@@ -245,7 +245,7 @@ class HistRedirector:
                 
                 live_new_url = inter_urls[-1]
                 live_new_url = self.na_alias(live_new_url)
-                if live_new_url is None:
+                if live_new_url is None or url_utils.suspicious_alias(url, live_new_url):
                     continue
                 inter_urls.append(live_new_url)
                 # //pass_check, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)

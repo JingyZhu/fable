@@ -79,7 +79,7 @@ class Searcher:
                 # searched_wayback = self.memo.wayback_index(searched_url, policy='earliest')
                 # searched_url_rep = searched_wayback if searched_wayback else searched_url
                 searched_url_rep = searched_url
-                searched_html = self.memo.crawl(searched_url_rep, proxies=self.PS.select())
+                searched_html, searched_url_rep = self.memo.crawl(searched_url_rep, final_url=True, proxies=self.PS.select())
                 searched_htmls[searched_url_rep] = searched_html
                 if searched_html is None: continue
                 searched_contents[searched_url_rep] = self.memo.extract_content(searched_html)
