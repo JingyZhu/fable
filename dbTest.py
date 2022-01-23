@@ -8,15 +8,9 @@ d = dict((db, [collection for collection in client[db].collection_names()])
 print(client['fable']['reorg'])
 print(d)
 
-cursor = client['fable']['reorg'].find({"url": "https://www.newscientist.com/article.ns?id=dn7360" })
+cursor = client['fable']['reorg'].find({})
 for document in cursor:
-        if 'achitta' not in document:
-                print("lol")
-        else:
-                print(document)
-                if 'reorg_url' in document['achitta']:
-                        print("here")
-                        print(document['achitta']['reorg_url'])
+        print(document)
 
 
 
