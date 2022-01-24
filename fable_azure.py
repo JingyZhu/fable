@@ -3,6 +3,7 @@ import logging
 import json
 import pymongo
 import pywikibot
+import os
 from fable import ReorgPageFinder
 from azure_client import AzureClient
 from azure.storage.queue import (
@@ -15,11 +16,9 @@ from bson.objectid import ObjectId
 rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.DEBUG)
 azureClient = AzureClient()
 
-
-queueURL = "https://fablestorage.queue.core.windows.net/output"
-sasToken = "?sv=2020-08-04&ss=bfqt&srt=sco&sp=rwdlacupix&se=2021-12-02T14:42:05Z&st=2021-11-11T06:42:05Z&spr=https&sig=pbMyft6gYJ0FtyciNqMh%2FfSCt%2BmMAfeIVarq4lp1j9I%3D"
-
-client = pymongo.MongoClient('mongodb://fable-database:mSMNajjnkR1R5lGXxXihhJF5DUKvyyEhrWeBUBE0Mr8mqWsCfOhpsi2zp8ihUzWGaZdHaFKD3G5qF1P6ZMQYaw==@fable-database.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@fable-database@')
+# Mongo DB Info
+MONGO_ID = str(os.getenv("MONGO"))
+client = pymongo.MongoClient(MONGO_ID)
 db = client["fable"]
 
 def addToURLCollection(document):
@@ -102,7 +101,8 @@ def pkill(pattern):
 # Run Fable and upload logs on success to Azure files
 def fable_api(urlInfo: dict):
     print(urlInfo)
-    email = urlInfo["email"]
+    
+    title = str(urlInfo["article_title"])
     base_URL = str(urlInfo["base_url"])
     broken_links = urlInfo["broken_links"]
 
@@ -124,35 +124,16 @@ def fable_api(urlInfo: dict):
     
     
     aliasIDS = getAliasesFromDB(broken_links)
-    print(aliasIDS)
 
     # Add to DB
     newDoc = {
         "alias_ids": list(map(lambda x: ObjectId(x), aliasIDS)),
-        "article_title": "",
+        "article_title": title,
         "article_url": base_URL,
         "article_url_title": base_URL.split("/")[-1]
     }
 
-    print(newDoc)
-
     articleCollection.insert_one(newDoc)
-
-    # # Create a request object
-    # requestObject = {
-    #     "email": email,
-    #     "base_url": baseURL,
-    #     "broken_links": broken_link_map,
-    # }
-
-    # # postToWiki(requestObject)
-    # queue = QueueClient.from_queue_url(
-    #             queueURL, 
-    #             credential=sasToken,
-    #         )
-    
-    # jsonString = json.dumps(requestObject)
-    # queue.send_message(jsonString)
 
 
 # Read URLs from Azure Queues and run Fable on them    
