@@ -10,6 +10,8 @@ from azure.storage.queue import (
         TextBase64EncodePolicy,
 )
 
+from bson.objectid import ObjectId
+
 rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.DEBUG)
 azureClient = AzureClient()
 
@@ -17,9 +19,37 @@ azureClient = AzureClient()
 queueURL = "https://fablestorage.queue.core.windows.net/output"
 sasToken = "?sv=2020-08-04&ss=bfqt&srt=sco&sp=rwdlacupix&se=2021-12-02T14:42:05Z&st=2021-11-11T06:42:05Z&spr=https&sig=pbMyft6gYJ0FtyciNqMh%2FfSCt%2BmMAfeIVarq4lp1j9I%3D"
 
-def getAliasFromDB(broken_links):
-    client = pymongo.MongoClient('mongodb://fable-database:mSMNajjnkR1R5lGXxXihhJF5DUKvyyEhrWeBUBE0Mr8mqWsCfOhpsi2zp8ihUzWGaZdHaFKD3G5qF1P6ZMQYaw==@fable-database.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@fable-database@')
-    broken_link_map = {}
+client = pymongo.MongoClient('mongodb://fable-database:mSMNajjnkR1R5lGXxXihhJF5DUKvyyEhrWeBUBE0Mr8mqWsCfOhpsi2zp8ihUzWGaZdHaFKD3G5qF1P6ZMQYaw==@fable-database.mongo.cosmos.azure.com:10255/?ssl=true&replicaSet=globaldb&retrywrites=false&maxIdleTimeMS=120000&appName=@fable-database@')
+db = client["fable"]
+
+def addToURLCollection(document):
+    
+    urlCollection = db["bot_urls"]
+    exists = urlCollection.find_one({"brokenLink": document["url"]})
+
+    if exists:
+        return str(document["_id"])
+    
+    generalMethod = str(document["achitta"]["by"]["method"]).capitalize()
+    specificMethod = str(document["achitta"]["by"]["type"]).capitalize()
+
+    newDoc = {
+        "brokenLink": document["url"],
+        "fixedLink": document["achitta"]["reorg_url"],
+        "method": str(generalMethod + "-" + specificMethod),
+        "correct_votes": 0,
+        "cant_tell_votes": 0,
+        "inaccurate_votes": 0,
+        "beenReplaced": False,
+    }
+
+    added = urlCollection.insert_one(newDoc)
+
+    return str(added["_id"]) 
+
+
+def getAliasesFromDB(broken_links):
+    alias_ids = []
     
     for domainName in broken_links:
         hostname = domainName
@@ -27,15 +57,14 @@ def getAliasFromDB(broken_links):
 
         for url in urls:
             # Add to broken_link_map
-            broken_link_map.update({str(url): "NONE"})
-            cursor = client['fable']['reorg'].find({"url": str(url) })
+            cursor = db['reorg'].find({"url": str(url) })
 
             for document in cursor:
                 if 'achitta' in document:
                     if 'reorg_url' in document['achitta']:
-                        broken_link_map[url] = str(document['achitta'])
+                        alias_ids.append(addToURLCollection(document))
     
-    return broken_link_map
+    return alias_ids
 
 def postFormatter(requestObject):
     content = ""
@@ -74,8 +103,14 @@ def pkill(pattern):
 def fable_api(urlInfo: dict):
     print(urlInfo)
     email = urlInfo["email"]
-    baseURL = urlInfo["base_url"]
+    base_URL = str(urlInfo["base_url"])
     broken_links = urlInfo["broken_links"]
+
+    articleCollection = db["bot_articles"]
+
+    # Check to see if article exists
+    if articleCollection.find_one({"article_url": base_URL }):
+        return
 
     for domainName in broken_links:
         hostname = domainName
@@ -88,24 +123,36 @@ def fable_api(urlInfo: dict):
             pass
     
     
-    broken_link_map = getAliasFromDB(broken_links)
-    print(broken_link_map)
+    aliasIDS = getAliasesFromDB(broken_links)
+    print(aliasIDS)
 
-    # Create a request object
-    requestObject = {
-        "email": email,
-        "base_url": baseURL,
-        "broken_links": broken_link_map,
+    # Add to DB
+    newDoc = {
+        "alias_ids": list(map(lambda x: ObjectId(x), aliasIDS)),
+        "article_title": "",
+        "article_url": base_URL,
+        "article_url_title": base_URL.split("/")[-1]
     }
 
-    # postToWiki(requestObject)
-    queue = QueueClient.from_queue_url(
-                queueURL, 
-                credential=sasToken,
-            )
+    print(newDoc)
+
+    articleCollection.insert_one(newDoc)
+
+    # # Create a request object
+    # requestObject = {
+    #     "email": email,
+    #     "base_url": baseURL,
+    #     "broken_links": broken_link_map,
+    # }
+
+    # # postToWiki(requestObject)
+    # queue = QueueClient.from_queue_url(
+    #             queueURL, 
+    #             credential=sasToken,
+    #         )
     
-    jsonString = json.dumps(requestObject)
-    queue.send_message(jsonString)
+    # jsonString = json.dumps(requestObject)
+    # queue.send_message(jsonString)
 
 
 # Read URLs from Azure Queues and run Fable on them    
