@@ -3,6 +3,7 @@ import logging
 import json
 import pymongo
 import pywikibot
+import time
 import os
 from fable import ReorgPageFinder
 from azure_client import AzureClient
@@ -12,6 +13,7 @@ from azure.storage.queue import (
 )
 
 from bson.objectid import ObjectId
+from .sendEmail import sendEmail
 
 rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.DEBUG)
 azureClient = AzureClient()
@@ -102,9 +104,11 @@ def pkill(pattern):
 def fable_api(urlInfo: dict):
     print(urlInfo)
     
+    email = urlInfo["email"]
     title = str(urlInfo["article_title"])
     base_URL = str(urlInfo["base_url"])
     broken_links = urlInfo["broken_links"]
+    article_title_url = base_URL.split("/")[-1]
 
     articleCollection = db["bot_articles"]
 
@@ -130,27 +134,33 @@ def fable_api(urlInfo: dict):
         "alias_ids": list(map(lambda x: ObjectId(x), aliasIDS)),
         "article_title": title,
         "article_url": base_URL,
-        "article_url_title": base_URL.split("/")[-1]
+        "article_url_title": article_title_url
     }
 
     articleCollection.insert_one(newDoc)
+
+    # Send the Email that Fable hs completed
+    sendEmail(email, base_URL, article_title_url)
 
 
 # Read URLs from Azure Queues and run Fable on them    
 def main():
     count = 0
     with open('progress.txt', 'a') as progress_file:
-        while azureClient.get_queue_length() > 0:
-            try:
-                # Kill any stale chrome processes in case of memory issues
-                pkill('chrome')
+        while True:
+            if azureClient.get_queue_length() > 0:
+                try:
+                    # Kill any stale chrome processes in case of memory issues
+                    pkill('chrome')
 
-                urlInfo = azureClient.poll_message()
-                # progress_file.write(f"Processing number {count}\tHostname: {urlInfo['hostname']}\n")
-                fable_api(urlInfo)
-                count += 1
-            except:
-                pass
+                    urlInfo = azureClient.poll_message()
+                    # progress_file.write(f"Processing number {count}\tHostname: {urlInfo['hostname']}\n")
+                    fable_api(urlInfo)
+                    count += 1
+                except:
+                    pass
+            else:
+                time.sleep(60)
 
 if __name__ == "__main__":
     main()
