@@ -13,7 +13,7 @@ from azure.storage.queue import (
 )
 
 from bson.objectid import ObjectId
-from .sendEmail import sendEmail
+from sendEmail import sendEmail
 
 rpf = ReorgPageFinder(classname='achitta', logname='achitta', loglevel=logging.DEBUG)
 azureClient = AzureClient()
