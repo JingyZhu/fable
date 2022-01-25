@@ -39,7 +39,7 @@ class Searcher:
         elif search_engine == 'bing':
             self.searched_results = {}
         if url_utils.na_url(url):
-            return
+            return None, {'reason': "Not applicable URL"}
         if url not in self.searched_results:
             self.searched_results[url] ={'title': {}, 'content': {}, 'html': {}}
         site = he.extract(url)
@@ -56,7 +56,7 @@ class Searcher:
         except Exception as e:
             tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             wayback_url = url_utils.constr_wayback(url, '20211231')
-            return
+            return None, {'reason': "Fail to get archive copy"}
         tracer.title(url, title)
         search_results, searched = [], set()
 
@@ -103,7 +103,10 @@ class Searcher:
                 # * Bing Title
                 site_str = f'site:{site}'
                 bing_title = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
-                bing_title = ' '.join(bing_title)
+                # bing_title = ' '.join(bing_title)
+                uniq_title = self.similar.unique_title(wayback_url, title, content, self.similar.wb_meta, wayback=True)
+                bing_title = uniq_title
+                tracer.debug(f'Search query: {bing_title} {site_str}')
                 search_results = search.bing_search(f'{bing_title} {site_str}', use_db=self.use_db)
                 if len(search_results) > 20: search_results = search_results[:20]
                 similar = search_once(search_results, typee='title_site')
@@ -174,4 +177,4 @@ class Searcher:
             similar = search_once(search_results, typee='topN')
             if similar is not None: 
                 return similar
-        return
+        return None, {}

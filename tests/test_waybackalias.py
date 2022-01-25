@@ -88,7 +88,7 @@ def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.activestate.com:80/ruby.plex"
+        "https://www.threatmetrix.com/digital-identity-blog/digital-identity/in-store-frictionless-payments-with-digital-identities/"
     ]
     for url in urls:
         print(url)

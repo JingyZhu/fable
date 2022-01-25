@@ -579,25 +579,36 @@ def url_token_diffs(url1_tokens, url2_tokens):
     # print(diffs)
     i = 0
     counter = 0
+    stack = []
+    def _difflib2mydiff(i, d):
+        nonlocal counter
+        t = {'+': 'A', '-': 'D'}
+        r = (i, t[d[0]], d[2:])
+        if d[0] == '-': counter += 1
+        return r
     while i < len(diffs):
         diff = diffs[i]
-        if diff[0] == ' ': # * No Change
-            i += 1
+        if diff[0] == ' ': # * No Change, pop stack
+            for j, d in stack: tokendiffs.append(_difflib2mydiff(j, d))
+            stack = []
             counter += 1
-        elif diff[0] == '+': # * Only adding
-            tokendiffs.append((counter, 'A', diff[2:]))
-            i += 1
-        elif diff[0] == '-': # * Either deletion or change
-            if (i+1) < len(diffs) and diffs[i+1][0] == '+': # * Change
-                tokendiffs.append((counter, 'C', diffs[i+1][2:]))
-                counter += 1
-                i += 1
-            else: # * Delete
-                tokendiffs.append((counter, 'D', diff[2:]))
-                counter += 1
-            i += 1
+        elif diff[0] == '+': # * Pop stack if stack is -
+            if len(stack) and stack[0][1][0] == '-':
+                j, d = stack.pop(0)
+                tokendiffs.append((j, 'C', diff[2:]))
+            else:
+                stack.append((counter, diff))
+        elif diff[0] == '-': # * Pop stack if stack is +
+            if len(stack) and stack[0][1][0] == '+':
+                j, d = stack.pop(0)
+                tokendiffs.append((counter, 'C', d[2:]))
+            else:
+                stack.append((counter, diff))
+            counter += 1
         else:
             raise
+        i += 1
+    for j, d in stack: tokendiffs.append(_difflib2mydiff(counter, d))
     return tokendiffs
 
 def order_neighbors(target_url, neighbors, urlgetter=None,

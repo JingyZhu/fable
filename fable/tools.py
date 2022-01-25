@@ -217,6 +217,7 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
         utitle = ' '.join([tt for tt in title_tokens if tt not in itsts])
     else:
         utitle = ' '.join([tt for tt in title_tokens[0].split() if tt not in itsts])
+    utitle = utitle.strip()
     tracer.debug(f'unique_title: {url} --> "{utitle}"')
     return utitle
 
@@ -1027,26 +1028,39 @@ class Similar:
         return simi[0][-1] >= threshold and simi[1][-1] < threshold
 
     def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, \
-                cand_htmls={}, fixed=True, **kwargs):
+                cand_htmls={}, fixed=True, match_order=None, **kwargs):
         """
         All text-based similar tech is included
         Fixed: Whether title similarity is allowed across different sites
+        matched_order: how different types of match should be ordered
 
         Return: [(similar urls, similarity)], from which comparison(title/content) if there is some similarity
                 else: [], ""
         """
         self._add_crawl(tg_url, tg_title, tg_content)
         separable = lambda x: x[0][1] >= self.threshold and x[1][1] < self.threshold
+        matched_alias = []
         for cand_url in cand_titles:
             self._add_crawl(cand_url, cand_titles[cand_url], cand_contents.get(cand_url), \
                             cand_htmls.get(cand_url))
         if self.site is not None and tg_title:
             title_similars = self.title_similar(tg_url, tg_title, tg_content, cand_titles, cand_contents, fixed=fixed, **kwargs)
             if separable(title_similars):
-                return title_similars, "title"
+                matched_alias.append((title_similars, "title"))
+                # return title_similars, "title"
         content_similars = self.content_similar(tg_content, cand_contents, cand_htmls)
         if separable(content_similars):
-            return content_similars, "content"
+            matched_alias.append((content_similars, "content"))
+            # return content_similars, "content"
+        if len(matched_alias) > 0:
+            if not match_order:
+                matched_alias.sort(reverse=True, key=lambda x: x[0][0][1])
+            else:
+                orig_matched_alias = matched_alias
+                matched_alias = []
+                for o in match_order:
+                    matched_alias += [oma for oma in orig_matched_alias if oma[1] == o]
+            return matched_alias[0]
         else:
             return [], ""
 

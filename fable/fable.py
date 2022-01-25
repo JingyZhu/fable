@@ -229,7 +229,7 @@ class ReorgPageFinder:
             start = time.time()
             searched = None
             searched = self.searcher.search(url, search_engine='bing')
-            if searched is None and 'google_search_key' in config.var_dict:
+            if searched[0] is None and 'google_search_key' in config.var_dict:
                 searched = self.searcher.search(url, search_engine='google')
             end = time.time()
             self.tracer.info(f'Runtime (Search): {end - start}')
@@ -258,7 +258,7 @@ class ReorgPageFinder:
 
             self.tracer.flush()
 
-            if searched is not None:
+            if searched[0] is not None:
                 searched, trace = searched
                 self.tracer.info(f"HIT: {searched}")
                 found.append(url)

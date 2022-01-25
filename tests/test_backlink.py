@@ -40,7 +40,7 @@ def test_backlink_withalias():
     for url, alias in url_alias:
         print(url)
         alias = dis.discover(url)
-        assert(alias is not None)
+        assert(alias[0] is not None)
 
 
 def test_backlink_noalias():
@@ -55,7 +55,7 @@ def test_backlink_noalias():
         site = he.extract(url)
         dis.similar._init_titles(site)
         alias = dis.discover(url)
-        assert(alias is None)
+        assert(alias[0] is None)
 
 unsolved = {
     # ! Correct backlink page not ranked at top and get cut off

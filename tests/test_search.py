@@ -38,10 +38,12 @@ def test_search_withalias():
     ]
     for url, alias in url_alias:
         print(url)
+        site = he.extract(url)
+        search.similar._init_titles(site)
         alias = search.search(url, search_engine='bing')
         if alias is None:
             alias = search.search(url, search_engine='google')
-        assert(alias is not None)
+        assert(alias[0] is not None)
 
 
 def test_search_noalias():
@@ -73,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.icann.org/cctlds/bi/mou-attd-16may02.htm"
+        "http://au.christiantoday.com/article/archbishop-attack-on-gaza-health-clinic-incomprehensible/5059.htm"
     ]
     results = []
     for url in urls:
@@ -83,6 +85,6 @@ def test_search_temp():
         if alias is None:
             alias = search.search(url, search_engine='google')
         tr.info(f'alias: {alias}')
-        assert(alias is None)
+        assert(alias[0] is None)
         # results.append({'url': url, 'alias': alias})
         # json.dump(results, open('test_search.json', 'w+'), indent=2)

@@ -64,7 +64,7 @@ def tokenize(texts):
     """
     texts = texts.replace('_', ' ')
     # # ? Tokenize: Scikit-Learn version
-    cv = CountVectorizer(stop_words='english') # TODO: Not necessary english
+    cv = CountVectorizer(stop_words='english', token_pattern=r"(?u)\b\w+\b") # TODO: Not necessary english
     analyze = cv.build_analyzer()
     texts = analyze(texts)
     # ? Tokenize: nltk version
