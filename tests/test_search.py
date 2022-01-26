@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.cloudera.com/content/cloudera-content/cloudera-docs/CDH5/latest/CDH5-Installation-Guide/cdh5ig_hue_supported_browsers.html"
+        "http://docs.openstack.org:80/networking-guide/common/app_support.html"
     ]
     results = []
     for url in urls:

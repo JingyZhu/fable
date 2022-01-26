@@ -87,7 +87,7 @@ def test_unique_title():
 def test_unique_title_temp():
     _init_large_obj()
     urls = {
-        "https://ubwp.buffalo.edu/selfandmotivationlab/": (False, "Self and Motivation Lab")
+        "http://www.wiley.com:80/cda/product/0,,CPLX%7cdesc%7c2713,00.html": (True, "Complexity")
     }
     for url, (wayback, uniq_title) in urls.items():
         site = he.extract(url, wayback=wayback)
@@ -100,9 +100,9 @@ def test_unique_title_temp():
         title = memo.extract_title(html)
         more_crawls = memo.get_more_crawls(target_url, wayback=wayback)
         for more_crawl in more_crawls:
-            simi._add_crawl(more_crawl['url'], more_crawl['title'], more_crawl['content'], more_crawl['html'])
+            simi._add_crawl(more_crawl['url'], more_crawl['title'], '', '')
         meta = simi.wb_meta if wayback else simi.lw_meta
         found_uniq_title = simi.unique_title(target_url, title, '', meta, wayback=wayback)
         assert(found_uniq_title == uniq_title)
 
-# test_is_title_unique_temp()
+test_unique_title_temp()

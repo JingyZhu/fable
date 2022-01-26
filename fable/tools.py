@@ -133,11 +133,11 @@ def token_intersect(title1_token, title2_token):
     """Intersection on two titles' token. Return intersections if available"""
     len1, len2 = len(title1_token), len(title2_token)
     len_m = len1 * len2
-    if len_m > 1 and len_m in [len1, len2]: # * One don't have "-, |", the other have
+    if len_m > 1 and len_m in [len1, len2]: # * One don't have separator, the other have
         return set()
-    elif len_m > 1: # *Both with "-, |"
+    elif len_m > 1: # *Both with separator
         return set(title1_token).intersection(title2_token)
-    else: # *Both without "-, |"
+    else: # *Both without separator
         return set()
         return set(title1_token[0].split()).intersection(title2_token[0].split())
 
