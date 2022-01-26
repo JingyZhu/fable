@@ -19,9 +19,6 @@ cchardet
 pandas
 regex
 json
-mwparserfromhell
-wikitextparser
-pywikibot
 
 azure-identity
 azure-keyvault-secrets

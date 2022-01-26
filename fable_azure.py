@@ -1,8 +1,8 @@
 """ Run Fable using Azure services """
+from ftplib import all_errors
 import logging
 import json
 import pymongo
-import pywikibot
 import time
 import os
 from fable import ReorgPageFinder
@@ -23,9 +23,28 @@ MONGO_ID = str(os.getenv("MONGO"))
 client = pymongo.MongoClient(MONGO_ID)
 db = client["fable"]
 
+# Collections Needed
+all_link_collection = db["bot_all_links"]
+articleCollection = db["bot_articles"]
+urlCollection = db["bot_urls"]
+
+def addLinksToDb(article_id, broken_links):
+
+    for domainName in broken_links:
+        hostname = domainName
+        urls = broken_links[hostname]
+
+        for url in urls:
+            newDoc = {
+                "url": str(url),
+                "article_id": ObjectId(article_id),
+                "alias_found": True if articleCollection.find_one({"brokenLink": str(url)}) else False,
+            }
+
+            all_link_collection.insert_one(newDoc)
+
 def addToURLCollection(document):
     
-    urlCollection = db["bot_urls"]
     exists = urlCollection.find_one({"brokenLink": document["url"]})
 
     if exists:
@@ -48,7 +67,6 @@ def addToURLCollection(document):
 
     return str(added["_id"]) 
 
-
 def getAliasesFromDB(broken_links):
     alias_ids = []
     
@@ -67,33 +85,6 @@ def getAliasesFromDB(broken_links):
     
     return alias_ids
 
-def postFormatter(requestObject):
-    content = ""
-    
-    # Create Base Header
-    content += "Broken Link Aliases For {0}\n".format(requestObject["base_url"])
-
-    # Add Link Aliases
-    for link, alias in requestObject["broken_links"].items():
-        content += "{0} has the alias: {1}\n".format(link, alias)
-    
-    return content
-
-
-def postToWiki(requestObject):
-    print("Posting to Wiki Page")
-    site = pywikibot.Site("test", "wikidata")
-    repo = site.data_repository()
-    page = pywikibot.Page(site, "User talk:Anishnya123")
-
-    heading = "== Fable Bot Edit =="
-    content = postFormatter(requestObject)
-    message = "\n\n{}\n{} --~~~~".format(heading, content)
-
-    page.save(summary="Testing", watch=None, minor=False, botflag=True,
-                force=False, callback=None,
-                apply_cosmetic_changes=None, appendtext=message)
-
 def pkill(pattern):
     try:
         subprocess.run(["pkill", "-f", pattern], check=False)
@@ -110,15 +101,15 @@ def fable_api(urlInfo: dict):
     broken_links = urlInfo["broken_links"]
     article_title_url = base_URL.split("/")[-1]
 
-    articleCollection = db["bot_articles"]
-
     # Check to see if article exists
     if articleCollection.find_one({"article_url": base_URL }):
+        sendEmail(email, base_URL, article_title_url)
         return
 
     for domainName in broken_links:
         hostname = domainName
         urls = broken_links[hostname]
+
         try:
             rpf.init_site(hostname, urls)
             rpf.search(required_urls=urls)
@@ -137,7 +128,10 @@ def fable_api(urlInfo: dict):
         "article_url_title": article_title_url
     }
 
-    articleCollection.insert_one(newDoc)
+    newArticle = articleCollection.insert_one(newDoc)
+
+    # Update the db with all the links
+    addLinksToDb(str(newArticle["_id"]), broken_links)
 
     # Send the Email that Fable hs completed
     sendEmail(email, base_URL, article_title_url)
