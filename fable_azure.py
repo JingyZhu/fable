@@ -38,7 +38,7 @@ def addLinksToDb(article_id, broken_links):
             newDoc = {
                 "url": str(url),
                 "article_id": ObjectId(article_id),
-                "alias_found": True if articleCollection.find_one({"brokenLink": str(url)}) else False,
+                "alias_found": True if urlCollection.find_one({"brokenLink": str(url)}) else False,
             }
 
             all_link_collection.insert_one(newDoc)

@@ -1,5 +1,4 @@
 import smtplib, ssl, os
-from sendEmail import sendEmail
 
 port = 465  # For SSL
 smtp_server = "smtp.gmail.com"
