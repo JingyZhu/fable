@@ -7,11 +7,6 @@ import time
 import os
 from fable import ReorgPageFinder
 from azure_client import AzureClient
-from azure.storage.queue import (
-        QueueClient,
-        TextBase64EncodePolicy,
-)
-
 from bson.objectid import ObjectId
 from sendEmail import sendEmail
 
