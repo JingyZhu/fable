@@ -29,13 +29,16 @@ def addLinksToDb(article_id, broken_links):
         urls = broken_links[hostname]
 
         for url in urls:
+            print("Adding url here")
             newDoc = {
                 "url": str(url),
                 "article_id": ObjectId(article_id),
                 "alias_found": True if urlCollection.find_one({"brokenLink": str(url)}) else False,
             }
 
+            print(newDoc)
             all_link_collection.insert_one(newDoc)
+            print("added to collection")
 
 def addToURLCollection(document):
     
