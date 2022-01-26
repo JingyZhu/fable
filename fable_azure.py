@@ -24,7 +24,6 @@ articleCollection = db["bot_articles"]
 urlCollection = db["bot_urls"]
 
 def addLinksToDb(article_id, broken_links):
-
     for domainName in broken_links:
         hostname = domainName
         urls = broken_links[hostname]
@@ -115,6 +114,8 @@ def fable_api(urlInfo: dict):
     
     aliasIDS = getAliasesFromDB(broken_links)
 
+    print("Got Aliases")
+
     # Add to DB
     newDoc = {
         "alias_ids": list(map(lambda x: ObjectId(x), aliasIDS)),
@@ -125,11 +126,17 @@ def fable_api(urlInfo: dict):
 
     newArticle = articleCollection.insert_one(newDoc)
 
+    print("Added Article to DB")
+
     # Update the db with all the links
     addLinksToDb(str(newArticle["_id"]), broken_links)
 
+    print("Added Links")
+
     # Send the Email that Fable hs completed
     sendEmail(email, base_URL, article_title_url)
+
+    print("Email Sent")
 
 
 # Read URLs from Azure Queues and run Fable on them    
