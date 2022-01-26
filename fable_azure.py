@@ -24,6 +24,7 @@ articleCollection = db["bot_articles"]
 urlCollection = db["bot_urls"]
 
 def addLinksToDb(article_id, broken_links):
+    print("in here")
     for domainName in broken_links:
         hostname = domainName
         urls = broken_links[hostname]
@@ -32,7 +33,7 @@ def addLinksToDb(article_id, broken_links):
             print("Adding url here")
             newDoc = {
                 "url": str(url),
-                "article_id": ObjectId(article_id),
+                "article_id": article_id,
                 "alias_found": True if urlCollection.find_one({"brokenLink": str(url)}) else False,
             }
 
@@ -132,7 +133,7 @@ def fable_api(urlInfo: dict):
     print("Added Article to DB")
 
     # Update the db with all the links
-    addLinksToDb(str(newArticle["_id"]), broken_links)
+    addLinksToDb(newArticle["_id"], broken_links)
 
     print("Added Links")
 
