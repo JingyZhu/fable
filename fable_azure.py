@@ -132,6 +132,9 @@ def fable_api(urlInfo: dict):
 
     print("Added Article to DB")
 
+    print(newDoc)
+    print(newArticle)
+
     # Update the db with all the links
     addLinksToDb(newArticle["_id"], broken_links)
 
