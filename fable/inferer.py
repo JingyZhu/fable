@@ -97,6 +97,18 @@ class Inferer:
     def add_urls(self, url_metas):
         for url, meta in url_metas:
             self.add_url(url, meta)
+    
+    def cluster_examples(self, examples):
+        """
+        Classify examples base on the same delta. To prevent fail to infer
+        Return [list of examples in the same delta]
+        """
+        delta_examples = defaultdict(list)
+        for example in examples:
+            url, alias = example[0], example[2]
+            diff = url_utils.url_alias_diff(url, alias)
+            delta_examples[diff].append(example)
+        return sorted(list(delta_examples.values()), reverse=True, key=lambda x: len(x))
 
     def infer(self, examples, urls):
         """
@@ -425,7 +437,6 @@ class Inferer:
             score = tuple(l(reorg) for l in lambdas)
             reorg_score.append((reorg, score))
         reorg_score.sort(key=lambda x: x[1])
-        print(reorg_score)
         return [r[0] for r in reorg_score]
 
     def _verify_alias(self, url, reorg_urls, compare=True):

@@ -39,6 +39,8 @@ def test_backlink_withalias():
     ]
     for url, alias in url_alias:
         print(url)
+        site = he.extract(url)
+        dis.similar._init_titles(site)
         alias = dis.discover(url)
         assert(alias[0] is not None)
 
@@ -68,7 +70,7 @@ def test_backlink_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.icann.org/cctlds/bi/mou-attd-16may02.htm"
+        "http://www.redcross.org.uk/en/About-us/Who-we-are/Museum-and-archives/Collections/How-to-donate-historical-items"
     ]
     for url in urls:
         site = he.extract(url)
@@ -76,3 +78,5 @@ def test_backlink_temp():
         alias = dis.discover(url)
         tr.info(f'alias: {alias}')
         assert(alias[0] is not None)
+
+test_backlink_temp()

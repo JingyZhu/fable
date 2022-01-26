@@ -611,6 +611,12 @@ def url_token_diffs(url1_tokens, url2_tokens):
     for j, d in stack: tokendiffs.append(_difflib2mydiff(counter, d))
     return tokendiffs
 
+def url_alias_diff(url, alias):
+    url_tokens = tokenize_url(url, include_all=True)
+    alias_tokens = tokenize_url(alias, include_all=True)
+    example_diffs = url_token_diffs(url_tokens, alias_tokens)
+    return tuple(sorted(e[:2] for e in example_diffs))
+
 def order_neighbors(target_url, neighbors, urlgetter=None,
                     ts=None, prefix_funcs=[], suffix_funcs=[]):
         """

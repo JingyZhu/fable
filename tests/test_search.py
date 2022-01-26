@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://au.christiantoday.com/article/archbishop-attack-on-gaza-health-clinic-incomprehensible/5059.htm"
+        "https://www.cloudera.com/content/cloudera-content/cloudera-docs/CDH5/latest/CDH5-Installation-Guide/cdh5ig_hue_supported_browsers.html"
     ]
     results = []
     for url in urls:

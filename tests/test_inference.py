@@ -33,7 +33,7 @@ def test_inferer_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     examples_urls = [
-        "aweber.com_0.json"
+        "cloudera.com_0.json"
     ]
     for obj_file in examples_urls:
         obj = json.load(open('examples/'+obj_file, 'r'))
@@ -44,13 +44,17 @@ def test_inferer_temp():
         site = he.extract(url)
         ifr.init_site(site)
         ifr.similar._init_titles(site)
-        poss_infer = ifr.infer(examples, urls)
-        poss_infer = ifr._filter_multicast(poss_infer)
-        print("possible infer:", poss_infer)
+        examples_list = ifr.cluster_examples(examples)
         alias = None
-        for url, poss_aliases in poss_infer.items():
-            alias, _ = ifr._verify_alias(url, poss_aliases)
-            print("alias:", alias)
+        for examples in examples_list:
+            poss_infer = ifr.infer(examples, urls)
+            poss_infer = ifr._filter_multicast(poss_infer)
+            print("possible infer:", poss_infer)
+            for url, poss_aliases in poss_infer.items():
+                alias, _ = ifr._verify_alias(url, poss_aliases)
+                print("alias:", alias)
+            if alias is not None:
+                break
         assert(alias is not None)
 
 test_inferer_temp()
