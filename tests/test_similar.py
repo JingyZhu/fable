@@ -87,7 +87,7 @@ def test_unique_title():
 def test_unique_title_temp():
     _init_large_obj()
     urls = {
-        "http://www.wiley.com:80/cda/product/0,,CPLX%7cdesc%7c2713,00.html": (True, "Complexity")
+        "http://www.wiley.com:80/cda/product/0,,0471357278,00.html": (True, "Principles of Molecular Mechanics")
     }
     for url, (wayback, uniq_title) in urls.items():
         site = he.extract(url, wayback=wayback)

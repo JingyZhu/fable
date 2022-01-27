@@ -522,7 +522,7 @@ class Memoizer:
                     continue
                 try:
                     out_html = self.crawl(outlink)
-                    out_title = self.extract_title(out_html, handle_exception=False)
+                    out_title = self.extract_title(out_html, version='mine', handle_exception=False)
                     out_content = self.extract_content(out_html, handle_exception=False)
                 except: continue
                 tracer.debug(f"get_more_crawls: Got new sample from outlinks: {outlink} {out_title}")
@@ -572,7 +572,7 @@ class Memoizer:
                 continue
             try:
                 cand_html = self.crawl(cand_url)
-                cand_title = self.extract_title(cand_html, handle_exception=False)
+                cand_title = self.extract_title(cand_html, version='mine', handle_exception=False)
                 cand_content = self.extract_content(cand_html, handle_exception=False)
             except: continue
             tracer.debug(f"get_more_crawls: Got new sample from wayback")
@@ -616,7 +616,8 @@ class Similar:
             self.tfidf = text_utils.TFidfStatic(corpus)
             self.db = db # TODO: For testing only
         self.site = None
-    
+        self.separable = None
+
     def match_url_sig(self, old_linked_sig, new_sigs):
         """
         Calc similarities between wayback_sig and liveweb_sigs, for both anchor texts and sig texts
@@ -721,7 +722,7 @@ class Similar:
                 try:
                     html = memo.crawl(new_url)
                     content = memo.extract_content(html, handle_exception=False)
-                    title = memo.extract_title(html, handle_exception=False)
+                    title = memo.extract_title(html, version='mine', handle_exception=False)
                     lw_crawl.append({
                         'site': site, 
                         '_id': new_url, 
@@ -1038,7 +1039,10 @@ class Similar:
                 else: [], ""
         """
         self._add_crawl(tg_url, tg_title, tg_content)
-        separable = lambda x: x[0][1] >= self.threshold and x[1][1] < self.threshold
+        if not self.separable:
+            separable = lambda x: x[0][1] >= self.threshold and x[1][1] < self.threshold
+        else:
+            separable = self.separable
         matched_alias = []
         for cand_url in cand_titles:
             self._add_crawl(cand_url, cand_titles[cand_url], cand_contents.get(cand_url), \

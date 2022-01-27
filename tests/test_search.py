@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://docs.openstack.org:80/networking-guide/common/app_support.html"
+        "http://www.wiley.com:80/cda/product/0,,0471357278,00.html"
     ]
     results = []
     for url in urls:

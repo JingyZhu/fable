@@ -70,7 +70,7 @@ def test_backlink_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.redcross.org.uk/en/About-us/Who-we-are/Museum-and-archives/Collections/How-to-donate-historical-items"
+        "http://www.mensjournal.com:80/gear/electronics/newtown-2016s-most-intriguing-indie-films-so-far-20160204"
     ]
     for url in urls:
         site = he.extract(url)
@@ -78,5 +78,3 @@ def test_backlink_temp():
         alias = dis.discover(url)
         tr.info(f'alias: {alias}')
         assert(alias[0] is not None)
-
-test_backlink_temp()
