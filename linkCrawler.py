@@ -62,5 +62,6 @@ def main():
         current_page = ""
 
 while current_page:
+    print("On Current Page" + current_page)
     main()
 
