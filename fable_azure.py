@@ -45,13 +45,13 @@ BAD_ENDINGS = set([
     ".zip"
 ])
 
-def isBadEnding(link):
+def isGoodEnding(link):
     ending = str(link).split(".")[-1]
 
     if ending in BAD_ENDINGS:
-        return True
+        return False
     
-    return False
+    return True
 
 def addLinksToDb(broken_links):
 
@@ -71,7 +71,7 @@ def addLinksToDb(broken_links):
             newDoc = {
                 "url": str(url),
                 "alias_found": True if urlCollection.find_one({"brokenLink": str(url)}) else False,
-                "alias_can_be_found": isBadEnding(url),
+                "alias_can_be_found": isGoodEnding(url),
             }
 
             added = all_link_collection.insert_one(newDoc)
@@ -125,7 +125,7 @@ def generate_clean_urls(urls):
     clean_links = []
 
     for url in urls:
-        if isBadEnding(url):
+        if isGoodEnding(url):
             clean_links.append(str(url))
 
     return clean_links
