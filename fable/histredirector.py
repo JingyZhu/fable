@@ -103,7 +103,7 @@ class HistRedirector:
         neighbors, neighbor_set = [], set()
         while count < 3 and url_dir != "/" and len(neighbor_set) < 5:
         # // if url_prefix.path[-1] == '/': url_dir.append(os.path.dirname(url_dir[0]))
-            url_prefix = url_prefix._replace(path=os.path.join(url_dir, '*'), query='')
+            url_prefix = url_prefix._replace(path=os.path.join(url_dir, '*'), query='', fragment='')
             url_prefix_str = urlunsplit(url_prefix)
             param_dict = {
                 # 'from': str(ts_year) + '0101',
@@ -270,6 +270,7 @@ class HistRedirector:
         if new_host_url is None:
             new_host_url = f'http://{new_host}'
         html, alias = self.memo.crawl(alias, final_url=True)
+        tracer.debug(f"Alias, new_host_url {alias} {new_host_url}")
         alias = crawl.get_canonical(alias, html)
         if not alias or he.extract(new_host_url) != he.extract(alias):
             tracer.debug(f"no alias: {alias} not in the same site as the original site {new_host}")

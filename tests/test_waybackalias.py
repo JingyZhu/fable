@@ -88,7 +88,7 @@ def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.threatmetrix.com/digital-identity-blog/digital-identity/in-store-frictionless-payments-with-digital-identities/"
+        "http://www.zope.org:80/Members/struktur/zamino"
     ]
     for url in urls:
         print(url)

@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.wiley.com:80/cda/product/0,,0471357278,00.html"
+        "http://www.mysql.com:80/doc/T/e/Temporary_table_problems.html"
     ]
     results = []
     for url in urls:

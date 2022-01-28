@@ -139,12 +139,12 @@ class Inferer:
             url_inputs = [normal_hostname(us.netloc)] + path_list
             for j, url_piece in enumerate(url_inputs):
                 sheet.loc[row, f'URL{j}'] = url_piece
-                qs = url_utils.my_parse_qs(us.query)
+            qs = url_utils.my_parse_qs(us.query)
             for key, value in qs.items():
                 if key == 'NoKey':
                     sheet.loc[row, f'Query_{key}'] = value[0]
                 else:
-                    sheet.loc[i, f'Query_{key}'] = f'{key}={value[0]}'
+                    sheet.loc[row, f'Query_{key}'] = f'{key}={value[0]}'
             return sheet
 
         def insert_metadata(sheet, row, meta, expand=True):
@@ -189,7 +189,7 @@ class Inferer:
             sheet3 = insert_reorg(sheet3, i, reorg_url)
 
         url_idx = {}
-        # * Input the to infer examples
+        # * Input toinfer examples
         for i, (url, meta) in enumerate(urls):
             counter = i+len(examples)
             url_idx[url] = counter

@@ -11,6 +11,7 @@ import itertools
 from dateutil import parser as dparser
 import regex
 import difflib
+import datetime
 
 def _safe_dparse(ts):
     try:
@@ -687,6 +688,7 @@ def order_neighbors(target_url, neighbors, urlgetter=None,
         # * Has query? Same Key? Same Value?
         lambdas.append(lambda x: query_score(x))
         # * Format similarity
+        lambdas.append(lambda x: -len(set(tokenize_url(target_url)).intersection(tokenize_url(x))))
         lambdas.append(lambda x: -len(_detect_file_alnum(target_url).intersection(_detect_file_alnum(x))))
         if ts:
             if isinstance(ts, str):
