@@ -3,6 +3,11 @@ import smtplib, ssl, os
 DOMAIN = "fable.eecs.umich.edu/"
 
 def sendEmail(rec, article_url, article_url_title):
+
+    # For links that come from our auto crawler
+    if not str(rec):
+        return
+
     port = 465  # For SSL
     smtp_server = "smtp.gmail.com"
     sender_email = "anishnya@gmail.com"

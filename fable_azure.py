@@ -23,30 +23,68 @@ all_link_collection = db["bot_all_links"]
 articleCollection = db["bot_articles"]
 urlCollection = db["bot_urls"]
 
-def addLinksToDb(article_id, broken_links):
-    print("in here")
+BAD_ENDINGS = set([
+    ".jpg",
+    ".gif",
+    ".png",
+    ".pdf",
+    ".txt",
+    ".js",
+    ".css",
+    ".json",
+    ".start",
+    ".xml",
+    ".jpeg",
+    ".svg",
+    ".dbml",
+    ".ico",
+    ".doc",
+    ".mp4",
+    ".docx",
+    ".exe",
+    ".zip"
+])
+
+def isBadEnding(link):
+    ending = str(link).split(".")[-1]
+
+    if ending in BAD_ENDINGS:
+        return True
+    
+    return False
+
+def addLinksToDb(broken_links):
+
+    linkIDs = []
+
     for domainName in broken_links:
         hostname = domainName
         urls = broken_links[hostname]
 
         for url in urls:
-            print("Adding url here")
+            exists = all_link_collection.find_one({"url": str(url)})
+
+            if exists:
+                linkIDs.append(str(exists["_id"]))
+                continue
+
             newDoc = {
                 "url": str(url),
-                "article_id": article_id,
                 "alias_found": True if urlCollection.find_one({"brokenLink": str(url)}) else False,
+                "alias_can_be_found": isBadEnding(url),
             }
 
-            print(newDoc)
-            all_link_collection.insert_one(newDoc)
-            print("added to collection")
+            added = all_link_collection.insert_one(newDoc)
+            linkIDs.append(str(added.inserted_id))
+    
+    return linkIDs
 
 def addToURLCollection(document):
     
     exists = urlCollection.find_one({"brokenLink": document["url"]})
 
     if exists:
-        return str(document["_id"])
+        return str(exists["_id"])
     
     generalMethod = str(document["achitta"]["by"]["method"]).capitalize()
     specificMethod = str(document["achitta"]["by"]["type"]).capitalize()
@@ -63,7 +101,7 @@ def addToURLCollection(document):
 
     added = urlCollection.insert_one(newDoc)
 
-    return str(added["_id"]) 
+    return str(added.inserted_id)
 
 def getAliasesFromDB(broken_links):
     alias_ids = []
@@ -82,6 +120,15 @@ def getAliasesFromDB(broken_links):
                         alias_ids.append(addToURLCollection(document))
     
     return alias_ids
+
+def generate_clean_urls(urls):
+    clean_links = []
+
+    for url in urls:
+        if isBadEnding(url):
+            clean_links.append(str(url))
+
+    return clean_links
 
 def pkill(pattern):
     try:
@@ -106,7 +153,7 @@ def fable_api(urlInfo: dict):
 
     for domainName in broken_links:
         hostname = domainName
-        urls = broken_links[hostname]
+        urls = generate_clean_urls(broken_links[hostname])
 
         try:
             rpf.init_site(hostname, urls)
@@ -117,34 +164,23 @@ def fable_api(urlInfo: dict):
     
     
     aliasIDS = getAliasesFromDB(broken_links)
-
-    print("Got Aliases")
+    allLinkIDS = addLinksToDb(broken_links)
 
     # Add to DB
     newDoc = {
         "alias_ids": list(map(lambda x: ObjectId(x), aliasIDS)),
+        "all_link_ids": list(map(lambda x: ObjectId(x), allLinkIDS)),
         "article_title": title,
         "article_url": base_URL,
-        "article_url_title": article_title_url
+        "article_url_title": article_title_url,
+        "reported_dead_links": urlInfo["reported_dead_links"],
+        "eligible_li": urlInfo["eligible_li"],
     }
 
-    newArticle = articleCollection.insert_one(newDoc)
-
-    print("Added Article to DB")
-
-    print(newDoc)
-    print(newArticle)
-
-    # Update the db with all the links
-    addLinksToDb(newArticle["_id"], broken_links)
-
-    print("Added Links")
+    articleCollection.insert_one(newDoc)
 
     # Send the Email that Fable hs completed
     sendEmail(email, base_URL, article_title_url)
-
-    print("Email Sent")
-
 
 # Read URLs from Azure Queues and run Fable on them    
 def main():
