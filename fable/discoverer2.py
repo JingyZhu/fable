@@ -56,7 +56,7 @@ class Discoverer:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.threshold = 0.8
-        self.similar.separable = lambda x: x[0][1] >= self.threshold
+        self.similar.separable = lambda x: x[0][1] >= self.similar.threshold
 
 
     def guess_backlinks(self, url, num, ts=None):

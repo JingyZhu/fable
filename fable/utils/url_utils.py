@@ -609,6 +609,8 @@ def url_token_diffs(url1_tokens, url2_tokens):
             raise
         i += 1
     for j, d in stack: tokendiffs.append(_difflib2mydiff(counter, d))
+    if len(tokendiffs) > 0 and tokendiffs[0][0] == 0: # * Hostname change, should be aligned
+        tokendiffs[0] = (0, f'C {tokendiffs[0][2]}', tokendiffs[0][2])
     return tokendiffs
 
 def url_alias_diff(url, alias):
@@ -616,6 +618,23 @@ def url_alias_diff(url, alias):
     alias_tokens = tokenize_url(alias, include_all=True)
     example_diffs = url_token_diffs(url_tokens, alias_tokens)
     return tuple(sorted(e[:2] for e in example_diffs))
+
+def url_title_simi(url, title):
+    """
+    Calculate the overlapping tokens between title and url (currently filename)
+    """
+    path = urlsplit(url).path
+    if path not in ['', '/'] and path[-1] == '/': path = path[:-1]
+    filename = os.path.basename(path)
+    filename, _ = os.path.splitext(filename)
+    url_tokens = regex.split("[^a-zA-Z1-9]", filename.lower())
+    title_tokens = regex.split("[^a-zA-Z1-9]", title.lower())
+    url_tokens = list(filter(lambda x: x!="", url_tokens))
+    title_tokens = list(filter(lambda x: x!="", title_tokens))
+    diffs = list(difflib.ndiff(url_tokens, title_tokens))
+    overlap = [d[2:] for d in diffs if d[0] == ' ']
+    print(overlap, url_tokens)
+    return len(overlap) / len(url_tokens)
 
 def order_neighbors(target_url, neighbors, urlgetter=None,
                     ts=None, prefix_funcs=[], suffix_funcs=[]):
