@@ -148,7 +148,7 @@ class Discoverer:
         if backlinked_url is None:
             return None, None
         backlinked_content = self.memo.extract_content(backlinked_html, version='domdistiller')
-        backlinked_title = self.memo.extract_title(backlinked_html, version='domdistiller')
+        backlinked_title = self.memo.extract_title(backlinked_html, version='mine')
         title_cands = merge_dict(self.high_similar_pages['title'], {backlinked_url: backlinked_title})
         content_cands = merge_dict(self.high_similar_pages['content'], {backlinked_url: backlinked_content})
         similars, fromm = self.similar.similar(wayback_dst, title, content, title_cands, content_cands, match_order=['content', 'title'])
@@ -182,7 +182,7 @@ class Discoverer:
             if html is None: continue
             tracer.info(f'Test if outgoing link same: {outgoing_link}')
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
-            outgoing_title = self.memo.extract_title(html, version='domdistiller')
+            outgoing_title = self.memo.extract_title(html, version='mine')
             title_cands = merge_dict(self.high_similar_pages['title'], {outgoing_link: outgoing_title})
             content_cands = merge_dict(self.high_similar_pages['content'], {outgoing_link: outgoing_content})
             similars, fromm = self.similar.similar(wayback_dst, title, content, title_cands, content_cands, match_order=['content', 'title'])
@@ -349,7 +349,7 @@ class Discoverer:
         if not src_broken:
             src_html = self.memo.crawl(src)
             src_content = self.memo.extract_content(src_html, version='domdistiller')
-            src_title = self.memo.extract_title(src_html, version='domdistiller')
+            src_title = self.memo.extract_title(src_html, version='mine')
             title_cands = merge_dict(self.high_similar_pages['title'], {src: src_title})
             content_cands = merge_dict(self.high_similar_pages['content'], {src: src_content})
             similars, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, title_cands, content_cands, match_order=['content', 'title'])
@@ -502,6 +502,7 @@ class Discoverer:
             searched_url_rep = searched_url
             searched_html, searched_url_rep = self.memo.crawl(searched_url_rep, final_url=True, proxies=self.PS.select())
             if searched_html is None: continue
+            searched_url_rep = crawl.get_canonical(searched_url_rep, searched_html)
             searched_contents[searched_url_rep] = self.memo.extract_content(searched_html)
             
             if he.extract(url) == he.extract(searched_url) or self.similar.site[-1] == he.extract(searched_url):
@@ -534,7 +535,7 @@ class Discoverer:
             wayback_url = self.memo.wayback_index(url, policy='latest-rep')
             html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
             content = self.memo.extract_content(html, version='domdistiller')
-            title = self.memo.extract_title(html, version='domdistiller')
+            title = self.memo.extract_title(html, version='mine')
             url_ts = url_utils.get_ts(wayback_url)
             has_snapshot = True
             tracer.wayback_url(url, wayback_url)

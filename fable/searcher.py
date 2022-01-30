@@ -50,7 +50,7 @@ class Searcher:
         try:
             wayback_url = self.memo.wayback_index(url)
             html = self.memo.crawl(wayback_url, proxies=self.PS.select())
-            title = self.memo.extract_title(html, version='domdistiller')
+            title = self.memo.extract_title(html, version='mine')
             content = self.memo.extract_content(html)
             tracer.wayback_url(url, wayback_url)
         except Exception as e:

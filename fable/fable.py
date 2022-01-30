@@ -177,7 +177,7 @@ class ReorgPageFinder:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(html, version='domdistiller')
+                    title = self.memo.extract_title(html, version='mine')
                 except: # No snapthost on wayback
                     self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
                     title = 'N/A'
@@ -242,7 +242,7 @@ class ReorgPageFinder:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(html, version='domdistiller')
+                    title = self.memo.extract_title(html, version='mine')
                 except: # No snapthost on wayback
                     self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
                     try:
@@ -330,7 +330,7 @@ class ReorgPageFinder:
                 try:
                     wayback_url = self.memo.wayback_index(url)
                     html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(html, version='domdistiller')
+                    title = self.memo.extract_title(html, version='mine')
                 except: # No snapthost on wayback
                     self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
                     try: self.db.na_urls.update_one({'_id': url}, {"$set": {

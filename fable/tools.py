@@ -1050,21 +1050,32 @@ class Similar:
         if self.site is not None and tg_title:
             title_similars = self.title_similar(tg_url, tg_title, tg_content, cand_titles, cand_contents, fixed=fixed, **kwargs)
             if separable(title_similars):
-                matched_alias.append((title_similars, "title"))
+                matched_alias.append((title_similars[0], "title"))
                 # return title_similars, "title"
         content_similars = self.content_similar(tg_content, cand_contents, cand_htmls)
         if separable(content_similars):
-            matched_alias.append((content_similars, "content"))
+            matched_alias.append((content_similars[0], "content"))
             # return content_similars, "content"
+        # * matched_alias: [((url, simi), "content"/"title")]
         if len(matched_alias) > 0:
             if not match_order:
-                matched_alias.sort(reverse=True, key=lambda x: x[0][0][1])
+                matched_alias.sort(reverse=True, key=lambda x: x[0][1])
+                top_match = matched_alias[0]
+                another_match = [am for am in matched_alias[1:] if am[0][0] == top_match[0][0]]
+                if top_match[1] == "content" and len(another_match) > 0:
+                    another_match, fromm = another_match[0]
+                    return [another_match], fromm
+                else:
+                    top_match, fromm = top_match
+                    return [top_match], fromm
+
             else:
                 orig_matched_alias = matched_alias
                 matched_alias = []
                 for o in match_order:
                     matched_alias += [oma for oma in orig_matched_alias if oma[1] == o]
-            return matched_alias[0]
+                matched_alias, fromm = matched_alias[0]
+                return [matched_alias], fromm
         else:
             return [], ""
 

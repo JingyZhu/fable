@@ -13,6 +13,11 @@ import regex
 import difflib
 import datetime
 
+from sklearn.feature_extraction.text import CountVectorizer
+from nltk.corpus import stopwords
+from nltk.stem.snowball import SnowballStemmer
+from nltk.stem import WordNetLemmatizer
+
 def _safe_dparse(ts):
     try:
         return dparser.parse(ts)
@@ -546,10 +551,45 @@ def netloc_dir(url, nondigit=True, nondate=False, exclude_index=False):
         p = nondate_pathname(p)
     return ('.'.join(hosts), p.lower())
 
+stemmer = None 
+lemmatizer = None
+stem_cache = {}
+
+def tokenize(texts):
+    """
+    Simple function for tokenizing a text. Extracted from sklearn src code
+    
+    Returns: list of features in the original order
+    """
+    global stemmer, lemmatizer, stem_cache
+    if stemmer is None:
+        stemmer = SnowballStemmer('english')
+        lemmatizer = WordNetLemmatizer()
+    texts = texts.replace('_', ' ')
+    # # ? Tokenize: Scikit-Learn version
+    cv = CountVectorizer(stop_words='english', token_pattern=r"(?u)\b\w+\b") # TODO: Not necessary english
+    analyze = cv.build_analyzer()
+    texts = analyze(texts)
+    # ? Tokenize: nltk version
+    # texts = nltk.word_tokenize(texts)
+    def cached_transform(t, func, cache):
+        if t in cache:
+            return cache[t]
+        tt = func(t)
+        cache[t] = tt
+        return tt
+    # * Stemming
+    texts = [cached_transform(t, stemmer.stem, stem_cache) for t in texts]
+    # * Lemmatization
+    # texts = [lemmatizer.lemmatize(t) for t in texts]
+    return texts
+
 def tokenize_url(url, include_all=False, process=False):
     """
     include_all: if host & query will be included in the tokens
-    process: if each token of URL will be further tokenized (like text tokenize)
+    process: Whether each token of URL will be further tokenized (like text tokenize)
+                if set True, all tokens will be tokenized
+                if set as file, only filename will be tokenized 
     """
     us = urlsplit(url)
     path = us.path
@@ -562,11 +602,11 @@ def tokenize_url(url, include_all=False, process=False):
         host = host.split('.')
         if host[0] == 'www': host = host[1:]
         tokens.append('.'.join(host))
-    for p in path:
+    for i, p in enumerate(path):
         token = p
-        if process:
+        if process == True or (process == 'file' and i == len(path)-1):
             token = os.path.splitext(token)[0]
-            token = regex.split("[^a-zA-Z1-9]", token)
+            token = tokenize(token)
             token = ' '.join(token)
         tokens.append(token.lower())
     return tokens
@@ -685,11 +725,11 @@ def order_neighbors(target_url, neighbors, urlgetter=None,
         lambdas = prefix_funcs
         # * Same ext?
         lambdas.append(lambda x: -(get_ext(target_url) == get_ext(x)) )
-        # * Has query? Same Key? Same Value?
-        lambdas.append(lambda x: query_score(x))
         # * Format similarity
         lambdas.append(lambda x: -len(set(tokenize_url(target_url)).intersection(tokenize_url(x))))
         lambdas.append(lambda x: -len(_detect_file_alnum(target_url).intersection(_detect_file_alnum(x))))
+        # * Has query? Same Key? Same Value?
+        lambdas.append(lambda x: query_score(x))
         if ts:
             if isinstance(ts, str):
                 ts = _safe_dparse(ts)

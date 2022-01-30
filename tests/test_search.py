@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.mysql.com:80/doc/T/e/Temporary_table_problems.html"
+        "http://www.wintellect.com:80/devcenter/jcarroll/why-you-should-be-writing-ecma-script-6-now"
     ]
     results = []
     for url in urls:

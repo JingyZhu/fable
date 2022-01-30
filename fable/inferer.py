@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import pickle
 from urllib.parse import urlsplit, parse_qsl, parse_qs
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, Counter
 import string
 import time
 import socket
@@ -103,12 +103,21 @@ class Inferer:
         Classify examples base on the same delta. To prevent fail to infer
         Return [list of examples in the same delta]
         """
-        delta_examples = defaultdict(list)
+        dedup_set = set()
+        new_examples = []
         for example in examples:
+            url, alias = example[0], example[2]
+            if (url, alias) in dedup_set:
+                continue
+            new_examples.append(example)
+            dedup_set.add((url, alias))
+        delta_examples = defaultdict(list)
+        for example in new_examples:
             url, alias = example[0], example[2]
             diff = url_utils.url_alias_diff(url, alias)
             delta_examples[diff].append(example)
-        return sorted(list(delta_examples.values()), reverse=True, key=lambda x: len(x))
+        delta_examples = [d for d in delta_examples.values() if len(d) > 1]
+        return sorted(delta_examples, reverse=True, key=lambda x: len(x))
 
     def infer(self, examples, urls):
         """
@@ -225,26 +234,33 @@ class Inferer:
         poss_infer = defaultdict(list) # * Any results inferred from 3 sheets
         seen_reorg = set()
         for output in outputs:
+            reorg_url_lists = output.filter(regex='^Output_\d', axis=1)
+            reorg_query_lists = output.filter(regex='^Output_Q', axis=1)
             for url, meta in urls:
                 idx = url_idx[url]
                 if idx >= output.shape[0]: # ? Weird bug here: idx exceeds sheet
                     continue
-                reorg_url_lists = output.filter(regex='^Output_\d', axis=1).iloc[idx]
-                reorg_query_lists = output.filter(regex='^Output_Q', axis=1).iloc[idx]
-                num_url_outputs = len(reorg_url_lists)
-                scheme_netloc = reorg_url_lists['Output_0']
+                reorg_url_list = reorg_url_lists.iloc[idx]
+                reorg_query_list = reorg_query_lists.iloc[idx]
+                num_url_outputs = len(reorg_url_list)
+                scheme_netloc = reorg_url_list['Output_0']
                 reorg_paths = []
                 for j in range(1, num_url_outputs):
-                    reorg_part = reorg_url_lists[f'Output_{j}']
+                    reorg_part = reorg_url_list[f'Output_{j}']
                     # TODO: How to deal with nan requires more thoughts
                     if reorg_part != reorg_part: # * Check for NaN value (trick)
-                        continue
+                        # * Instead of continue, pick the most common string if there are multiple same str
+                        reorg_url_col = reorg_url_lists[f'Output_{j}'].dropna().tolist()
+                        path_counter = Counter(reorg_url_col)
+                        reorg_part = max(path_counter.items(), key=lambda x: x[1])[0]
+                        # continue
+
                     if ISNUM(reorg_part): reorg_part = str(int(reorg_part))
                     reorg_paths.append(reorg_part)
                 reorg_paths = '/'.join(reorg_paths)
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
                 reorg_queries = []
-                for key, reorg_kv in reorg_query_lists.items():
+                for key, reorg_kv in reorg_query_list.items():
                     if reorg_kv != reorg_kv:
                         continue
                     if key != "Output_Q_NoKey" and (len(reorg_kv.split('='))<2 or not reorg_kv.split('=')[1]):
