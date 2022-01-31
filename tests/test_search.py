@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.wintellect.com:80/devcenter/jcarroll/why-you-should-be-writing-ecma-script-6-now"
+        "http://css-tricks.com:80/14727-five-questions-with-paul-irish/?replytocom=117260"
     ]
     results = []
     for url in urls:

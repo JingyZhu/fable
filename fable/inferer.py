@@ -101,7 +101,9 @@ class Inferer:
     def cluster_examples(self, examples):
         """
         Classify examples base on the same delta. To prevent fail to infer
-        Return [list of examples in the same delta]
+        If with the same delta: there are multiple aliases with the same netloc_dir, prioritize it
+
+        Return [list of examples in the same delta (even netloc_dir)]
         """
         dedup_set = set()
         new_examples = []
@@ -117,7 +119,19 @@ class Inferer:
             diff = url_utils.url_alias_diff(url, alias)
             delta_examples[diff].append(example)
         delta_examples = [d for d in delta_examples.values() if len(d) > 1]
-        return sorted(delta_examples, reverse=True, key=lambda x: len(x))
+        delta_examples.sort(reverse=True, key=lambda x: len(x))
+        all_examples = []
+        # * Add examples with same delta + alias with the same netloc_dir in the front
+        for delta_example in delta_examples:
+            nd_alias = defaultdict(list)
+            for de in delta_example:
+                nd = url_utils.netloc_dir(de[2])
+                nd_alias[nd].append(de)
+            nd_alias = [d for d in nd_alias.values() if len(d) > 1]
+            nd_alias.sort(reverse=True, key=lambda x: len(x))
+            all_examples += nd_alias
+        all_examples += delta_examples
+        return all_examples
 
     def infer(self, examples, urls):
         """

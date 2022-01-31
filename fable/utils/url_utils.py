@@ -654,9 +654,9 @@ def url_token_diffs(url1_tokens, url2_tokens):
         tokendiffs[0] = (0, f'C {tokendiffs[0][2]}', tokendiffs[0][2])
     return tokendiffs
 
-def url_alias_diff(url, alias):
-    url_tokens = tokenize_url(url, include_all=True)
-    alias_tokens = tokenize_url(alias, include_all=True)
+def url_alias_diff(url, alias, process='file'):
+    url_tokens = tokenize_url(url, include_all=True, process=process)
+    alias_tokens = tokenize_url(alias, include_all=True, process=process)
     example_diffs = url_token_diffs(url_tokens, alias_tokens)
     return tuple(sorted(e[:2] for e in example_diffs))
 
@@ -679,69 +679,69 @@ def url_title_simi(url, title):
 
 def order_neighbors(target_url, neighbors, urlgetter=None,
                     ts=None, prefix_funcs=[], suffix_funcs=[]):
-        """
-        Order neighbors so that most similar neighbor will be ranked first
-        urlgetter: lambda to get url from neighbors
-        ts: str/datetime. If set, neighbors url needs to be in the wayback form
+    """
+    Order neighbors so that most similar neighbor will be ranked first
+    urlgetter: lambda to get url from neighbors
+    ts: str/datetime. If set, neighbors url needs to be in the wayback form
 
-        return: Sorted neighbors
-        """
-        if urlgetter is None:
-            urlgetter = lambda x: x
-        def get_ext(url):
-            path = urlsplit(url).path
-            if path not in ['/', ''] and path[-1] == '/': path = path[:-1]
-            return os.path.splitext(path)[1]
-        def query_score(url):
-            scores = []
-            target_query = urlsplit(target_url).query
-            query = urlsplit(url).query
-            # * Has query?
-            scores.append(-((target_query != "") == (query != "")))
-            target_qs = parse_qs(target_query)
-            qs = parse_qs(query)
-            # * How many same keys?
-            same_keys = set(target_qs.keys()).intersection(qs.keys())
-            scores.append(-len(same_keys))
-            # * How many same values
-            same_values = 0
-            for k in same_keys:
-                same_values += len(set(target_qs[k]).intersection(qs[k]))
-            scores.append(-same_values)
-            return tuple(scores)
-        def _detect_file_alnum(url):
-            """Detect whether string has alpha and/or numeric char"""
-            path = urlsplit(url).path
-            if path not in ['/', ''] and path[-1] == '/': path = path[:-1]
-            filename = os.path.basename(path)
-            typee = ''
-            alpha_char = [c for c in filename if c.isalpha()]
-            num_char = [c for c in filename if c.isdigit()]
-            if len(alpha_char) > 0:
-                typee += 'A'
-            if len(num_char) > 0:
-                typee += 'N'
-            return set(typee)
-        lambdas = prefix_funcs
-        # * Same ext?
-        lambdas.append(lambda x: -(get_ext(target_url) == get_ext(x)) )
-        # * Format similarity
-        lambdas.append(lambda x: -len(set(tokenize_url(target_url)).intersection(tokenize_url(x))))
-        lambdas.append(lambda x: -len(_detect_file_alnum(target_url).intersection(_detect_file_alnum(x))))
-        # * Has query? Same Key? Same Value?
-        lambdas.append(lambda x: query_score(x))
-        if ts:
-            if isinstance(ts, str):
-                ts = _safe_dparse(ts)
-            # * ts diff
-            lambdas.append(lambda x: abs((_safe_dparse(get_ts(x)) - ts).total_seconds()))
-        lambdas += suffix_funcs
-        neighbor_score = []
-        for neighbor in neighbors:
-            score = tuple(l(urlgetter(neighbor)) for l in lambdas)
-            neighbor_score.append((neighbor, score))
-        neighbor_score.sort(key=lambda x: x[1])
-        return [r[0] for r in neighbor_score]
+    return: Sorted neighbors
+    """
+    if urlgetter is None:
+        urlgetter = lambda x: x
+    def get_ext(url):
+        path = urlsplit(url).path
+        if path not in ['/', ''] and path[-1] == '/': path = path[:-1]
+        return os.path.splitext(path)[1]
+    def query_score(url):
+        scores = []
+        target_query = urlsplit(target_url).query
+        query = urlsplit(url).query
+        # * Has query?
+        scores.append(-((target_query != "") == (query != "")))
+        target_qs = parse_qs(target_query)
+        qs = parse_qs(query)
+        # * How many same keys?
+        same_keys = set(target_qs.keys()).intersection(qs.keys())
+        scores.append(-len(same_keys))
+        # * How many same values
+        same_values = 0
+        for k in same_keys:
+            same_values += len(set(target_qs[k]).intersection(qs[k]))
+        scores.append(-same_values)
+        return tuple(scores)
+    def _detect_file_alnum(url):
+        """Detect whether string has alpha and/or numeric char"""
+        path = urlsplit(url).path
+        if path not in ['/', ''] and path[-1] == '/': path = path[:-1]
+        filename = os.path.basename(path)
+        typee = ''
+        alpha_char = [c for c in filename if c.isalpha()]
+        num_char = [c for c in filename if c.isdigit()]
+        if len(alpha_char) > 0:
+            typee += 'A'
+        if len(num_char) > 0:
+            typee += 'N'
+        return set(typee)
+    lambdas = prefix_funcs.copy()
+    # * Same ext?
+    lambdas.append(lambda x: -(get_ext(target_url) == get_ext(x)) )
+    # * Format similarity
+    lambdas.append(lambda x: -len(set(tokenize_url(target_url)).intersection(tokenize_url(x))))
+    lambdas.append(lambda x: -len(_detect_file_alnum(target_url).intersection(_detect_file_alnum(x))))
+    # * Has query? Same Key? Same Value?
+    lambdas.append(lambda x: query_score(x))
+    if ts:
+        if isinstance(ts, str):
+            ts = _safe_dparse(ts)
+        # * ts diff
+        lambdas.append(lambda x: abs((_safe_dparse(get_ts(x)) - ts).total_seconds()))
+    lambdas += suffix_funcs.copy()
+    neighbor_score = []
+    for neighbor in neighbors:
+        score = tuple(l(urlgetter(neighbor)) for l in lambdas)
+        neighbor_score.append((neighbor, score))
+    neighbor_score.sort(key=lambda x: x[1])
+    return [r[0] for r in neighbor_score]
 
 
 def na_url(url):

@@ -146,7 +146,7 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
     """
     Eliminate common suffix/prefix of certain site for liveweb
     url: full url (if wayback, url including web.archive.org)
-    site_url_meta: [[netloc_dir, crawls]] sorted in netloc_dir
+    site_url_meta: [[netloc_dir, [crawls]]] sorted in netloc_dir
     
     Returns: prefix/suffix filtered title, prefix/suffix if return_common_part is True
     """
@@ -170,6 +170,7 @@ def unique_title(url, title, content, site_url_meta, wayback=False, return_commo
                 or striphost(site_url_meta[upidx][0]) != nd[0])
     downgoing = not (downidx > len(site_url_meta) - 1 \
                   or striphost(site_url_meta[downidx][0]) != nd[0])
+    
 
     meta = ts if wayback else title
     while (upgoing or downgoing) and len(diffs) < 7:

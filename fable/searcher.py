@@ -102,10 +102,10 @@ class Searcher:
             if search_engine == 'bing':
                 # * Bing Title
                 site_str = f'site:{site}'
-                bing_title = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
-                # bing_title = ' '.join(bing_title)
                 uniq_title = self.similar.unique_title(wayback_url, title, content, self.similar.wb_meta, wayback=True)
                 bing_title = uniq_title
+                bing_title = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
+                bing_title = ' '.join(bing_title)
                 tracer.debug(f'Search query: {bing_title} {site_str}')
                 search_results = search.bing_search(f'{bing_title} {site_str}', use_db=self.use_db)
                 if len(search_results) > 20: search_results = search_results[:20]
