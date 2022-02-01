@@ -1,7 +1,7 @@
 
 from publicsuffixlist import PublicSuffixList
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, parse_qsl, parse_qs, urlsplit, urlunsplit
+from urllib.parse import urlparse, parse_qsl, parse_qs, urlsplit, urlunsplit, unquote
 import re
 import os, time
 from bs4 import BeautifulSoup
@@ -603,7 +603,7 @@ def tokenize_url(url, include_all=False, process=False):
         if host[0] == 'www': host = host[1:]
         tokens.append('.'.join(host))
     for i, p in enumerate(path):
-        token = p
+        token = unquote(p)
         if process == True or (process == 'file' and i == len(path)-1):
             token = os.path.splitext(token)[0]
             token = tokenize(token)

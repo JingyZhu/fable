@@ -108,7 +108,7 @@ class Inferer:
         dedup_set = set()
         new_examples = []
         for example in examples:
-            url, alias = example[0], example[2]
+            url, alias = url_utils.url_norm(example[0]), url_utils.url_norm(example[2])
             if (url, alias) in dedup_set:
                 continue
             new_examples.append(example)
@@ -118,7 +118,10 @@ class Inferer:
             url, alias = example[0], example[2]
             diff = url_utils.url_alias_diff(url, alias)
             delta_examples[diff].append(example)
-        delta_examples = [d for d in delta_examples.values() if len(d) > 1]
+        delta_examples = [v for v in delta_examples.values()]
+        max_example_len = max([len(v) for v in delta_examples])
+        if max_example_len > 1:
+            delta_examples = [d for d in delta_examples if len(d) > 1]
         delta_examples.sort(reverse=True, key=lambda x: len(x))
         all_examples = []
         # * Add examples with same delta + alias with the same netloc_dir in the front
@@ -257,7 +260,9 @@ class Inferer:
                 reorg_url_list = reorg_url_lists.iloc[idx]
                 reorg_query_list = reorg_query_lists.iloc[idx]
                 num_url_outputs = len(reorg_url_list)
-                scheme_netloc = reorg_url_list['Output_0']
+                scheme_netloc_col = reorg_url_lists[f'Output_0'].dropna().tolist()
+                host_counter = Counter(scheme_netloc_col)
+                scheme_netloc = max(host_counter.items(), key=lambda x: x[1])[0]
                 reorg_paths = []
                 for j in range(1, num_url_outputs):
                     reorg_part = reorg_url_list[f'Output_{j}']

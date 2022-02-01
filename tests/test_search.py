@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://css-tricks.com:80/14727-five-questions-with-paul-irish/?replytocom=117260"
+        "http://www.python.org:80/doc/current/library/urllib2.html"
     ]
     results = []
     for url in urls:
