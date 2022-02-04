@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.python.org:80/doc/current/library/urllib2.html"
+        "https://3dprinterchat.com/2016/09/1st-annual-filament-olympics/"
     ]
     results = []
     for url in urls:

@@ -80,8 +80,9 @@ class Searcher:
                 # searched_url_rep = searched_wayback if searched_wayback else searched_url
                 searched_url_rep = searched_url
                 searched_html, searched_url_rep = self.memo.crawl(searched_url_rep, final_url=True, proxies=self.PS.select())
-                searched_htmls[searched_url_rep] = searched_html
                 if searched_html is None: continue
+                searched_url_rep = crawl.get_canonical(searched_url_rep, searched_html)
+                searched_htmls[searched_url_rep] = searched_html
                 searched_contents[searched_url_rep] = self.memo.extract_content(searched_html)
                 if he.extract(url) == he.extract(searched_url) or site == he.extract(searched_url):
                     searched_titles[searched_url_rep] = self.memo.extract_title(searched_html)

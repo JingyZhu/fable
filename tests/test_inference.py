@@ -33,7 +33,7 @@ def test_inferer_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     examples_urls = [
-        "zope.org_0.json"
+        "openstack.org_0.json"
     ]
     for obj_file in examples_urls:
         obj = json.load(open('examples/'+obj_file, 'r'))
@@ -48,7 +48,7 @@ def test_inferer_temp():
         alias = None
         for examples in examples_list:
             poss_infer = ifr.infer(examples, urls)
-            poss_infer = ifr._filter_multicast(poss_infer)
+            poss_infer = ifr._filter_multicast(examples, poss_infer)
             print("possible infer:", poss_infer)
             for url, poss_aliases in poss_infer.items():
                 alias, _ = ifr._verify_alias(url, poss_aliases)

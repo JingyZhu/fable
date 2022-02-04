@@ -334,13 +334,24 @@ class Inferer:
             examples.append(cell)
         return examples, toinfer
     
-    def _filter_multicast(self, possible_infer):
+    def _filter_multicast(self, examples, possible_infer):
         """Filter out all inferred alias that appeared in mutliple original URL"""
+        url_norm = lambda x: url_utils.url_norm(x, ignore_scheme=True, trim_www=True, case=True)
         alias_match = defaultdict(set)
+        for eurl, _, ealias in examples:
+            alias_match[url_norm(ealias)].add(url_norm(eurl))
+        new_possible_infer = defaultdict(list)
         for infer_url, cands in possible_infer.items():
             for cand in cands:
-                alias_match[cand].add(infer_url)
-        return {k: [vv for vv in v if len(alias_match[vv]) <= 1] for k, v in possible_infer.items()}
+                cand_html, cand = self.memo.crawl(cand, final_url=True)
+                if not cand_html:
+                    continue
+                cand = crawl.get_canonical(cand, cand_html)
+                alias_match[url_norm(cand)].add(url_norm(infer_url))
+                new_possible_infer[infer_url].append(url_norm(cand))
+        # import json
+        # print(json.dumps({k: list(v) for k, v in alias_match.items()}, indent=2))
+        return {k: [vv for vv in v if len(alias_match[vv]) <= 1] for k, v in new_possible_infer.items()}
 
     def infer_on_example(self, example):
         """
@@ -498,8 +509,7 @@ class Inferer:
             if reorg_broken == True and not soft_404_content(reason): # * Broken
                 self.not_workings.add(reorg_url)
             else:
-                reorg_url_resp = crawl.requests_crawl(reorg_url, raw=True)
-                reorg_url, reorg_url_html = reorg_url_resp.url, reorg_url_resp.text
+                reorg_url_html, reorg_url = self.memo.crawl(reorg_url, final_url=True)
                 reorg_url = crawl.get_canonical(reorg_url, reorg_url_html)
                 working_aliases.append(reorg_url)
 
