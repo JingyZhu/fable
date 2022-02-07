@@ -54,7 +54,7 @@ class Searcher:
             content = self.memo.extract_content(html)
             tracer.wayback_url(url, wayback_url)
         except Exception as e:
-            tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+            tracer.warn(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             wayback_url = url_utils.constr_wayback(url, '20211231')
             return None, {'reason': "Fail to get archive copy"}
         tracer.title(url, title)

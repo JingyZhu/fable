@@ -485,6 +485,7 @@ class Discoverer:
         """
          # * Bing Title
         site_str = f'site:{self.similar.site[-1]}'
+        title = self.similar.unique_title(wayback_url, title, content, self.similar.wb_meta, wayback=True)
         bing_title = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
         bing_title = ' '.join(bing_title)
         bing_title = re.sub(r'[^\x00-\x7F]+', ' ' , bing_title)
@@ -541,7 +542,7 @@ class Discoverer:
             has_snapshot = True
             tracer.wayback_url(url, wayback_url)
         except Exception as e:
-            tracer.error(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
+            tracer.warn(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
             html, title, content = '', '', ''
         
         if wayback_url:

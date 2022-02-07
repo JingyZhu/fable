@@ -679,11 +679,14 @@ def url_title_simi(url, title):
     return len(overlap) / len(url_tokens)
 
 def order_neighbors(target_url, neighbors, urlgetter=None,
-                    ts=None, prefix_funcs=[], suffix_funcs=[]):
+                    ts=None, prefix_funcs=[], suffix_funcs=[],
+                    middle_funcs=[]):
     """
     Order neighbors so that most similar neighbor will be ranked first
     urlgetter: lambda to get url from neighbors
     ts: str/datetime. If set, neighbors url needs to be in the wayback form
+    prefix/suffix_funcs: self defined function that generate first/last scores for the ranking
+    middle_func: [(func, insert_idx)]
 
     return: Sorted neighbors
     """

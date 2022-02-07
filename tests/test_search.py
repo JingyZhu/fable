@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.wthr.com/article/guilty-plea-1988-murder-8-year-old-ft-wayne-girl"
+        "https://3dprinterchat.com/2016/10/tinny-home-filament-experiment/"
     ]
     results = []
     for url in urls:
