@@ -555,7 +555,7 @@ stemmer = None
 lemmatizer = None
 stem_cache = {}
 
-def tokenize(texts):
+def tokenize(texts, stop_words='english', stemming=True):
     """
     Simple function for tokenizing a text. Extracted from sklearn src code
     
@@ -567,7 +567,7 @@ def tokenize(texts):
         lemmatizer = WordNetLemmatizer()
     texts = texts.replace('_', ' ')
     # # ? Tokenize: Scikit-Learn version
-    cv = CountVectorizer(stop_words='english', token_pattern=r"(?u)\b\w+\b") # TODO: Not necessary english
+    cv = CountVectorizer(stop_words=stop_words, token_pattern=r"(?u)\b\w+\b") # TODO: Not necessary english
     analyze = cv.build_analyzer()
     texts = analyze(texts)
     # ? Tokenize: nltk version
@@ -579,7 +579,8 @@ def tokenize(texts):
         cache[t] = tt
         return tt
     # * Stemming
-    texts = [cached_transform(t, stemmer.stem, stem_cache) for t in texts]
+    if stemming:
+        texts = [cached_transform(t, stemmer.stem, stem_cache) for t in texts]
     # * Lemmatization
     # texts = [lemmatizer.lemmatize(t) for t in texts]
     return texts
@@ -606,7 +607,7 @@ def tokenize_url(url, include_all=False, process=False):
         token = unquote(p)
         if process == True or (process == 'file' and i == len(path)-1):
             token = os.path.splitext(token)[0]
-            token = tokenize(token)
+            token = tokenize(token, stop_words=[])
             token = ' '.join(token)
         tokens.append(token.lower())
     return tokens
@@ -750,8 +751,9 @@ def na_url(url):
     path = urlsplit(url).path
     if path not in ["/", ""] and path[-1] == "/": path = path[:-1]
     filename = path.split("/")[-1]
+    filename = set(tokenize(filename, stop_words=[], stemming=False))
     for k in keywords:
-        if k in filename.lower():
+        if k in filename:
             return True
     return False
 

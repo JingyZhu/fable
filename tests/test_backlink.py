@@ -70,7 +70,7 @@ def test_backlink_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.mensjournal.com:80/gear/electronics/newtown-2016s-most-intriguing-indie-films-so-far-20160204"
+        "https://www.wthr.com/article/guilty-plea-1988-murder-8-year-old-ft-wayne-girl"
     ]
     for url in urls:
         site = he.extract(url)

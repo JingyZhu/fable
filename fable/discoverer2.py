@@ -487,6 +487,7 @@ class Discoverer:
         site_str = f'site:{self.similar.site[-1]}'
         bing_title = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}', title)
         bing_title = ' '.join(bing_title)
+        bing_title = re.sub(r'[^\x00-\x7F]+', ' ' , bing_title)
         tracer.info(f'search title: {bing_title} {site_str}')
         search_results = search.bing_search(f'{bing_title} {site_str}', use_db=True)
         

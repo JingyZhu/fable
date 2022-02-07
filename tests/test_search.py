@@ -75,14 +75,14 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://3dprinterchat.com/2016/09/1st-annual-filament-olympics/"
+        "https://www.wthr.com/article/guilty-plea-1988-murder-8-year-old-ft-wayne-girl"
     ]
     results = []
     for url in urls:
         site = he.extract(url)
         search.similar._init_titles(site)
         alias = search.search(url, search_engine='bing')
-        if alias is None:
+        if alias[0] is None:
             alias = search.search(url, search_engine='google')
         tr.info(f'alias: {alias}')
         assert(alias[0] is None)
