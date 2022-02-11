@@ -623,7 +623,10 @@ class Discoverer:
                 # if early_exit(status, reason):
                 #     break
                 if status == 'found':
-                    return r_dict['url(s)'], {'type': reason[0], 'value': reason[1]}
+                    url = r_dict['url(s)']
+                    html, url = self.memo.crawl(url, final_url=True)
+                    url = crawl.get_canonical(url, html)
+                    return url, {'type': reason[0], 'value': reason[1]}
                 elif status == 'loop':
                     out_sigs = r_dict['url(s)']
                     if link_depth >= OUTGOING:

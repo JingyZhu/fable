@@ -33,7 +33,7 @@ def test_inferer_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     examples_urls = [
-        "kde.org_0.json"
+        "kendoi.com_0.json"
     ]
     for obj_file in examples_urls:
         obj = json.load(open('examples/'+obj_file, 'r'))

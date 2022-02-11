@@ -105,4 +105,24 @@ def test_unique_title_temp():
         found_uniq_title = simi.unique_title(target_url, title, '', meta, wayback=wayback)
         assert(found_uniq_title == uniq_title)
 
-test_unique_title_temp()
+def test_similarity_temp():
+    _init_large_obj()
+    url_comp = [
+        ("http://www.wintellect.com/devcenter/wintellect/asp-net-core-development-with-docker", "https://www.atmosera.com/video/asp-net-core-development-with-docker/")
+    ]
+    for url, comp in url_comp:
+        site = he.extract(url)
+        simi._init_titles(site)
+        wayback_url = memo.wayback_index(url)
+        print(url, wayback_url)
+        url_html = memo.crawl(wayback_url)
+        title = memo.extract_title(url_html, version='mine')
+        content = memo.extract_content(url_html)
+        comp_html = memo.crawl(comp)
+        comp_title = memo.extract_title(comp_html, version='mine')
+        comp_content = memo.extract_content(comp_html)
+        similarity = simi.similar(wayback_url, title, content, {comp: comp_title}, 
+                                    {comp: comp_content}, {comp: comp_html})
+        print(similarity)
+
+test_similarity_temp()

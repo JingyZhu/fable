@@ -269,6 +269,8 @@ class Inferer:
                     # TODO: How to deal with nan requires more thoughts
                     if reorg_part != reorg_part: # * Check for NaN value (trick)
                         # * Instead of continue, pick the most common string if there are multiple same str
+                        if j == num_url_outputs - 1: # * Exempt for filename
+                            continue
                         reorg_url_col = reorg_url_lists[f'Output_{j}'].dropna().tolist()
                         path_counter = Counter(reorg_url_col)
                         reorg_part = max(path_counter.items(), key=lambda x: x[1])[0]

@@ -27,7 +27,7 @@ def _init_large_obj():
     if simi is None:
         simi = tools.Similar()
     if search is None:
-        search = searcher.Searcher(memo=memo, similar=simi)
+        search = searcher.Searcher(memo=memo, similar=simi, use_db=False)
 
 def test_search_withalias():
     """URLs that should be found alias by search"""
@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://3dprinterchat.com/2016/10/tinny-home-filament-experiment/"
+        "http://www.gsma.com/membership/verizon-to-trial-spidercloud-lte-u-scalable-in-building-system-for-enterprises-and-venues/"
     ]
     results = []
     for url in urls:
