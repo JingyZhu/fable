@@ -594,6 +594,8 @@ def tokenize_url(url, include_all=False, process=False):
     """
     us = urlsplit(url)
     path = us.path
+    query = us.query
+    qsl = sorted(parse_qsl(query))
     if path == '': path = '/'
     if path[-1] == '/' and path != '/': path = path[:-1]
     path = path.split('/')[1:]
@@ -610,6 +612,8 @@ def tokenize_url(url, include_all=False, process=False):
             token = tokenize(token, stop_words=[])
             token = ' '.join(token)
         tokens.append(token.lower())
+    for k, v in qsl:
+        tokens.append(f"{k.lower()}={v.lower()}")
     return tokens
 
 def url_token_diffs(url1_tokens, url2_tokens):
@@ -654,6 +658,18 @@ def url_token_diffs(url1_tokens, url2_tokens):
     if len(tokendiffs) > 0 and tokendiffs[0][0] == 0: # * Hostname change, should be aligned
         tokendiffs[0] = (0, f'C {tokendiffs[0][2]}', tokendiffs[0][2])
     return tokendiffs
+
+def order_diffs(diffs):
+    """
+    diffs: [delta]
+    1. Based on delta length
+    2. Based on delta starting changing point
+    """
+    diff_length = defaultdict(set)
+    for diff in diffs:
+        length = len(diff)
+        diff_length[length].add(diff)
+    return [d[1] for d in sorted(diff_length.items())]
 
 def url_alias_diff(url, alias, process='file'):
     url_tokens = tokenize_url(url, include_all=True, process=process)

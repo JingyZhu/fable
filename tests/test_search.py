@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.gsma.com/membership/verizon-to-trial-spidercloud-lte-u-scalable-in-building-system-for-enterprises-and-venues/"
+        "http://cheaperthandirt.com/blog/?p=801"
     ]
     results = []
     for url in urls:
