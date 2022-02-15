@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://cheaperthandirt.com/blog/?p=801"
+        "http://www.utm.edu:80/research/primes/lists/top20/sizes.html"
     ]
     results = []
     for url in urls:

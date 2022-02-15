@@ -608,7 +608,7 @@ def tokenize_url(url, include_all=False, process=False):
     for i, p in enumerate(path):
         token = unquote(p)
         if process == True or (process == 'file' and i == len(path)-1):
-            token = os.path.splitext(token)[0]
+            # token = os.path.splitext(token)[0]
             token = tokenize(token, stop_words=[])
             token = ' '.join(token)
         tokens.append(token.lower())
@@ -677,6 +677,22 @@ def url_alias_diff(url, alias, process='file'):
     example_diffs = url_token_diffs(url_tokens, alias_tokens)
     return tuple(sorted(e[:2] for e in example_diffs))
 
+def url_alias_filename_simi(url, alias):
+    url_file = urlsplit(url).path
+    url_file = os.path.basename(url_file)
+    url_file, _ = os.path.splitext(url_file)
+    alias_file = urlsplit(alias).path
+    alias_file = os.path.basename(alias_file)
+    alias_file, _ = os.path.splitext(alias_file)
+    url_file_tokens = regex.split("[^a-zA-Z1-9]", url_file.lower())
+    url_file_tokens = list(filter(lambda x: x!="", url_file_tokens))
+    alias_file_tokens = regex.split("[^a-zA-Z1-9]", alias_file.lower())
+    alias_file_tokens = list(filter(lambda x: x!="", alias_file_tokens))
+    itst = set(url_file_tokens).intersection(alias_file_tokens)
+    union = set(url_file_tokens).union(alias_file_tokens)
+    if len(union) == 0: return 0
+    return len(itst)/len(union)
+
 def url_title_simi(url, title):
     """
     Calculate the overlapping tokens between title and url (currently filename)
@@ -688,10 +704,12 @@ def url_title_simi(url, title):
     url_tokens = regex.split("[^a-zA-Z1-9]", filename.lower())
     title_tokens = regex.split("[^a-zA-Z1-9]", title.lower())
     url_tokens = list(filter(lambda x: x!="", url_tokens))
+    if len(url_tokens) == 0:
+        return 0
     title_tokens = list(filter(lambda x: x!="", title_tokens))
     diffs = list(difflib.ndiff(url_tokens, title_tokens))
     overlap = [d[2:] for d in diffs if d[0] == ' ']
-    print(overlap, url_tokens)
+    # print(overlap, url_tokens)
     return len(overlap) / len(url_tokens)
 
 def order_neighbors(target_url, neighbors, urlgetter=None,
@@ -781,3 +799,12 @@ def suspicious_alias(url, alias):
     # * Non home to home page
     if not is_home(url) and is_home(alias):
         return True
+
+
+def path_common_prefix(urls):
+    """Get path common prefix of URLs"""
+    paths = []
+    for url in urls:
+        path = urlsplit(url).path
+        paths.append(path)
+    return os.path.commonpath(paths)

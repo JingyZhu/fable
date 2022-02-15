@@ -9,6 +9,7 @@ import time
 import socket
 import os
 import regex
+import random
 
 from . import config, tools, tracer
 from .utils import crawl, sic_transit, url_utils
@@ -269,7 +270,7 @@ class Inferer:
                     # TODO: How to deal with nan requires more thoughts
                     if reorg_part != reorg_part: # * Check for NaN value (trick)
                         if j == num_url_outputs - 1: # * Exempt for filename
-                            reorg_part = 'nan'
+                            reorg_part = ''.join([random.choice(string.ascii_lowercase + string.digits) for _ in range(20)])
                         # * Instead of continue, pick the most common string if there are multiple same str
                         else:
                             reorg_url_col = reorg_url_lists[f'Output_{j}'].dropna().tolist()
