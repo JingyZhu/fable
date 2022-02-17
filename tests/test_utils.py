@@ -3,7 +3,9 @@ import logging
 import os
 
 from fable import config
-from fable.utils import url_utils
+from fable.utils import url_utils, crawl, text_utils
+import json
+from concurrent import futures
 
 he = url_utils.HostExtractor()
 db = config.DB
@@ -28,3 +30,28 @@ def test_url_token_diffs():
             diff = _diffs(url, alias)
             if diffs is None: diffs = diff
             assert(diffs == diff)
+
+def test_lang_detect():
+    def get_lang(i, url):
+        print(i, url)
+        html = crawl.requests_crawl(url, raw=True)
+        r = {'site': url, 'lang_meta': None, 'fuzzy': None, 'all': None}
+        r['lang_meta'] = text_utils._lang_meta(html)
+        r['fuzzy'] = text_utils._fuzzy_lang(html)
+        r['all'] = text_utils.detect_lan(html, fuzzy=True)
+        return r
+
+    site_lan = json.load(open('test_data/site_lan_test.json', 'r'))
+    inconsistent = []
+    with futures.ThreadPoolExecutor(max_workers=10) as e:
+        rs = []
+        for i, site in enumerate(site_lan):
+            rs.append(e.submit(get_lang, i, site))
+        for r in rs:
+            r = r.result()
+            s = set([r['lang_meta'], r['fuzzy'], r['all']])
+            if len(s) > 1:
+                inconsistent.append(r)
+    json.dump(inconsistent, open('test_data/site_lan_test_inconsistent.json', 'w+'), indent=2)
+
+test_lang_detect()

@@ -12,6 +12,7 @@ import numpy as np
 from collections import defaultdict
 import functools
 from subprocess import Popen, PIPE
+import requests
 
 from langcodes import Language
 from langdetect import detect_langs
@@ -499,18 +500,45 @@ def domdistiller_extract(html, lang=None):
     return content
 
 
-def lang_meta(html):
+def _lang_meta(resp):
     """
-    Grab the metadata of html
+    resp: If Response, will look for headers. If html, directly looking for tag
+    Grab the metadata of resp & html
+
+    return: top possible lang
     """
-    soup = BeautifulSoup(html, 'lxml')
-    html = soup.find('html')
+    if isinstance(resp, requests.Response):
+        for k, v in resp.headers.items():
+            if k.lower() == 'content-language':
+                lans = v.split(',')
+                return lans[0].strip()[:2]
+        html = resp.text
+    else:
+        html = resp
     try:
+        soup = BeautifulSoup(html, 'lxml')
+        html = soup.find('html')
         return html['lang'][:2]
     except:
         return None
 
+def _fuzzy_lang(resp):
+    if isinstance(resp, requests.Response):
+        resp = resp.text
+    try:
+        soup = BeautifulSoup(resp, 'lxml')
+        text = soup.get_text(strip=True)
+        return detect_langs(text)[0].lang[:2]
+    except:
+        return
 
+def detect_lan(resp, fuzzy=False):
+    """Fuzzy: whether to perform language analysis on the content of HTML"""
+    if fuzzy:
+        lan = _fuzzy_lang(resp)
+        if lan: return lan
+    return _lang_meta(resp)
+    
 def extract_body(html, version='domdistiller', handle_exception=True):
     """
     Wrapper functions for different version of html body extraction
@@ -519,7 +547,7 @@ def extract_body(html, version='domdistiller', handle_exception=True):
     able_soup = _try_soup(html)
     if not able_soup:
         print("Cannot soup the HTML")
-    lang = lang_meta(html) if able_soup else None
+    lang = _lang_meta(html) if able_soup else None
     backup_versions = ['domdistiller', 'boilerpipe']
     if isinstance(version, str):
         backup_versions = [v for v in backup_versions if v != version]
@@ -632,7 +660,7 @@ def extract_title(html, version='mine', handle_exception=True):
     able_soup = _try_soup(html)
     if not able_soup:
         print("Cannot soup the HTML")
-    lang = lang_meta(html) if able_soup else None
+    lang = _lang_meta(html) if able_soup else None
     if html == '': return ''
     backup_versions = ['domdistiller', 'newspaper']
     backup_versions = [v for v in backup_versions if v != version]
@@ -743,7 +771,7 @@ def extract_title_body(html, handle_exception=True):
     able_soup = _try_soup(html)
     if not able_soup:
         print("Cannot soup the HTML")
-    lang = lang_meta(html) if able_soup else None
+    lang = _lang_meta(html) if able_soup else None
     if html == '': return '', ''
     if able_soup:
         title, content = domdistiller_title_body_extract(html, lang=lang)
