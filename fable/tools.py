@@ -842,7 +842,8 @@ class Similar:
 
         Returns: 0 if not match. Actual similarity otherwise
         """
-        text1_token, text2_token = text_utils.tokenize(text1), text_utils.tokenize(text2)
+        text1_token = text_utils.tokenize(text1) if isinstance(text1, str) else text1
+        text2_token = text_utils.tokenize(text2) if isinstance(text2, str) else text2
         # ! Choice 1: Consider sequence
         # text1_token, text2_token = ' '.join(text1_token), ' '.join(text2_token)
         # # * To match, one text must be the subset of another

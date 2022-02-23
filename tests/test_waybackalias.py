@@ -88,7 +88,7 @@ def test_waybackalias_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.legacy.com:80/Charlotte/LegacySubPage2.asp?Page=GuestBook&PersonId=359877"
+        "http://www.iucnredlist.org/search/details.php/32941/all"
     ]
     for url in urls:
         print(url)

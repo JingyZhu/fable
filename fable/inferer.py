@@ -25,9 +25,10 @@ VERTICAL_BAR_SET = '\u007C\u00A6\u2016\uFF5C\u2225\u01C0\u01C1\u2223\u2502\u0964
 
 def normal_hostname(hostname):
     hostname = hostname.split(':')[0]
-    hostname = hostname.split('.')
-    if hostname[0] == 'www': hostname = hostname[1:]
-    return '.'.join(hostname)
+    # hostname = hostname.split('.')
+    # if hostname[0] == 'www': hostname = hostname[1:]
+    # return '.'.join(hostname)
+    return hostname
 
 def soft_404_content(reason):
     if not isinstance(reason, list):
@@ -143,6 +144,7 @@ class Inferer:
         examples: list of (urls, (other metadata), reorg_url)
         urls: list of (urls, other metadata)
         Two metadata should be in the same format
+        split: If the urls are too big, split into multiple shards
 
         Returns: {url: [possible reorg_url]}
         # TODO: Create more sheets with similar/same #words
@@ -169,9 +171,9 @@ class Inferer:
             qs = url_utils.my_parse_qs(us.query)
             for key, value in qs.items():
                 if key == 'NoKey':
-                    sheet.loc[row, f'Query_{key}'] = value[0]
+                    sheet.loc[row, f'Query_{key}'] = value[0].lower()
                 else:
-                    sheet.loc[row, f'Query_{key}'] = f'{key}={value[0]}'
+                    sheet.loc[row, f'Query_{key}'] = f'{key}={value[0].lower()}'
             return sheet
 
         def insert_metadata(sheet, row, meta, expand=True):
@@ -194,9 +196,9 @@ class Inferer:
                 qs_reorg = url_utils.my_parse_qs(us_reorg.query)
             for key, value in qs_reorg.items():
                 if key == 'NoKey':
-                    sheet.loc[i, f'Output_Q_{key}'] = value[0]
+                    sheet.loc[i, f'Output_Q_{key}'] = value[0].lower()
                 else:
-                    sheet.loc[i, f'Output_Q_{key}'] = f'{key}={value[0]}'
+                    sheet.loc[i, f'Output_Q_{key}'] = f'{key}={value[0].lower()}'
             return sheet
                 
         sheet1 = pd.DataFrame() # Both url and meta
@@ -265,12 +267,14 @@ class Inferer:
                 host_counter = Counter(scheme_netloc_col)
                 scheme_netloc = max(host_counter.items(), key=lambda x: x[1])[0]
                 reorg_paths = []
+                able_infer = True
                 for j in range(1, num_url_outputs):
                     reorg_part = reorg_url_list[f'Output_{j}']
                     # TODO: How to deal with nan requires more thoughts
                     if reorg_part != reorg_part: # * Check for NaN value (trick)
                         if j == num_url_outputs - 1: # * Exempt for filename
-                            reorg_part = ''.join([random.choice(string.ascii_lowercase + string.digits) for _ in range(20)])
+                            # reorg_part = "random_str:" + ''.join([random.choice(string.ascii_lowercase + string.digits) for _ in range(20)])
+                            able_infer = False
                         # * Instead of continue, pick the most common string if there are multiple same str
                         else:
                             reorg_url_col = reorg_url_lists[f'Output_{j}'].dropna().tolist()
@@ -280,6 +284,8 @@ class Inferer:
 
                     if ISNUM(reorg_part): reorg_part = str(int(reorg_part))
                     reorg_paths.append(reorg_part)
+                if not able_infer:
+                    continue
                 reorg_paths = '/'.join(reorg_paths)
                 reorg_url = f'{scheme_netloc}/{reorg_paths}'
                 reorg_queries = []
@@ -299,6 +305,15 @@ class Inferer:
                 poss_infer[url].append(reorg_url)
         return {k: self._order_alias(v, [examples[0][2]]) for k, v in poss_infer.items()}
     
+    def infer_shards(self, examples, urls, split=1000):
+        """Wrapper for infer. Only infer in shards to avoid Excel OLE"""
+        poss_infer = {}
+        for st in range(0, len(urls), split):
+            surls = urls[st: min(st+split, len(urls))]
+            part_poss_infer = self.infer(examples, surls)
+            poss_infer.update(part_poss_infer)
+        return poss_infer
+
     def _construct_input_output(self, match):
         """
         Given a pattern of URLs, output a sheet for RPC inference
@@ -340,7 +355,7 @@ class Inferer:
     
     def _filter_multicast(self, examples, possible_infer):
         """Filter out all inferred alias that appeared in mutliple original URL"""
-        url_norm = lambda x: url_utils.url_norm(x, ignore_scheme=True, trim_www=True, case=True)
+        url_norm = lambda x: url_utils.url_norm(x, ignore_scheme=True, case=True)
         alias_match = defaultdict(set)
         for eurl, _, ealias in examples:
             alias_match[url_norm(ealias)].add(url_norm(eurl))
@@ -501,21 +516,26 @@ class Inferer:
         # * 1. Check breakage of inferred candidates
         new_reorg = False
         for reorg_url in reorg_urls:
-            # Try:
             if urlsplit(url).path not in ['', '/'] and urlsplit(reorg_url).path in ['', '/']:
                 continue
-            # End of Try
             new_reorg = True
             if reorg_url in self.not_workings:
                 tracer.debug(f'Inferred URL already checked broken: {reorg_url}')
                 continue
-            reorg_broken, reason = sic_transit.broken(reorg_url, html=True)
-            if reorg_broken == True and not soft_404_content(reason): # * Broken
-                self.not_workings.add(reorg_url)
-            else:
+            # reorg_broken, reason = sic_transit.broken(reorg_url, html=True)
+            # if reorg_broken == True and not soft_404_content(reason): # * Broken
+            #     self.not_workings.add(reorg_url)
+            # else:
+            #     reorg_url_html, reorg_url = self.memo.crawl(reorg_url, final_url=True)
+            #     reorg_url = crawl.get_canonical(reorg_url, reorg_url_html)
+            #     working_aliases.append(reorg_url)
+            # ? Try new version
+            try:
                 reorg_url_html, reorg_url = self.memo.crawl(reorg_url, final_url=True)
                 reorg_url = crawl.get_canonical(reorg_url, reorg_url_html)
                 working_aliases.append(reorg_url)
+            except: pass
+            # ? End of Try
 
         def return_noncompare():
             """No more information available than whether URLs are working or not"""

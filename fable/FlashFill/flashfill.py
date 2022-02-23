@@ -24,6 +24,14 @@ def time_limit(seconds, msg=''):
         # if the action ends in specified time, timer is canceled
         timer.cancel()
 
+def _to_xlsx_idx(n):
+    s = ''
+    n += 1
+    while n > 0:
+        n, remainder = divmod(n - 1, 26)
+        s = string.ascii_uppercase[remainder] + s
+    return s
+
 class FlashFillHandler:
     def handle(self, inputs, identifier):
         """
@@ -48,9 +56,9 @@ class FlashFillHandler:
             with time_limit(20):
                 for ws in wb.sheets: 
                     cols = output_cols[ws.name]
-                    assert(cols[-1] < 26)
+                    # assert(cols[-1] < 26)
                     for col in cols:
-                        idx = string.ascii_uppercase[col]
+                        idx = _to_xlsx_idx(col)
                         try:
                             r = ws.range(f'{idx}1')
                             r.api.FlashFill()
@@ -90,7 +98,7 @@ class FlashFillHandler:
             sheet = wb.sheets[name]
             for i in range(row):
                 for j in range(col):
-                    range_str = string.ascii_uppercase[j] + str(i+1)
+                    range_str = _to_xlsx_idx(j) + str(i+1)
                     sheet.range(range_str).number_format = '@'
                     sheet.range(range_str).value = df.iloc[i, j]
         wb.save(f'output\\{identifier}.xlsx')
