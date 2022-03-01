@@ -90,7 +90,7 @@ class NeighborAlias:
         self.similar2._init_titles(site)    
         results = {'hist_redir': (None, {}), 'search': (None, {}), 'backlink': (None, {})}
         def _wayback_alias(url):
-            alias = self.histredirector.wayback_alias(url)
+            alias = self.histredirector.wayback_alias_history(url)
             results['hist_redir'] = alias, {'method': 'wayback_alias'}
         def _search(url):
             alias = self.searcher.search(url, search_engine='bing')

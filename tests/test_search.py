@@ -75,15 +75,16 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.utm.edu:80/research/primes/lists/top20/sizes.html"
+        "https://www.tensorflow.org/tfx/serving/"
     ]
     results = []
+    fuzzy = True
     for url in urls:
         site = he.extract(url)
         search.similar._init_titles(site)
-        alias = search.search(url, search_engine='bing')
+        alias = search.search(url, search_engine='bing', fuzzy=fuzzy)
         if alias[0] is None:
-            alias = search.search(url, search_engine='google')
+            alias = search.search(url, search_engine='google', fuzzy=fuzzy)
         tr.info(f'alias: {alias}')
         assert(alias[0] is None)
         # results.append({'url': url, 'alias': alias})

@@ -151,8 +151,8 @@ class Discoverer:
         backlinked_title = self.memo.extract_title(backlinked_html, version='mine')
         title_cands = merge_dict(self.high_similar_pages['title'], {backlinked_url: backlinked_title})
         content_cands = merge_dict(self.high_similar_pages['content'], {backlinked_url: backlinked_content})
-        similars, fromm = self.similar.similar(wayback_dst, title, content, title_cands, content_cands, match_order=['content', 'title'])
-        if len(similars) > 0 and url_utils.url_match(similars[0][0], backlinked_url):
+        similar, fromm = self.similar.similar(wayback_dst, title, content, title_cands, content_cands, match_order=['content', 'title'])[0]
+        if similar and url_utils.url_match(similar[0], backlinked_url):
             return backlinked_url, fromm
 
         # outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
@@ -185,8 +185,8 @@ class Discoverer:
             outgoing_title = self.memo.extract_title(html, version='mine')
             title_cands = merge_dict(self.high_similar_pages['title'], {outgoing_link: outgoing_title})
             content_cands = merge_dict(self.high_similar_pages['content'], {outgoing_link: outgoing_content})
-            similars, fromm = self.similar.similar(wayback_dst, title, content, title_cands, content_cands, match_order=['content', 'title'])
-            if len(similars) > 0 and url_utils.url_match(similars[0][0], outgoing_link):
+            similar, fromm = self.similar.similar(wayback_dst, title, content, title_cands, content_cands, match_order=['content', 'title'])[0]
+            if similar and url_utils.url_match(similar[0], outgoing_link):
                 return outgoing_link, fromm
         return None, None
     
@@ -352,10 +352,10 @@ class Discoverer:
             src_title = self.memo.extract_title(src_html, version='mine')
             title_cands = merge_dict(self.high_similar_pages['title'], {src: src_title})
             content_cands = merge_dict(self.high_similar_pages['content'], {src: src_content})
-            similars, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, title_cands, content_cands, match_order=['content', 'title'])
-            if len(similars) > 0 and url_utils.url_match(similars[0][0], src):
+            similar, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, title_cands, content_cands, match_order=['content', 'title'])[0]
+            if similar and url_utils.url_match(similar[0], src):
                 tracer.info(f'Discover: Directly found copy during looping')
-                top_similar = similars[0]
+                top_similar = similar
                 r_dict.update({
                     "status": "found",
                     "url(s)": top_similar[0],
@@ -509,10 +509,10 @@ class Discoverer:
             
             if he.extract(url) == he.extract(searched_url) or self.similar.site[-1] == he.extract(searched_url):
                 searched_titles[searched_url_rep] = self.memo.extract_title(searched_html)
-        similars, fromm = self.similar.similar(wayback_url, title, content, searched_titles, searched_contents, match_order=['content', 'title'], shorttext=False)
+        similar, fromm = self.similar.similar(wayback_url, title, content, searched_titles, searched_contents, match_order=['content', 'title'], shorttext=False)[0]
         searched_info = {'title': searched_titles, 'content': searched_contents}
-        if len(similars) > 0:
-            top_similar = similars[0]
+        if similar:
+            top_similar = similar
             return (top_similar[0], {'type': fromm, 'value': top_similar[1]}), searched_info
         return None, searched_info
         

@@ -13,7 +13,7 @@ import random
 import brotli
 from dateutil import parser as dparser
 import datetime
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit, urlunsplit, parse_qsl
 import bisect
 from bs4 import BeautifulSoup
 
@@ -1006,6 +1006,8 @@ class Similar:
         Return: sorted([(url, token, similarity)])
         """
         all_tokens = [target_token]
+        # ? For query, only consider values
+        candidates_tokens = {cand: [t.split('=')[-1] for t in tokens] for cand, tokens in candidates_tokens.items()}
         for tokens in candidates_tokens.values():
             all_tokens += tokens
         self.tfidf._clear_workingset()
@@ -1031,14 +1033,14 @@ class Similar:
         return simi[0][-1] >= threshold and simi[1][-1] < threshold
 
     def similar(self, tg_url, tg_title, tg_content, cand_titles, cand_contents, \
-                cand_htmls={}, fixed=True, match_order=None, **kwargs):
+                cand_htmls={}, fixed=True, match_order=['title', 'content'], **kwargs):
         """
         All text-based similar tech is included
         Fixed: Whether title similarity is allowed across different sites
         matched_order: how different types of match should be ordered
 
-        Return: [(similar urls, similarity)], from which comparison(title/content) if there is some similarity
-                else: [], ""
+        Return: [((similar urls, similarity), from which comparison(title/content))], if there is some similarity
+                else: [(None, from)]
         """
         self._add_crawl(tg_url, tg_title, tg_content)
         if not self.separable:
@@ -1059,27 +1061,13 @@ class Similar:
             matched_alias.append((content_similars[0], "content"))
             # return content_similars, "content"
         # * matched_alias: [((url, simi), "content"/"title")]
+        get_order = lambda x: -match_order.index(x)
+        tracer.debug(f'matched_alias: {matched_alias}')
         if len(matched_alias) > 0:
-            if not match_order:
-                matched_alias.sort(reverse=True, key=lambda x: x[0][1])
-                top_match = matched_alias[0]
-                another_match = [am for am in matched_alias[1:] if am[0][0] == top_match[0][0]]
-                if top_match[1] == "content" and len(another_match) > 0:
-                    another_match, fromm = another_match[0]
-                    return [another_match], fromm
-                else:
-                    top_match, fromm = top_match
-                    return [top_match], fromm
-
-            else:
-                orig_matched_alias = matched_alias
-                matched_alias = []
-                for o in match_order:
-                    matched_alias += [oma for oma in orig_matched_alias if oma[1] == o]
-                matched_alias, fromm = matched_alias[0]
-                return [matched_alias], fromm
+            matched_alias.sort(reverse=True, key=lambda x: (get_order(x[1]), x[0][1]))
+            return matched_alias    
         else:
-            return [], ""
+            return [(None, "")]
 
 
 def is_canonical(url1, url2, resp1=None, resp2=None):
@@ -1140,44 +1128,67 @@ def is_canonical(url1, url2, resp1=None, resp2=None):
         return True
     return False
 
-def get_unique_token(url):
-        """Given a URL, return which tokens should be put into search engine"""
-        us = urlsplit(url)
-        path = us.path
-        if path == '': path = '/'
-        if path[-1] == '/' and path != '/': path = path[:-1]
-        path = path.split('/')
-        if 'index' in path[-1]: path = path[:-1]
-        available_tokens = []
-        params = {
-            'output': 'json',
-            "limit": 10,
-            'collapse': 'urlkey',
-            'filter': ['statuscode:200', 'mimetype:text/html'],
-        }
-        def _collapse_index(li):
-            urls = set()
-            for url in li:
-                us = urlsplit(url)
-                path = us.path
-                if path == '': path = '/'
-                if path[-1] == '/' and path != '/': path = path[:-1]
-                path = us.path.split('/')
-                if 'index' in path[-1]: path = path[:-1]
-                url = urlunsplit(us._replace(path='/'.join(path)))
-                urls.add(url)
-            return urls
-        for i in range(len(path)-1, 0, -1):
-            sub_path = '/'.join(path[:i+1])
-            sub_us = us._replace(path=sub_path + '*', query='', fragment='')
-            sub_url = urlunsplit(sub_us)
-            wayback_index, _ = crawl.wayback_index(sub_url, param_dict=params)
-            # print(sub_url)
-            wayback_index = _collapse_index([w[1] for w in wayback_index])
-            tracer.debug(f'_get_unique_token: {sub_url}, {len(wayback_index)}')
-            if len(wayback_index) <= 1:
-                available_tokens.append(path[i])
-            else:
-                break
-        return available_tokens
+def get_unique_token(url, fuzzy=False):
+    """
+    Given a URL, return which tokens should be put into search engine
+    fuzzy: Get fuzzy with extraction of tokens
+    """
+    us = urlsplit(url)
+    path = us.path
+    if path == '': path = '/'
+    if path[-1] == '/' and path != '/': path = path[:-1]
+    path = path.split('/')
+    query = parse_qsl(us.query)
+    if 'index' in path[-1]: path = path[:-1]
+    available_tokens = []
+    params = {
+        'output': 'json',
+        "limit": 10000,
+        'collapse': 'urlkey',
+        'filter': ['statuscode:200', 'mimetype:text/html'],
+    }
+    def _collapse_index(li):
+        urls = set()
+        for url in li:
+            us = urlsplit(url)
+            path = us.path
+            if path == '': path = '/'
+            if path[-1] == '/' and path != '/': path = path[:-1]
+            path = us.path.split('/')
+            if 'index' in path[-1]: path = path[:-1]
+            url = urlunsplit(us._replace(path='/'.join(path)))
+            urls.add(url)
+        return urls
+    def _is_id(s):
+        if s.isdigit():
+            s = int(s)
+            return s > 2050 # ? Not year
+    def _unique_query(li, query):
+        qs = [v[1] for v in query]
+        q_count = defaultdict(int)
+        for _, v in query:
+            q_count[v] += 1
+        for url in li:
+            us = urlsplit(url)
+            liq = parse_qsl(us.query)
+            for _, v in liq:
+                q_count[v] += 1
+        return [q for q in qs if q_count.get(q) <= 1 or _is_id(q)]
+    # * Check for unique token in the path
+    for i in range(len(path)-1, 0, -1):
+        sub_path = '/'.join(path[:i+1])
+        sub_us = us._replace(path=sub_path + '*', query='', fragment='')
+        sub_url = urlunsplit(sub_us)
+        wayback_index, _ = crawl.wayback_index(sub_url, param_dict=params)
+        # print(sub_url)
+        wayback_index = _collapse_index([w[1] for w in wayback_index])
+        tracer.debug(f'get_unique_token: {sub_url}, {len(wayback_index)}')
+        if len(query):
+            available_tokens += _unique_query(wayback_index, query)
+        if len(wayback_index) <= 1:
+            available_tokens.append(path[i])
+        else:
+            break
+    
+    return available_tokens
     

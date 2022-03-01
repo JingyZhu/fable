@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from queue import Queue
 from collections import defaultdict
 import re, json
+import requests
 from dateutil import parser as dparser
 import datetime
 
@@ -165,7 +166,7 @@ class HistRedirector:
             return False
         return True
 
-    def wayback_alias(self, url, require_neighbor=False, homepage_redir=True, strict_filter=False):
+    def wayback_alias_history(self, url, require_neighbor=False, homepage_redir=True, strict_filter=False):
         """
         Utilize wayback's archived redirections to find the alias/reorg of the page
         Not consider non-homepage to homepage
@@ -174,7 +175,7 @@ class HistRedirector:
         homepage_redir: Whether redirection to homepage (from non-homepage) is considered valid
         strict_filter: Not consider case where: redirected URL's path is a substring of the original one
 
-        Returns: reorg_url is latest archive is an redirection to working page, else None
+        Returns: List of all redirection history to live version of alias, else None
         """
         tracer.debug('Start wayback_alias')
         us = urlsplit(url)
@@ -255,11 +256,32 @@ class HistRedirector:
                 pass_check = self._verify_alias(url, inter_urls, ts, homepage_redir=is_homepage and new_is_homepage, \
                                                 strict_filter=strict_filter, require_neighbor=require_neighbor, seen_redir_url=seen_redir_url)
                 if pass_check:
+                    # * Select all historical redirected URLs that are still working
                     tracer.debug(f'found: {live_new_url}')
-                    return live_new_url
+                    inter_urls = list(dict.fromkeys([url_utils.url_norm(iu, ignore_scheme=True) for iu in inter_urls]))
+                    working_inter_urls = inter_urls.copy()
+                    for iu in inter_urls:
+                        r = crawl.requests_crawl(iu, raw=True)
+                        if isinstance(r, requests.Response) and \
+                            (url_utils.url_match(r.url, inter_urls[-1]) or url_utils.url_match(r.url, live_new_url)):
+                            break
+                        working_inter_urls.pop(0)
+                    return working_inter_urls
             else:
                 url_match_count += 1
         return
+
+    def wayback_alias(self, url, require_neighbor=False, homepage_redir=True, strict_filter=False):
+        """
+        Wrapper for wayback_alias_history
+        
+        Return: If found an alias, only return the live web version of the alias, else None
+        """
+        alias = self.wayback_alias_history(url, require_neighbor=require_neighbor, \
+                        homepage_redir=homepage_redir, strict_filter=strict_filter)
+        if isinstance(alias, list):
+            alias = alias[-1]
+        return alias
 
     def na_alias(self, alias):
         """Check whether found alias are N/A"""

@@ -349,9 +349,9 @@ class Discoverer:
             return None, None
         backlinked_content = self.memo.extract_content(backlinked_html, version='domdistiller')
         backlinked_title = self.memo.extract_title(backlinked_html, version='domdistiller')
-        similars, fromm = self.similar.similar(wayback_dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})
-        if len(similars) > 0:
-            return similars[0], fromm
+        similar, fromm = self.similar.similar(wayback_dst, title, content, {backlinked_url: backlinked_title}, {backlinked_url: backlinked_content})[0]
+        if similar:
+            return similar[0], fromm
 
         # outgoing_links = crawl.outgoing_links(backlinked_url, backlinked_html, wayback=False)
         global he
@@ -381,9 +381,9 @@ class Discoverer:
             tracer.info(f'Test if outgoing link same: {outgoing_link}')
             outgoing_content = self.memo.extract_content(html, version='domdistiller')
             outgoing_title = self.memo.extract_title(html, version='domdistiller')
-            similars, fromm = self.similar.similar(wayback_dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})
-            if len(similars) > 0:
-                return similars[0], fromm
+            similar, fromm = self.similar.similar(wayback_dst, title, content, {outgoing_link: outgoing_title}, {outgoing_link: outgoing_content})[0]
+            if similar > 0:
+                return similar[0], fromm
         return None, None
     
     def _first_not_linked(self, dst, src, waybacks):
@@ -543,10 +543,10 @@ class Discoverer:
             src_html = self.memo.crawl(src)
             src_content = self.memo.extract_content(src_html, version='domdistiller')
             src_title = self.memo.extract_title(src_html, version='domdistiller')
-            similars, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, {src: src_title}, {src: src_content})
-            if len(similars) > 0:
+            similar, fromm = self.similar.similar(wayback_dst, dst_title, dst_content, {src: src_title}, {src: src_content})[0]
+            if similar > 0:
                 tracer.info(f'Discover: Directly found copy during looping')
-                top_similar = similars[0]
+                top_similar = similar
                 r_dict.update({
                     "status": "found",
                     "url(s)": top_similar[0],

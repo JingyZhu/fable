@@ -95,4 +95,16 @@ def test_waybackalias_temp():
         alias = hist.wayback_alias(url)
         assert(alias is None)
 
-# test_waybackalias_temp()
+def test_waybackalias_hist_temp():
+    """Temporary test to avoid long waiting for other tests"""
+    _init_large_obj()
+    urls = [
+        "http://www.iucnredlist.org/search/details.php/32941/all"
+    ]
+    for url in urls:
+        print(url)
+        alias = hist.wayback_alias_history(url)
+        print(alias)
+        assert(alias is None)
+
+test_waybackalias_hist_temp()

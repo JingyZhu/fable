@@ -31,17 +31,33 @@ class Searcher:
         self.similar = similar if similar is not None else tools.Similar()
         self.searched_results = {} # * URL: {title: {}, content: {}}
 
-    def search(self, url, search_engine='bing'):
+    def search(self, url, search_engine='bing', fuzzy=False):
+        """
+        fuzzy: If there will be no separable check for similar
+
+        Return: If no alias: None, reason
+                If alias:   fuzzy=False: (top_match, reason)
+                            fuzzy=True: [(match, reason)]
+        """
         global he
         if search_engine not in ['google', 'bing']:
             raise Exception("Search engine could support for google and bing")
         # TODO: Not ideal
         elif search_engine == 'bing':
             self.searched_results = {}
+        
         if url_utils.na_url(url):
             return None, {'reason': "Not applicable URL"}
         if url not in self.searched_results:
             self.searched_results[url] ={'title': {}, 'content': {}, 'html': {}}
+
+        if fuzzy:
+            self.similar.separable = lambda x: x[0][1] >= self.similar.threshold
+            shorttext = False
+        else:
+            self.similar.separable = None
+            shorttext = True
+
         site = he.extract(url)
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
@@ -89,13 +105,17 @@ class Searcher:
             self.searched_results[url]['title'].update(searched_titles)
             self.searched_results[url]['content'].update(searched_contents)
             self.searched_results[url]['html'].update(searched_htmls)
-            similars, fromm = self.similar.similar(wayback_url, title, content, self.searched_results[url]['title'], self.searched_results[url]['content'],
-                                                    self.searched_results[url]['html'])
-            if len(similars) > 0:
-                top_similar = similars[0]
+            similars = self.similar.similar(wayback_url, title, content, self.searched_results[url]['title'], self.searched_results[url]['content'],
+                                                    self.searched_results[url]['html'], shorttext=shorttext)
+            if similars[0][0]:
                 # * Pre filter suspicous cands
-                if not url_utils.suspicious_alias(url, top_similar[0]):
-                    return top_similar[0], {'type': fromm, 'value': top_similar[1]}
+                similars = [(s[0], {'type': fromm, 'value': s[1]}) for s, fromm in similars if not url_utils.suspicious_alias(url, s[0])]
+                if len(similars) == 0:
+                    return 
+                if fuzzy:
+                    return similars
+                else:
+                    return similars[0]
             return
 
         # * Search with title
@@ -155,9 +175,11 @@ class Searcher:
             for sr in search_results:
                 tokens = url_utils.tokenize_url(sr, process=True)
                 search_tokens[sr] = tokens
-            token_simi = self.similar.token_similar(url, token, search_tokens)[:2]
+            token_simi = self.similar.token_similar(url, token, search_tokens, shorttext=shorttext)[:2]
             token_simi = [s for s in token_simi if s[0] != "" and sic_transit.broken(s[0],  html=True)[0] == False]
-            if len(token_simi) >= 2 and self.similar._separable(token_simi, threshold=1):
+            if len(token_simi) == 0:
+                return
+            elif len(token_simi) == 1 or self.similar._separable(token_simi, threshold=1):
                 top_similar = token_simi[0]
                 return top_similar[0], {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
 

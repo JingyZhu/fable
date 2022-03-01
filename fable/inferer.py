@@ -575,9 +575,9 @@ class Inferer:
             pass
         # * 3.1 Match title/content
         if wayback_available:
-            similars, fromm = self.similar.similar(wayback_url, title, content, reorg_title, reorg_content)
-            if len(similars) > 0:
-                top_similar = similars[0]
+            similar, fromm = self.similar.similar(wayback_url, title, content, reorg_title, reorg_content)[0]
+            if similar:
+                top_similar = similar
                 return top_similar[0], {'type': fromm, 'value': top_similar[1]}
             else:
                 return return_noncompare()
