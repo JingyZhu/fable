@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://www.tensorflow.org/tfx/serving/"
+        "http://www.legacy.com:80/Charlotte/LegacySubPage2.asp?Page=GuestBook&PersonId=359877"
     ]
     results = []
     fuzzy = True
@@ -89,3 +89,5 @@ def test_search_temp():
         assert(alias[0] is None)
         # results.append({'url': url, 'alias': alias})
         # json.dump(results, open('test_search.json', 'w+'), indent=2)
+
+test_search_temp()

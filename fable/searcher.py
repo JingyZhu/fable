@@ -178,10 +178,14 @@ class Searcher:
             token_simi = self.similar.token_similar(url, token, search_tokens, shorttext=shorttext)[:2]
             token_simi = [s for s in token_simi if s[0] != "" and sic_transit.broken(s[0],  html=True)[0] == False]
             if len(token_simi) == 0:
-                return
+                break
             elif len(token_simi) == 1 or self.similar._separable(token_simi, threshold=1):
                 top_similar = token_simi[0]
-                return top_similar[0], {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
+                top_similar_url = top_similar[0]
+                top_similar_html, top_similar_url = self.memo.crawl(top_similar_url, final_url=True)
+                top_similar_url = crawl.get_canonical(top_similar_url, top_similar_html)
+                r = top_similar_url, {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
+                return [r] if fuzzy else r
 
         # * Search with content
         self.similar.tfidf._clear_workingset()
