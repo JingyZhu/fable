@@ -127,7 +127,7 @@ class NeighborAlias:
         """Assume the url is not broken"""
         html, final_url = self.memo.crawl(url, final_url=True)
         if final_url and not url_utils.url_match(url, final_url):
-            return crawl.get_canonical(url, html)
+            return crawl.get_canonical(final_url, html)
         return
 
     def neighbor_aliases(self, urls, title=False, tss=[], speed=1,

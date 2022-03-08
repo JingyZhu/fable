@@ -613,7 +613,7 @@ def tokenize_url(url, include_all=False, process=False):
             token = ' '.join(token)
         tokens.append(token.lower())
     for k, v in qsl:
-        tokens.append(f"{k.lower()}={v.lower()}")
+        tokens.append(f"{v.lower()}")
     return tokens
 
 def url_token_diffs(url1_tokens, url2_tokens):
