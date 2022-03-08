@@ -54,6 +54,7 @@ class Searcher:
         if fuzzy:
             self.similar.separable = lambda x: x[0][1] >= self.similar.threshold
             shorttext = False
+            fuzzy_similars = []
         else:
             self.similar.separable = None
             shorttext = True
@@ -133,13 +134,19 @@ class Searcher:
                 if len(search_results) > 20: search_results = search_results[:20]
                 similar = search_once(search_results, typee='title_site')
                 if similar is not None: 
-                    return similar
+                    if fuzzy:
+                        fuzzy_similars += similar
+                    else:
+                        return similar
                 if len(search_results) >= 8:
                     search_results = search.bing_search(f'+"{bing_title}" {site_str}', use_db=self.use_db)
                     if len(search_results) > 20: search_results = search_results[:20]
                     similar = search_once(search_results, typee='title_exact')
                     if similar is not None: 
-                        return similar
+                        if fuzzy:
+                            fuzzy_similars += similar
+                        else:
+                            return similar
             else:
                 google_title = uniq_title
                 google_title = ' '.join(google_title)
@@ -153,7 +160,10 @@ class Searcher:
                     search_results = search.google_search(f'"{google_title}"', site_spec_url=site, use_db=self.use_db)
                     similar = search_once(search_results, typee='title_exact')
                     if similar is not None: 
-                        return similar
+                        if fuzzy:
+                            fuzzy_similars += similar
+                        else:
+                            return similar
         
         # * Search with token
         available_tokens = tools.get_unique_token(url)
@@ -185,7 +195,10 @@ class Searcher:
                 top_similar_html, top_similar_url = self.memo.crawl(top_similar_url, final_url=True)
                 top_similar_url = crawl.get_canonical(top_similar_url, top_similar_html)
                 r = top_similar_url, {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
-                return [r] if fuzzy else r
+                if fuzzy:
+                    fuzzy_similars.append(r)
+                else:
+                    return r
 
         # * Search with content
         self.similar.tfidf._clear_workingset()
@@ -207,5 +220,13 @@ class Searcher:
                 search_results = search.google_search(topN, site_spec_url=site, use_db=self.use_db)
             similar = search_once(search_results, typee='topN')
             if similar is not None: 
-                return similar
-        return None, {}
+                if fuzzy:
+                    fuzzy_similars += similar
+                else:
+                    return similar
+        if fuzzy and len(fuzzy_similars) > 0:
+            fuzzy_similars = {f[0]: f for f in reversed(fuzzy_similars)}
+            fuzzy_similars = list(fuzzy_similars.values())
+            return fuzzy_similars
+        else:
+            return None, {}

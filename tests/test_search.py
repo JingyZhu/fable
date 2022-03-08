@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.legacy.com:80/Charlotte/LegacySubPage2.asp?Page=GuestBook&PersonId=359877"
+        "http://www.adweek.com:80/aw/content_display/news/media/e3if52b9a5b28d70b335ffe8f533c42b814?pn=1"
     ]
     results = []
     fuzzy = True

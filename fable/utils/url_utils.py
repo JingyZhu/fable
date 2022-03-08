@@ -608,7 +608,7 @@ def tokenize_url(url, include_all=False, process=False):
     for i, p in enumerate(path):
         token = unquote(p)
         if process == True or (process == 'file' and i == len(path)-1):
-            # token = os.path.splitext(token)[0]
+            token = os.path.splitext(token)[0]
             token = tokenize(token, stop_words=[])
             token = ' '.join(token)
         tokens.append(token.lower())
@@ -795,11 +795,16 @@ def na_url(url):
     return False
 
 def suspicious_alias(url, alias):
+    alias_us = urlsplit(alias)
     is_home = lambda u: urlsplit(u).path in ['', '/']
     # * Non home to home page
     if not is_home(url) and is_home(alias):
         return True
-
+    # * Non HTML
+    _, ext = os.path.splitext(alias_us.path)
+    if ext.lower() in {'.pdf', '.jpeg', '.jpg', '.doc'}:
+        return True
+    return False
 
 def path_common_prefix(urls):
     """Get path common prefix of URLs"""
