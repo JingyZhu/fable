@@ -1,6 +1,7 @@
 """
 Utilities for crawling a page
 """
+from ftplib import error_temp
 from subprocess import call, check_output
 import requests
 from urllib.request import urlopen, Request
@@ -178,7 +179,8 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             time.sleep(20)
             continue
         except Exception as e:
-            logger.warn(f"Wayback index: {str(e)}")
+            error_msg = str(e).split('\n')[0]
+            logger.warn(f"Wayback index: {error_msg}")
             if not r or not wait or r.status_code not in [429, 445, 501, 503]:
                 return [], str(e)
             if count > 3:

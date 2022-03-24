@@ -75,10 +75,10 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.adweek.com:80/aw/content_display/news/media/e3if52b9a5b28d70b335ffe8f533c42b814?pn=1"
+        "http://www.ucsf.edu/alumni_friends/index.html"
     ]
     results = []
-    fuzzy = True
+    fuzzy = False
     for url in urls:
         site = he.extract(url)
         search.similar._init_titles(site)

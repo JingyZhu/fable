@@ -4,6 +4,7 @@ import os
 
 from fable import tools, histredirector, tracer, config
 from fable.utils import url_utils
+import time, json
 
 he = url_utils.HostExtractor()
 memo = tools.Memoizer()
@@ -99,7 +100,7 @@ def test_waybackalias_hist_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.iucnredlist.org/search/details.php/32941/all"
+        "http://www.anu.edu.au/giving/how-give/workplace-giving-anu-staff-members"
     ]
     for url in urls:
         print(url)
@@ -107,4 +108,23 @@ def test_waybackalias_hist_temp():
         print(alias)
         assert(alias is None)
 
-test_waybackalias_hist_temp()
+def test_waybackalias_batch_temp():
+    _init_large_obj()
+    start = time.time()
+    urls = [
+        "http://www.world-heritage-tour.org/visitSite.php?siteID=1208",
+        "http://www.world-heritage-tour.org/visitSite.php?siteID=912",
+        "http://www.world-heritage-tour.org/visitSite.php?siteID=340",
+        "http://www.world-heritage-tour.org/visitSite.php?siteID=779",
+        "http://www.world-heritage-tour.org/visitSite.php?siteID=1003",
+        "http://www.world-heritage-tour.org/visitSite.php?siteID=778",
+        "http://www.world-heritage-tour.org/visitSite.php?siteID=1077",
+        "http://www.world-heritage-tour.org/visitSite.php?siteID=113"
+    ]
+    for url in urls:
+        results = hist.wayback_alias_history(url)
+        print(json.dumps(results, indent=2))
+    end = time.time()
+    print(end - start)
+
+test_waybackalias_batch_temp()

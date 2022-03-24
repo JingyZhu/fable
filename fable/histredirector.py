@@ -32,6 +32,16 @@ class HistRedirector:
         self.corpus = corpus
         self.PS = crawl.ProxySelector(proxies)
         self.memo = memo if memo is not None else tools.Memoizer()
+        self.prefix_wayback_300s = {} # * Cache prefix searched 300 archives
+        self.crawl_cache = {} # * Cache crawled response
+    
+    def _requests_crawl(self, url):
+        if url in self.crawl_cache:
+            return self.crawl_cache[url]
+        else:
+            resp = crawl.requests_crawl(url, raw=True)
+            self.crawl_cache[url] = resp
+            return resp
     
     def _order_neighbors(self, target_url, neighbors, ts):
         """Order the neighbors so that most similar neighbor (in location/format and in time) can be tested first"""
@@ -106,15 +116,19 @@ class HistRedirector:
         # // if url_prefix.path[-1] == '/': url_dir.append(os.path.dirname(url_dir[0]))
             url_prefix = url_prefix._replace(path=os.path.join(url_dir, '*'), query='', fragment='')
             url_prefix_str = urlunsplit(url_prefix)
-            param_dict = {
-                # 'from': str(ts_year) + '0101',
-                # 'to': str(ts_year) + '1231',
-                "filter": ['statuscode:3[0-9]*', 'mimetype:text/html'],
-                # 'limit': 1000
-            }
-            neighbor, _ = crawl.wayback_index(url_prefix_str, param_dict=param_dict, total_link=True)
-            tracer.debug(f'Search for neighbors with query & year: {url_prefix_str} {ts_year}. Count: {len(neighbor)}')
-
+            if url_prefix_str not in self.prefix_wayback_300s:
+                param_dict = {
+                    # 'from': str(ts_year) + '0101',
+                    # 'to': str(ts_year) + '1231',
+                    "filter": ['statuscode:3[0-9]*', 'mimetype:text/html'],
+                    # 'limit': 1000
+                }
+                neighbor, _ = crawl.wayback_index(url_prefix_str, param_dict=param_dict, total_link=True)
+                tracer.debug(f'Search for neighbors with query & year: {url_prefix_str} {ts_year}. Count: {len(neighbor)}')
+                self.prefix_wayback_300s[url_prefix_str] = neighbor
+            else:
+                neighbor = self.prefix_wayback_300s[url_prefix_str]
+                tracer.debug(f'Cached neighbors with query & year: {url_prefix_str} {ts_year}. Count: {len(neighbor)}')
 
             # *Get closest crawled urls in the same dir, which is not target itself  
             same_netdir = lambda u: url_dir in url_utils.nondigit_dirname(urlsplit(url_utils.filter_wayback(u)).path[:-1])
@@ -134,14 +148,14 @@ class HistRedirector:
         for i in range(min(5, len(neighbors))):
             try:
                 tracer.debug(f'Choose closest neighbor: {neighbors[i][1]}')
-                response = crawl.requests_crawl(neighbors[i][1], raw=True)
+                response = self._requests_crawl(neighbors[i][1])
                 neighbor_urls = [r.url for r in response.history[1:]] + [response.url]
                 if (url_utils.url_match(neighbors[i][1], response.url, wayback=True)):
                     tracer.debug(f'No actual redirection')
                     continue
                 match = False
 
-                live_neighor_response = crawl.requests_crawl(url_utils.filter_wayback(response.url), raw=True)
+                live_neighor_response = self._requests_crawl(url_utils.filter_wayback(response.url))
                 live_neighor_url, html = live_neighor_response.url, live_neighor_response.text
                 live_neighor_url = crawl.get_canonical(live_neighor_url, html)
                 neighbor_urls.append(live_neighor_url)
@@ -282,6 +296,33 @@ class HistRedirector:
         if isinstance(alias, list):
             alias = alias[-1]
         return alias
+    
+    def wayback_alias_batch_history(self, urls, require_neighbor=False, homepage_redir=True, strict_filter=False):
+        """
+        Run wayback_alias on the list of URL. (URLs need to be under the same directory)
+        Save every individual effort on crawling responses and query wayback
+
+        Return: {url: results as wayback_alias}
+        """
+        self.prefix_wayback_300s = {}
+        self.crawl_cache = {}
+        url_history = {}
+        for url in urls:
+            alias = self.wayback_alias_history(url, require_neighbor=require_neighbor, \
+                        homepage_redir=homepage_redir, strict_filter=strict_filter)
+            url_history[url] = alias
+        return url_history
+
+    def wayback_alias_batch(self, urls, require_neighbor=False, homepage_redir=True, strict_filter=False):
+        """Wrapper for wayback_alias_batch_history"""
+        results = {}
+        url_hist = self.wayback_alias_batch_history(urls, require_neighbor=require_neighbor, \
+                        homepage_redir=homepage_redir, strict_filter=strict_filter)
+        for url, alias in url_hist.items():
+            if isinstance(alias, list):
+                alias = alias[-1]
+            results[url] = alias
+        return results
 
     def na_alias(self, alias):
         """Check whether found alias are N/A"""

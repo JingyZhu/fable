@@ -70,7 +70,7 @@ def test_backlink_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://docs.ansible.com:80/ansible/latest/raw_module.html"
+        "http://www.ucsf.edu/alumni_friends/index.html"
     ]
     for url in urls:
         site = he.extract(url)

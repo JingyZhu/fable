@@ -592,6 +592,7 @@ def tokenize_url(url, include_all=False, process=False):
                 if set True, all tokens will be tokenized
                 if set as file, only filename will be tokenized 
     """
+    url = unquote(url.lower())
     us = urlsplit(url)
     path = us.path
     query = us.query
