@@ -34,7 +34,8 @@ class HistRedirector:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.prefix_wayback_300s = {} # * Cache prefix searched 300 archives
         self.crawl_cache = {} # * Cache crawled response
-    
+        self.wayback_index_cache = defaultdict(list) # * Cache wayback indexed results
+
     def _requests_crawl(self, url):
         if url in self.crawl_cache:
             return self.crawl_cache[url]
@@ -43,6 +44,24 @@ class HistRedirector:
             self.crawl_cache[url] = resp
             return resp
     
+    def _wayback_index(self, url, non_400=True):
+        url = url_utils.url_norm(url)
+        if len(self.wayback_index_cache):
+            wayback_cache = self.wayback_index_cache.get(url, [])
+            non_400_dict = {True: '23', False: '4'}
+            wayback_cache = [wc for wc in wayback_cache if wc[2][0] in non_400_dict[non_400]]
+            return wayback_cache
+        else:
+            if non_400: # * Case for [23][00]
+                waybacks = self.memo.wayback_index(url, policy='all', all_none_400=True)
+                return waybacks
+            else: # * Live crawl
+                param_dict = {
+                    'filter': ['mimetype:text/html', 'statuscode:[4][0-9]*']
+                }
+                waybacks, _ = crawl.wayback_index(url, param_dict=param_dict)
+                return waybacks
+
     def _order_neighbors(self, target_url, neighbors, ts):
         """Order the neighbors so that most similar neighbor (in location/format and in time) can be tested first"""
         lambdas = []
@@ -195,7 +214,7 @@ class HistRedirector:
         us = urlsplit(url)
         is_homepage = us.path in ['/', ''] and not us.query
         try:
-            wayback_ts_urls = self.memo.wayback_index(url, policy='all', all_none_400=True)
+            wayback_ts_urls = self._wayback_index(url, non_400=True)
         except: return
 
         if not wayback_ts_urls or len(wayback_ts_urls) == 0:
@@ -204,12 +223,7 @@ class HistRedirector:
         wayback_ts_urls = [(_safe_dparse(c[0]), c[1]) for c in wayback_ts_urls]
 
         # * Check for 400 snapshots, any redirections after it will not be counted
-        param_dict = {
-            'url': url,
-            'filter': ['mimetype:text/html', 'statuscode:[4][0-9]*'],
-            'output': 'json'
-        }
-        broken_archives, _ = crawl.wayback_index(url, param_dict=param_dict)
+        broken_archives = self._wayback_index(url, non_400=False)
         if len(broken_archives):
             broken_ts = _safe_dparse(broken_archives[0][0])
             wayback_ts_urls = [w for w in wayback_ts_urls if w[0] < broken_ts]
@@ -300,12 +314,31 @@ class HistRedirector:
     def wayback_alias_batch_history(self, urls, require_neighbor=False, homepage_redir=True, strict_filter=False):
         """
         Run wayback_alias on the list of URL. (URLs need to be under the same directory)
-        Save every individual effort on crawling responses and query wayback
+        Save every individual effort on first wayback indexing + crawling responses + following query wayback
 
         Return: {url: results as wayback_alias}
         """
         self.prefix_wayback_300s = {}
         self.crawl_cache = {}
+
+        # * Query all 300 archives once
+        self.wayback_index_cache = defaultdict(list)
+        cur_prefix = max(urls, key=lambda x: len(x))
+        param_dict = {
+            'filter': ['mimetype:text/html'],
+            'output': 'json'
+        }
+        for url in urls:
+            url_prefix = url_utils.netloc_dir(url, exclude_index=True)
+            if len(url_prefix) < len(cur_prefix):
+                cur_prefix = url_prefix
+        cur_prefix = cur_prefix[0] + cur_prefix[1]
+        tracer.debug(f"batch_history: wayback index with prefix: {cur_prefix + '/*'}")
+        waybacks, _ = crawl.wayback_index(cur_prefix + '/*', param_dict=param_dict, total_link=True)
+        for wayback in waybacks:
+            target_url = url_utils.filter_wayback(wayback[1])
+            self.wayback_index_cache[url_utils.url_norm(target_url)].append(wayback)
+
         url_history = {}
         for url in urls:
             alias = self.wayback_alias_history(url, require_neighbor=require_neighbor, \

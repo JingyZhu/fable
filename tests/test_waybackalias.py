@@ -121,9 +121,10 @@ def test_waybackalias_batch_temp():
         "http://www.world-heritage-tour.org/visitSite.php?siteID=1077",
         "http://www.world-heritage-tour.org/visitSite.php?siteID=113"
     ]
-    for url in urls:
-        results = hist.wayback_alias_history(url)
-        print(json.dumps(results, indent=2))
+    # for url in urls:
+    #     results = hist.wayback_alias_history(url)
+    results = hist.wayback_alias_batch_history(urls)
+    print(json.dumps(results, indent=2))
     end = time.time()
     print(end - start)
 

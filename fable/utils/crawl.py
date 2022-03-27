@@ -173,6 +173,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
         try:
             r = requests.get('http://web.archive.org/cdx/search/cdx', headers=requests_header, params=params, proxies=proxies, timeout=120)
             r = r.json()
+            time.sleep(0.5)
             break
         except requests.exceptions.ConnectionError as e:
             logger.warn(f'Wayback index: unable to connect to wayback')
@@ -180,7 +181,7 @@ def wayback_index(url, param_dict={}, wait=True, total_link=False, proxies={}):
             continue
         except Exception as e:
             error_msg = str(e).split('\n')[0]
-            logger.warn(f"Wayback index: {error_msg}")
+            logger.warn(f"Wayback index: {url} {error_msg}")
             if not r or not wait or r.status_code not in [429, 445, 501, 503]:
                 return [], str(e)
             if count > 3:
