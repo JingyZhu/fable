@@ -49,6 +49,12 @@ def azure_kv(vault_name, secret_name):
     retrieved_secret = client.get_secret(secret_name)
     return retrieved_secret
 
+def new_db():
+    if 'mongo_url' not in var_dict:
+        db = eval(f"MongoClient(MONGO_HOSTNAME, username=MONGO_USER, password=MONGO_PWD, authSource='admin').{MONGO_DB}")
+    else:
+        db =  eval(f"MongoClient('{MONGO_URL}').{MONGO_DB}")
+    return db
 
 var_dict = {}
 default_var_dict = {}

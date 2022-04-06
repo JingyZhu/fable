@@ -75,10 +75,10 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.ucsf.edu/alumni_friends/index.html"
+        "http://rtfm.modx.com:80/display/xPDO20/xPDO.getObject"
     ]
     results = []
-    fuzzy = False
+    fuzzy = True
     for url in urls:
         site = he.extract(url)
         search.similar._init_titles(site)

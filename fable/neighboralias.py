@@ -16,7 +16,6 @@ from statistics import median
 from . import config, tools, searcher, discoverer2, histredirector, inferer, tracer
 from fable.utils import url_utils, crawl, sic_transit
 
-db = config.DB
 he = url_utils.HostExtractor()
 
 class NeighborAlias:
@@ -83,40 +82,63 @@ class NeighborAlias:
             uniq_neighbor_score.append(neighbor)
         return uniq_neighbor_score
 
-    def _find_alias(self, url, speed=1):
-        """speed: level of speed. 0: Only hist redir, 1: Not whole backlink, 2: Everything"""
+    def _find_alias(self, url, speed=1, spec_method=[]):
+        """
+        speed (if no spec_method): level of speed. 
+        0: Only hist redir, 
+        1: Not whole backlink, 
+        2: Everything
+
+        spec_method: specified method. speed will be abandoned
+                        use: wayback_alias, search, backlink_basic, backlink
+        """
         site = he.extract(url)
         self.similar._init_titles(site)
         self.similar2._init_titles(site)    
         results = {'hist_redir': (None, {}), 'search': (None, {}), 'backlink': (None, {})}
+        # * Decide what to run based on speed or spec_method
+        run_dict = {"hist_redir": False, 'search': False, "backlink_basic": False, "backlink": False}
+        if len(spec_method) > 0:
+            for sm in spec_method: run_dict[sm] = True
+        else:
+            run_dict['hist_redir'] = True
+            if speed > 0: 
+                run_dict['search'] = True
+                run_dict['backlink_basic'] = True
+            if speed > 1:
+                run_dict['backlink'] = True
+
         def _wayback_alias(url):
+            if not run_dict['hist_redir']:
+                return
             alias = self.histredirector.wayback_alias_history(url)
             results['hist_redir'] = alias, {'method': 'wayback_alias'}
         def _search(url):
+            if not run_dict['search']:
+                return
             alias = self.searcher.search(url, search_engine='bing')
             if alias[0] is None:
                 alias = self.searcher.search(url, search_engine='google')
             alias[1].update({'method': 'search'})
             results['search'] = alias
         def _backlink(url):
-            if speed < 2:
+            if run_dict['backlink_basic']:
                 try:
                     wayback_url = self.memo.wayback_index(url, policy='latest-rep')
                     html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
+                    alias = self.discoverer._check_archive_canonical(wayback_url, html)
+                    alias = alias, {'method': 'backlink', 'type': 'archive_canonincal'}
+                    results['backlink'] = alias
                 except:
-                    results['backlink'] = None, {'method': 'backlink', 'type': 'archive_canonincal'}
-                    return
-                alias = self.discoverer._check_archive_canonical(wayback_url, html)
-                alias = alias, {'method': 'backlink', 'type': 'archive_canonincal'}
-            else:
+                    pass
+            if run_dict['backlink']:
                 alias = self.discoverer.discover(url)
                 alias[1].update({'method': 'backlink'})
-            results['backlink'] = alias
+                results['backlink'] = alias
         threads = []
         threads.append(threading.Thread(target=_wayback_alias, args=(url,)))
-        if speed > 0:
-            threads.append(threading.Thread(target=_backlink, args=(url,)))
-            threads.append(threading.Thread(target=_search, args=(url,)))
+        threads.append(threading.Thread(target=_backlink, args=(url,)))
+        threads.append(threading.Thread(target=_search, args=(url,)))
         for i in range(len(threads)):
             threads[i].start()
         for i in range(len(threads)):
@@ -130,8 +152,8 @@ class NeighborAlias:
             return crawl.get_canonical(final_url, html)
         return
 
-    def neighbor_aliases(self, urls, title=False, tss=[], speed=1,
-                        order=['hist_redir', 'search', 'backlink'], max_keep=3):                
+    def neighbor_aliases(self, urls, title=False, tss=[], speed=1, spec_method=[],
+                        order=['hist_redir', 'search', 'backlink'], max_keep=3, status_filter='23'):                
         """
         Looking for other similar URLs' aliases
         urls: str/list. If list, randomly pick 5 (most) and look for their closed neighbors all together
@@ -154,7 +176,7 @@ class NeighborAlias:
             q = netdir[0] + url_dir + '/*'
             param_dict = {
                 'url': q,
-                'filter': ['mimetype:text/html', 'statuscode:[23][0-9]*'],
+                'filter': ['mimetype:text/html', f'statuscode:[{status_filter}][0-9]*'],
                 # 'collapse': ['urlkey'],
                 'output': 'json',
             }
@@ -205,7 +227,7 @@ class NeighborAlias:
                 continue
             total += 1
             aliases = []
-            alias_dict = self._find_alias(orig_url, speed=speed)
+            alias_dict = self._find_alias(orig_url, speed=speed, spec_method=spec_method)
             for o in order: aliases.append(alias_dict[o])
             aliases = [a for a in aliases if a[0] != None]
             if len(aliases) <= 0:

@@ -27,7 +27,6 @@ logging.setLoggerClass(tracer.tracer)
 tracer = logging.getLogger('logger')
 logging.setLoggerClass(logging.Logger)
 
-db = config.DB
 DEFAULT_CACHE = 3600*24*30
 LEAST_SITE_URLS = 20 # Least # of urls a site must try to crawl to enable title comparison
 COMMON_TITLE_SIZE = 5 # Common prefix/suffix extraction's sample number of title
@@ -246,13 +245,13 @@ class Memoizer:
     """
     Class for reducing crawl and wayback indexing
     """
-    def __init__(self, use_db=True, db=db, proxies={}):
+    def __init__(self, use_db=True, db=None, proxies={}):
         """
         # TODO: Implement non-db version. (In mem version)
         """
-        self.use_db = db
+        self.use_db = use_db
         if use_db:
-            self.db = db
+            self.db = config.new_db() if not db else db
         self.PS = crawl.ProxySelector(proxies)
     
     def crawl(self, url, final_url=False, max_retry=0, **kwargs):
@@ -594,7 +593,7 @@ class Memoizer:
 
 
 class Similar:
-    def __init__(self, use_db=True, db=db, corpus=[], threshold=0.8, short_threshold=None, corpus_size=10000):
+    def __init__(self, use_db=True, db=None, corpus=[], threshold=0.8, short_threshold=None, corpus_size=10000):
         """
         corpus_size: size of corpus to sample on: (0-250k)
         """
@@ -604,7 +603,7 @@ class Similar:
         self.threshold = threshold
         self.short_threshold = short_threshold if short_threshold else self.threshold - 0.1
         if use_db:
-            self.db =  db
+            self.db =  config.new_db() if not db else db
             corpus = self.db.corpus.aggregate([
                 {'$match':  {'$or': [{'src': 'realweb'}, {'usage': re.compile('represent')}]}},
                 {'$project': {'content': True}},
@@ -615,7 +614,6 @@ class Similar:
             self.tfidf = text_utils.TFidfStatic(corpus)
         else:
             self.tfidf = text_utils.TFidfStatic(corpus)
-            self.db = db # TODO: For testing only
         self.site = None
         self.separable = None
 
