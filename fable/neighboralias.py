@@ -152,21 +152,9 @@ class NeighborAlias:
             return crawl.get_canonical(final_url, html)
         return
 
-    def neighbor_aliases(self, urls, title=False, tss=[], speed=1, spec_method=[],
-                        order=['hist_redir', 'search', 'backlink'], max_keep=3, status_filter='23'):                
-        """
-        Looking for other similar URLs' aliases
-        urls: str/list. If list, randomly pick 5 (most) and look for their closed neighbors all together
-        speed: how much do we want to look for the alias (only hist redir --> everything)
-        order: how the aliases found by different technique should be ordered
-        max_keep: Max aliases to keep per each URL
-        """
-        if isinstance(urls, str):
-            urls = [urls]
+    def get_neighbors(self, urls, tss=[], status_filter='23'):
+        """Get neighbors (in order)"""
         url = urls[0]
-        if title:
-            site = he.extract(url)
-            self.similar._init_titles(site)
         netdir = url_utils.netloc_dir(url, exclude_index=True)
         url_dir = netdir[1]
         count = 0
@@ -193,6 +181,24 @@ class NeighborAlias:
         ts = median(tss) if len(tss) > 0 else None
         ordered_w = self._order_neighbors(urls, neighbors, ts)
         print('length ordered_w', len(ordered_w))
+        return ordered_w
+
+    def neighbor_aliases(self, urls, title=False, tss=[], speed=1, spec_method=[],
+                        order=['hist_redir', 'search', 'backlink'], max_keep=3, status_filter='23'):                
+        """
+        Looking for other similar URLs' aliases
+        urls: str/list. If list, randomly pick 5 (most) and look for their closed neighbors all together
+        speed: how much do we want to look for the alias (only hist redir --> everything)
+        order: how the aliases found by different technique should be ordered
+        max_keep: Max aliases to keep per each URL
+        """
+        if isinstance(urls, str):
+            urls = [urls]
+        url = urls[0]
+        if title:
+            site = he.extract(url)
+            self.similar._init_titles(site)
+        ordered_w = self.get_neighbors(urls, tss=tss, status_filter=status_filter)
         ordered_w = ordered_w[:min(len(ordered_w), 20)]
         
         print("Ordered_w", ordered_w)
