@@ -226,12 +226,14 @@ def text_norm(text):
     return text
 
 
-def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False):
+def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False,
+            redir_home=False):
     """
     Entry func: detect whether this url is broken
     html: Require the url to be html.
     ignore_soft_404: Whether soft-404 detection will be ignored
     ignore_soft_404_content: Ignore only content comparison soft-404
+    redir_home: If the redir is non-home page to homepage: consider wrong
 
     Return: True/False/"N/A", reason
     """
@@ -253,6 +255,11 @@ def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False
     # Ignore Homepages
     if urlsplit(url).path in ['', '/']:
         return False, "Homepage (no Soft-404 detection)"
+    # Non home to home 
+    if redir_home:
+        final_url = resp.url
+        if urlsplit(url).path not in ['', '/'] and urlsplit(final_url).path in ['', '/']:
+            return True, "Non homepage to homepage"
     try:
         soup = BeautifulSoup(resp.text, 'lxml')
         if len(soup.find_all('link', {'rel': 'canonical'})) > 0:
