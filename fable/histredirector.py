@@ -12,7 +12,7 @@ from dateutil import parser as dparser
 import datetime
 
 from . import config, tools, tracer
-from .utils import crawl, url_utils, sic_transit
+from .utils import crawl, url_utils, sic_transit, text_utils
 
 import logging
 logging.setLoggerClass(tracer.tracer)
@@ -88,7 +88,7 @@ class HistRedirector:
         # tracer.debug(uniq_neighbor_score[:10])
         return uniq_neighbor_score
 
-    def _verify_alias(self, url, new_urls, ts, homepage_redir, strict_filter, require_neighbor, seen_redir_url):
+    def _verify_alias(self, url, new_urls, ts, homepage_redir, strict_filter, require_neighbor, live_working, seen_redir_url):
         """
         Verify whether new_url is valid alias by checking:
             1. new_urls is in the same site
@@ -110,9 +110,13 @@ class HistRedirector:
             return False
 
         # *If homepage to homepage redir, no soft-404 will be checked
-        broken, _ = sic_transit.broken(new_url, html=True, ignore_soft_404_content=homepage_redir)
-        if broken: return False
-        if homepage_redir: return True
+        # ? If live_working == False, no need to check for breakeage
+        if live_working:
+            broken, _ = sic_transit.broken(new_url, html=True, ignore_soft_404_content=homepage_redir)
+            if broken: return False
+            if homepage_redir: return True
+        # ? End of live_working
+        
         if isinstance(ts, str): ts = dparser.parse(ts)
         ts_year = ts.year
 
@@ -174,10 +178,13 @@ class HistRedirector:
                     continue
                 match = False
 
-                live_neighor_response = self._requests_crawl(url_utils.filter_wayback(response.url))
-                live_neighor_url, html = live_neighor_response.url, live_neighor_response.text
-                live_neighor_url = crawl.get_canonical(live_neighor_url, html)
-                neighbor_urls.append(live_neighor_url)
+                # ? If live_working == False, no need to check for liveweb neighbor
+                if live_working:
+                    live_neighor_response = self._requests_crawl(url_utils.filter_wayback(response.url))
+                    live_neighor_url, html = live_neighor_response.url, live_neighor_response.text
+                    live_neighor_url = crawl.get_canonical(live_neighor_url, html)
+                    neighbor_urls.append(live_neighor_url)
+                # ? End of live_working
 
                 for neighbor_url in neighbor_urls:
                     for new_url in new_urls:    
@@ -187,7 +194,7 @@ class HistRedirector:
                             seen_redir_url.add(new_url)
                 matches.append(match)
                 if True in matches:
-                    tracer.debug(f'url in same dir: {neighbor[0][1]} redirects to the same url')
+                    tracer.debug(f'url in same dir: {neighbors[i][1]} redirects to the same url')
                     return False
                 if len(matches) > 1: # * Chech for two neighbors
                     break
@@ -199,13 +206,15 @@ class HistRedirector:
             return False
         return True
 
-    def wayback_alias_history(self, url, require_neighbor=False, homepage_redir=True, strict_filter=False):
+    def wayback_alias_history(self, url, require_neighbor=False, homepage_redir=True, 
+                                live_working=True, strict_filter=False):
         """
         Utilize wayback's archived redirections to find the alias/reorg of the page
         Not consider non-homepage to homepage
         If latest redirection is invalid, iterate towards earlier ones (separate by every month)
         require_neighbor: Whether a redirection neighbor is required to do the comparison
         homepage_redir: Whether redirection to homepage (from non-homepage) is considered valid
+        live_working: Require the live version of the "alias" to be working. Default set to true
         strict_filter: Not consider case where: redirected URL's path is a substring of the original one
 
         Returns: List of all redirection history to live version of alias, else None
@@ -245,58 +254,69 @@ class HistRedirector:
             try:
                 response = crawl.requests_crawl(wayback_url, raw=True)
                 wayback_url = response.url
+                # * First match check
                 match = url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
+                if match:
+                    redir_url = text_utils.parse_wayback_redir(response.text)
+                    tracer.debug(f"wayback alias: redir URL after parsing HTML: {redir_url}")
+                    wayback_url = redir_url if redir_url else wayback_url
+                    match =  url_utils.url_match(url, url_utils.filter_wayback(wayback_url))
+                    tracer.debug(f"url {url} match with redir {url_utils.filter_wayback(wayback_url)}: {match}")
             except:
                 continue
 
             # *Not match means redirections, the page could have a temporary redirections to the new page
-            if not match:
-                last_ts = ts
-                new_url = url_utils.filter_wayback(wayback_url)
-                inter_urls = [url_utils.filter_wayback(wu.url) for wu in response.history] # Check for multiple redirections
-                inter_urls.append(new_url)
-                inredir = False
-                for inter_url in inter_urls[1:]:
-                    if inter_url in seen_redir_url:
-                        inredir = True
-                if inredir:
-                    same_redir += 1
-                    continue
-                else:
-                    seen_redir_url.add(new_url)
-                inter_uss = [urlsplit(inter_url) for inter_url in inter_urls]
-                tracer.info(f'Wayback_alias: {ts}, {inter_urls}')
+            if match:
+                url_match_count += 1
+                continue
+            last_ts = ts
+            new_url = url_utils.filter_wayback(wayback_url)
+            inter_urls = [url_utils.filter_wayback(wu.url) for wu in response.history] # Check for multiple redirections
+            inter_urls.append(new_url)
+            inredir = False
+            for inter_url in inter_urls[1:]:
+                if inter_url in seen_redir_url:
+                    inredir = True
+            if inredir:
+                same_redir += 1
+                continue
+            else:
+                seen_redir_url.add(new_url)
+            inter_uss = [urlsplit(inter_url) for inter_url in inter_urls]
+            tracer.info(f'Wayback_alias: {ts}, {inter_urls}')
 
-                # *If non-home URL is redirected to homepage, it should not be a valid redirection
-                new_is_homepage = True in [inter_us.path in ['/', ''] and not inter_us.query for inter_us in inter_uss]
-                if not homepage_redir and new_is_homepage and (not is_homepage): 
-                   continue
-                
-                live_new_url = inter_urls[-1]
-                live_new_url = self.na_alias(live_new_url)
-                if live_new_url is None or url_utils.suspicious_alias(url, live_new_url):
-                    continue
-                inter_urls.append(live_new_url)
-                # //pass_check, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
-                # //ass_check = not pass_check
-                if len(inter_urls) > 1:
-                    inter_urls = inter_urls[1:]
-                pass_check = self._verify_alias(url, inter_urls, ts, homepage_redir=is_homepage and new_is_homepage, \
-                                                strict_filter=strict_filter, require_neighbor=require_neighbor, seen_redir_url=seen_redir_url)
-                if pass_check:
-                    # * Select all historical redirected URLs that are still working
-                    tracer.debug(f'found: {live_new_url}')
-                    inter_urls = list(dict.fromkeys([url_utils.url_norm(iu, ignore_scheme=True) for iu in inter_urls]))
-                    working_inter_urls = inter_urls.copy()
+            # *If non-home URL is redirected to homepage, it should not be a valid redirection
+            new_is_homepage = True in [inter_us.path in ['/', ''] and not inter_us.query for inter_us in inter_uss]
+            if not homepage_redir and new_is_homepage and (not is_homepage): 
+                continue
+            
+            live_new_url = inter_urls[-1]
+            live_new_url = self.na_alias(live_new_url, live_working)
+            if live_new_url is None or url_utils.suspicious_alias(url, live_new_url):
+                continue
+            inter_urls.append(live_new_url)
+            # //pass_check, reason = sic_transit.broken(new_url, html=True, ignore_soft_404=is_homepage and new_is_homepage)
+            # //ass_check = not pass_check
+            if len(inter_urls) > 1:
+                inter_urls = inter_urls[1:]
+            pass_check = self._verify_alias(url, inter_urls, ts, homepage_redir=is_homepage and new_is_homepage, \
+                                            strict_filter=strict_filter, require_neighbor=require_neighbor, \
+                                            live_working=live_working, seen_redir_url=seen_redir_url)
+            if pass_check:
+                # * Select all historical redirected URLs that are still working
+                tracer.debug(f'found: {live_new_url}')
+                inter_urls = list(dict.fromkeys([url_utils.url_norm(iu, ignore_scheme=True) for iu in inter_urls]))
+                working_inter_urls = inter_urls.copy()
+                # ? If live_working == False, no need to crawl the liveweb
+                if live_working:
                     for iu in inter_urls:
                         r = crawl.requests_crawl(iu, raw=True)
                         if isinstance(r, requests.Response) and \
                             (url_utils.url_match(r.url, inter_urls[-1]) or url_utils.url_match(r.url, live_new_url)):
                             break
                         working_inter_urls.pop(0)
-                    return working_inter_urls
-            else:
-                url_match_count += 1
+                # ? End of live_working
+                return working_inter_urls
         return
 
     def wayback_alias(self, url, require_neighbor=False, homepage_redir=True, strict_filter=False):
@@ -356,8 +376,14 @@ class HistRedirector:
                 alias = alias[-1]
             results[url] = alias
         return results
+    
+    def wayback_alias_any_history(self, url, require_neighbor=False, homepage_redir=True, strict_filter=False):
+        """Find for historical redirection with no requirement for live web working"""
+        alias = self.wayback_alias_history(url, require_neighbor=require_neighbor, \
+                        homepage_redir=homepage_redir, strict_filter=strict_filter, live_working=False)
+        return alias
 
-    def na_alias(self, alias):
+    def na_alias(self, alias, live_working):
         """Check whether found alias are N/A"""
         # * If today's url is not in the same site, not a valid redirection
         new_host = he.extract(alias)
@@ -365,12 +391,15 @@ class HistRedirector:
         _, new_host_url = self.memo.crawl(new_host_url, final_url=True)
         if new_host_url is None:
             new_host_url = f'http://{new_host}'
-        html, alias = self.memo.crawl(alias, final_url=True)
-        tracer.debug(f"Alias, new_host_url {alias} {new_host_url}")
-        alias = crawl.get_canonical(alias, html)
-        if not alias or he.extract(new_host_url) != he.extract(alias):
-            tracer.debug(f"no alias: {alias} not in the same site as the original site {new_host}")
-            return
+        # ? If live_working == False, no need to crawl liveweb
+        if live_working:
+            html, alias = self.memo.crawl(alias, final_url=True)
+            tracer.debug(f"Alias, new_host_url {alias} {new_host_url}")
+            alias = crawl.get_canonical(alias, html)
+            if not alias or he.extract(new_host_url) != he.extract(alias):
+                tracer.debug(f"no alias: {alias} not in the same site as the original site {new_host}")
+                return
+        # ? End of live_working
         
         # * Check if alias is a login page
         if url_utils.na_url(alias):

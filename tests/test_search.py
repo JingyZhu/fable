@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://rtfm.modx.com:80/display/xPDO20/xPDO.getObject"
+        "http://www.chanel.com:80/de_DE/parfum-schonheit/make-up/teint/teint-grundierungen.html"
     ]
     results = []
     fuzzy = True

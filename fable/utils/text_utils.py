@@ -425,6 +425,19 @@ def _try_soup(html):
     else:
         return True
 
+def parse_wayback_redir(html):
+    """Get which URL is wayback redirecting to by parsing the returned 200 HTML"""
+    able_soup = _try_soup(html)
+    if not able_soup:
+        return None
+    soup = BeautifulSoup(html, 'lxml')
+    try:
+        redir_tags = soup.find_all('p', {'class': 'impatient'})
+        redir_url = redir_tags[0].find('a')['href']
+        return redir_url
+    except:
+        return
+
 def domdistiller_extract(html, lang=None):
     """
     Insert domdistiller js into the html

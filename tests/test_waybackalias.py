@@ -100,11 +100,11 @@ def test_waybackalias_hist_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.anu.edu.au/giving/how-give/workplace-giving-anu-staff-members"
+        "http://www.saint-cannat.fr/index.php?option=com_content&view=article&id=54:le-xxd-siecle&catid=102:histoire&Itemid=215"
     ]
     for url in urls:
         print(url)
-        alias = hist.wayback_alias_history(url)
+        alias = hist.wayback_alias_any_history(url)
         print(alias)
         assert(alias is None)
 
@@ -128,4 +128,4 @@ def test_waybackalias_batch_temp():
     end = time.time()
     print(end - start)
 
-test_waybackalias_batch_temp()
+test_waybackalias_hist_temp()
