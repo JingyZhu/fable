@@ -90,4 +90,20 @@ def test_search_temp():
         # results.append({'url': url, 'alias': alias})
         # json.dump(results, open('test_search.json', 'w+'), indent=2)
 
-test_search_temp()
+def test_search_fuzzy_temp():
+    """Temporary test to avoid long waiting for other tests"""
+    _init_large_obj()
+    urls = [
+        "http://www.bankbazaar.com:80/ifsc-code/abu_dhabi_commercial_bank.html"
+    ]
+    fuzzy = True
+    for url in urls:
+        site = he.extract(url)
+        search.similar._init_titles(site)
+        alias = search.search(url, search_engine='bing', fuzzy=fuzzy)
+        if alias[0] is None:
+            alias = search.search(url, search_engine='google', fuzzy=fuzzy)
+        tr.info(f'alias: {alias}')
+        print(search.search_results(url))
+
+test_search_fuzzy_temp()

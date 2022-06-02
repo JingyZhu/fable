@@ -100,7 +100,7 @@ def test_waybackalias_hist_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.saint-cannat.fr/index.php?option=com_content&view=article&id=54:le-xxd-siecle&catid=102:histoire&Itemid=215"
+        "http://californiamaps.org/place.php?county=El+Dorado&feature=Camp+Harvey+West"
     ]
     for url in urls:
         print(url)
