@@ -66,7 +66,7 @@ class NeighborAlias:
     def _order_neighbors(self, target_urls, neighbors, ts):
         """Order the neighbors so that most similar neighbor (in location/format and in time) can be tested first"""
         all_neighbors = []
-        target_urls = random.sample(target_urls, max(5, len(target_urls)))
+        target_urls = random.sample(target_urls, min(5, len(target_urls)))
         print("Sampled target urls:", target_urls)
         for target_url in target_urls:
             all_neighbors += url_utils.order_neighbors(target_url, neighbors, urlgetter=lambda x: x[1], ts=ts)
@@ -95,9 +95,9 @@ class NeighborAlias:
         site = he.extract(url)
         self.similar._init_titles(site)
         self.similar2._init_titles(site)    
-        results = {'hist_redir': (None, {}), 'search': (None, {}), 'backlink': (None, {})}
+        results = {'hist_redir': (None, {}), 'hist_redir_any': (None, {}), 'search': (None, {}), 'backlink': (None, {})}
         # * Decide what to run based on speed or spec_method
-        run_dict = {"hist_redir": False, 'search': False, "backlink_basic": False, "backlink": False}
+        run_dict = {"hist_redir": False, "hist_redir_any": False, 'search': False, "backlink_basic": False, "backlink": False}
         if len(spec_method) > 0:
             for sm in spec_method: run_dict[sm] = True
         else:
@@ -113,6 +113,11 @@ class NeighborAlias:
                 return
             alias = self.histredirector.wayback_alias_history(url)
             results['hist_redir'] = alias, {'method': 'wayback_alias'}
+        def _wayback_any_alias(url):
+            if not run_dict['hist_redir']:
+                return
+            alias = self.histredirector.wayback_alias_any_history(url)
+            results['hist_redir_any'] = alias, {'method': 'wayback_alias_any'}
         def _search(url):
             if not run_dict['search']:
                 return
@@ -208,14 +213,15 @@ class NeighborAlias:
         print('Total candidates:', len(ordered_w))
         sheet_dict['urls'].append((url, (title,)))
         count = 0
-        total = 0
+        total = 0 # * Total #URLs that have been tried to find an alias
         for _, orig_url, _ in ordered_w:
-            if count >= 10:
+            if count >= 10 or total >= 10: # * Test at most 10 urls
                 break
             # if total > 5 and count / total < 0.1:
             #     break
             print(count, orig_url)
             broken, reason = sic_transit.broken(orig_url, html=True)
+            print("After sic transit")
             wayback_url = self.memo.wayback_index(orig_url)
             title = ''
             if wayback_url: 
@@ -231,6 +237,7 @@ class NeighborAlias:
                     count += 1
                     row += 1
                 continue
+            count += 1
             total += 1
             aliases = []
             alias_dict = self._find_alias(orig_url, speed=speed, spec_method=spec_method)

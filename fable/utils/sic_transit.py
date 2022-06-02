@@ -278,7 +278,7 @@ def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False
     for random_url in random_urls:
         # print(random_url)
         # * If original request no timeout issue, so should be this one
-        random_resp, msg = send_request(random_url, timeout=None)
+        random_resp, msg = send_request(random_url, timeout=15)
         if msg == 'Not Allowed':
             continue
         random_status, _ = get_status(random_url, random_resp, msg)

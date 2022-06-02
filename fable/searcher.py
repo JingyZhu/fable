@@ -230,3 +230,13 @@ class Searcher:
             return fuzzy_similars
         else:
             return None, {}
+    
+    def search_results(self, url, engines=['bing', 'google']):
+        """Get search results from tracer"""
+        searches = []
+        update_data = tracer.update_data.get(url)
+        for k, v in update_data.items():
+            if 'search' in k:
+                for engine in engines:
+                    searches += v[engine]
+        return list(dict.fromkeys(searches).keys())

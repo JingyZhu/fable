@@ -382,6 +382,41 @@ class HistRedirector:
         alias = self.wayback_alias_history(url, require_neighbor=require_neighbor, \
                         homepage_redir=homepage_redir, strict_filter=strict_filter, live_working=False)
         return alias
+    
+    def wayback_alias_batch_any_history(self, urls, require_neighbor=False, homepage_redir=True, strict_filter=False):
+        """
+        Run wayback_alias on the list of URL. (URLs need to be under the same directory)
+        Save every individual effort on first wayback indexing + crawling responses + following query wayback
+
+        Return: {url: results as wayback_alias}
+        """
+        self.prefix_wayback_300s = {}
+        self.crawl_cache = {}
+
+        # * Query all 300 archives once
+        self.wayback_index_cache = defaultdict(list)
+        cur_prefix = max(urls, key=lambda x: len(x))
+        param_dict = {
+            'filter': ['mimetype:text/html'],
+            'output': 'json'
+        }
+        for url in urls:
+            url_prefix = url_utils.netloc_dir(url, exclude_index=True)
+            if len(url_prefix) < len(cur_prefix):
+                cur_prefix = url_prefix
+        cur_prefix = cur_prefix[0] + cur_prefix[1]
+        tracer.debug(f"batch_history: wayback index with prefix: {cur_prefix + '/*'}")
+        waybacks, _ = crawl.wayback_index(cur_prefix + '/*', param_dict=param_dict, total_link=True)
+        for wayback in waybacks:
+            target_url = url_utils.filter_wayback(wayback[1])
+            self.wayback_index_cache[url_utils.url_norm(target_url)].append(wayback)
+
+        url_any_history = {}
+        for url in urls:
+            alias = self.wayback_alias_any_history(url, require_neighbor=require_neighbor, \
+                        homepage_redir=homepage_redir, strict_filter=strict_filter)
+            url_any_history[url] = alias
+        return url_any_history
 
     def na_alias(self, alias, live_working):
         """Check whether found alias are N/A"""
@@ -406,3 +441,25 @@ class HistRedirector:
             tracer.debug(f"no_alias: filename includes unwanted keyword")
             return
         return alias
+    
+    def get_title_atitle(self, urls):
+        """
+        For each input URL, get (title, title after historical redirection if available)
+        """
+        islist = isinstance(urls, list)
+        url_title = defaultdict(lambda: [None,None])
+        if not islist: urls = [urls]
+        for url in urls:
+            wayback_url = self.memo.wayback_index(url)
+            if wayback_url: 
+                wayback_html = self.memo.crawl(wayback_url)
+                title = self.memo.extract_title(wayback_html)
+                url_title[url][0] = title
+        url_any_alias = self.wayback_alias_batch_any_history(urls)
+        for url, any_alias in url_any_alias.items():
+            if any_alias:
+                wayback_aalias = self.memo.wayback_index(any_alias)
+                wayback_ahtml = self.memo.crawl(wayback_aalias)
+                atitle = self.memo.extract_title(wayback_ahtml)
+                url_title[url][1] = atitle
+        return url_title

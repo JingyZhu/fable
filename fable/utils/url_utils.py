@@ -592,17 +592,16 @@ def tokenize_url(url, include_all=False, process=False):
                 if set True, all tokens will be tokenized
                 if set as file, only filename will be tokenized 
     """
-    url = unquote(url.lower())
     us = urlsplit(url)
-    path = us.path
-    query = us.query
+    path = unquote(us.path.lower())
+    query = unquote(us.query.lower())
     qsl = sorted(parse_qsl(query))
     if path == '': path = '/'
     if path[-1] == '/' and path != '/': path = path[:-1]
     path = path.split('/')[1:]
     tokens = []
     if include_all:
-        host = us.netloc.split(':')[0].lower()
+        host = unquote(us.netloc.split(':')[0].lower())
         host = host.split('.')
         if host[0] == 'www': host = host[1:]
         tokens.append('.'.join(host))
