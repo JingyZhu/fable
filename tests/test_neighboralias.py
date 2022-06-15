@@ -56,24 +56,18 @@ def test_get_neighbors():
 def test_neighbor_aliases():
     _init_large_obj()
     urls = [
-        "http://sharghnewspaper.ir/News/90/10/03/20282.html",
-        "http://www.sharghnewspaper.ir/News/90/10/05/20431.html",
-        "http://sharghnewspaper.ir/News/91/05/04/37859.html",
-        "http://sharghnewspaper.ir/News/90/04/01/3223.html",
-        "http://sharghnewspaper.ir/News/90/05/30/9012.html",
-        "http://sharghnewspaper.ir/News/90/06/24/31885.html",
-        "http://sharghnewspaper.ir/News/90/04/12/4229.html",
-        "http://sharghnewspaper.ir/News/90/03/17/1804.html",
-        "http://sharghnewspaper.ir/News/90/03/31/3163.html",
-        "http://sharghnewspaper.ir/News/90/05/15/7457.html",
-        "http://sharghnewspaper.ir/News/90/04/16/4723.html",
-        "http://sharghnewspaper.ir/News/91/03/10/32986.html",
-        "http://sharghnewspaper.ir/News/90/06/28/11529.html",
-        "http://sharghnewspaper.ir/News/90/03/28/10532.html",
-        "http://sharghnewspaper.ir/News/90/06/13/10000.html"
+        "http://pc.ign.com/articles/935/935119p2.html",
+        "http://pc.ign.com/articles/159/159942p1.html",
+        "http://pc.ign.com/articles/101/1011624p1.html",
+        "http://pc.ign.com/articles/880/880936p1.html",
+        "http://pc.ign.com/articles/759/759391p1.html",
+        "http://pc.ign.com/articles/961/961510p1.html",
+        "http://pc.ign.com/articles/745/745105p1.html",
+        "http://pc.ign.com/articles/948/948555p2.html",
+        "http://pc.ign.com/articles/876/876701p1.html",
     ]
-    sheet = nba.neighbor_aliases(urls, spec_method=['search', 'backlink_basic'], status_filter='2')
+    sheet = nba.neighbor_aliases(urls, spec_method=['search_fuzzy', 'backlink_basic'], status_filter='2', max_trials=5)
     print(json.dumps(sheet, indent=2))
 
-test_get_neighbors()
-# test_neighbor_aliases()
+# test_get_neighbors()
+test_neighbor_aliases()
