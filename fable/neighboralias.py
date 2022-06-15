@@ -97,7 +97,14 @@ class NeighborAlias:
         self.similar2._init_titles(site)    
         results = {'hist_redir': (None, {}), 'hist_redir_any': (None, {}), 'search': (None, {}), 'backlink': (None, {})}
         # * Decide what to run based on speed or spec_method
-        run_dict = {"hist_redir": False, "hist_redir_any": False, 'search': False, "backlink_basic": False, "backlink": False}
+        run_dict = {
+            "hist_redir": False, 
+            "hist_redir_any": False, 
+            'search': False, 
+            "search_fuzzy": False, 
+            "backlink_basic": False, 
+            "backlink": False
+        }
         if len(spec_method) > 0:
             for sm in spec_method: run_dict[sm] = True
         else:
@@ -119,13 +126,31 @@ class NeighborAlias:
             alias = self.histredirector.wayback_alias_any_history(url)
             results['hist_redir_any'] = alias, {'method': 'wayback_alias_any'}
         def _search(url):
-            if not run_dict['search']:
-                return
-            alias = self.searcher.search(url, search_engine='bing')
-            if alias[0] is None:
-                alias = self.searcher.search(url, search_engine='google')
-            alias[1].update({'method': 'search'})
-            results['search'] = alias
+            if run_dict['search']:
+                alias = self.searcher.search(url, search_engine='bing')
+                if alias[0] is None:
+                    alias = self.searcher.search(url, search_engine='google')
+                alias[1].update({'method': 'search'})
+                results['search'] = alias
+            if run_dict['search_fuzzy']:
+                alias = self.searcher.search(url, search_engine='bing', fuzzy=True)
+                if alias[0] is None:
+                    alias = self.searcher.search(url, search_engine='google', fuzzy=True)
+                search_aliases = []
+                seen = set()
+                if alias[0]:
+                    for f in alias:
+                        reason = {'method': 'search'}
+                        reason.update(f[1])
+                        seen.add(f[0])
+                        search_aliases.append([f[0], reason])
+                all_search = self.searcher.search_results(url)
+                for ase in all_search:
+                    if ase in seen: continue
+                    seen.add(ase)
+                    search_aliases.append([ase, {'method': 'search', 'type': 'fuzzy_search'}])
+                if len(search_aliases) > 0:
+                    results['search'] = search_aliases
         def _backlink(url):
             if run_dict['backlink_basic']:
                 try:
@@ -189,7 +214,7 @@ class NeighborAlias:
         return ordered_w
 
     def neighbor_aliases(self, urls, title=False, tss=[], speed=1, spec_method=[],
-                        order=['hist_redir', 'search', 'backlink'], max_keep=3, status_filter='23'):                
+                        max_keep=None, status_filter='23', max_trials=10):                
         """
         Looking for other similar URLs' aliases
         urls: str/list. If list, randomly pick 5 (most) and look for their closed neighbors all together
@@ -212,16 +237,12 @@ class NeighborAlias:
         row = 0
         print('Total candidates:', len(ordered_w))
         sheet_dict['urls'].append((url, (title,)))
-        count = 0
         total = 0 # * Total #URLs that have been tried to find an alias
         for _, orig_url, _ in ordered_w:
-            if count >= 10 or total >= 10: # * Test at most 10 urls
+            if total >= max_trials: # * Test at most max_trials urls
                 break
-            # if total > 5 and count / total < 0.1:
-            #     break
-            print(count, orig_url)
+            print(total, orig_url)
             broken, reason = sic_transit.broken(orig_url, html=True)
-            print("After sic transit")
             wayback_url = self.memo.wayback_index(orig_url)
             title = ''
             if wayback_url: 
@@ -234,19 +255,20 @@ class NeighborAlias:
                     print(f"redirect alias: {orig_url} --> {alias}")
                     trace = {"method": "redirection", "type": "redirection"}
                     sheet_dict['examples'].append((orig_url, (title,), alias, trace))
-                    count += 1
                     row += 1
                 continue
-            count += 1
             total += 1
             aliases = []
             alias_dict = self._find_alias(orig_url, speed=speed, spec_method=spec_method)
-            for o in order: aliases.append(alias_dict[o])
-            aliases = [a for a in aliases if a[0] != None]
+            for v in alias_dict.values(): 
+                if v[0] is None: continue
+                if isinstance(v[0], list): aliases += v
+                else: aliases.append(v)
             if len(aliases) <= 0:
                 print('no alias')
                 continue
-            aliases = aliases[:min(max_keep, len(aliases))]
+            if max_keep:
+                aliases = aliases[:min(max_keep, len(aliases))]
             print(f'alias: {orig_url} --> {[a[0] for a in aliases]}')
             wayback_url = self.memo.wayback_index(orig_url)
             title = ''
@@ -257,6 +279,5 @@ class NeighborAlias:
                 sheet_dict['examples'].append((orig_url, (title,), alias, trace))
                 row += 1
             
-            count += 1
         sheet_dict['trials'] = total
         return sheet_dict

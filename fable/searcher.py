@@ -60,6 +60,7 @@ class Searcher:
             shorttext = True
 
         site = he.extract(url)
+        if not site: return None, {'reason': "Fail to get site of URL (non http URL)"}
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
         if final_url is not None:
@@ -235,6 +236,8 @@ class Searcher:
         """Get search results from tracer"""
         searches = []
         update_data = tracer.update_data.get(url)
+        if update_data is None:
+            return []
         for k, v in update_data.items():
             if 'search' in k:
                 for engine in engines:
