@@ -190,7 +190,7 @@ class Searcher:
             token_simi = [s for s in token_simi if s[0] != "" and sic_transit.broken(s[0],  html=True)[0] == False]
             if len(token_simi) == 0:
                 break
-            elif len(token_simi) == 1 or self.similar._separable(token_simi, threshold=1):
+            elif self.similar._separable(token_simi):
                 top_similar = token_simi[0]
                 top_similar_url = top_similar[0]
                 top_similar_html, top_similar_url = self.memo.crawl(top_similar_url, final_url=True)

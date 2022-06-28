@@ -148,20 +148,21 @@ class URLAlias:
             # * Check total predictable
             # * Exemption: 01 vs. 1
             if s1.isdigit() and s2.isdigit() and int(s1) == int(s2):
-                return Match.PRED, MixType.NA
+                return Match.PRED
             s1 = os.path.splitext(s1)[0]
             s2 = os.path.splitext(s2)[0]
             t1s = set(url_utils.tokenize(s1, stop_words=None))
             t2s = set(url_utils.tokenize(s2, stop_words=None))
             if len(t2s) == 0 or len(t1s) == 0:
-                return Match.UNPRED, MixType.NA
+                return Match.UNPRED
             # * One of the token is length 1 and the other is not
             if len(t2s)+len(t1s) > 2 and len(t1s)*len(t2s) in [len(t1s),len(t2s)]:
-                return Match.UNPRED, MixType.NA
+                return Match.UNPRED
             itst = t1s.intersection(t2s)
             ratio1 = len(itst) / len(t1s)
             if len(itst) / len(t2s) == 1 and ratio1 > 0.5:
-                return Match.PRED, MixType.NA
+                return Match.PRED
+            return Match.UNPRED
             # * Separate tokens into digit and non-digit
             # * If there are some digit predictable, partially pred with ID
             # * Else, str partial pred needs to have majority
@@ -175,32 +176,72 @@ class URLAlias:
                 ratio2 = len(itst) / len(t2s_alpha)
                 if ratio2 > 0.6: 
                     return Match.MIX, MixType.STR
-            return Match.UNPRED, MixType.NA
-
         
+        def _partial_predictability(s1, s2):
+            """Sequence of partial predictability of filename"""
+            seq = []
+            s1 = os.path.splitext(s1)[0]
+            s2 = os.path.splitext(s2)[0]
+            t1 = url_utils.tokenize(s1, stop_words=None)
+            t2 = url_utils.tokenize(s2, stop_words=None)
+            t1s = set(t1)
+            for t in t2:
+                if t not in t1s:
+                    match = (Match.UNPRED, MixType.NA)
+                elif not self._looks_noid(t):
+                    match = (Match.PRED, MixType.ID)
+                else:
+                    match = (Match.PRED, MixType.STR)
+                if len(seq) == 0 or tuple(seq[-1][:2]) != match:
+                    seq.append(list(match) + [int(match[0] > 0)])
+                else:
+                    seq[-1][2] += int(match[0] > 0)
+                    seq[-1][1] = max(seq[-1][1], match[1])
+            return [tuple(s) for s in seq]
+
         titles = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}| (?:{OTHER_DELIMITER_SET}) |(?:{OTHER_DELIMITER_SET})', self.title)
         if len(titles) > 1:
             titles = [' '.join(titles[:-1]), ' '.join(titles[1:])]
         
-        rules = []
-        for i, at in enumerate(alias_tokens[1:]):
+        dir_rules = []
+        file_rules = []
+        # * Directory
+        for i, at in enumerate(alias_tokens[1:-1]):
             # * Check prefix from other_pairs
             best_match = (Match.UNPRED, "")
-            if i != len(alias_tokens)-1 and _intersect_prefix(at, i):
+            if _intersect_prefix(at, i):
                 best_match = (Match.PREFIX, at)
             src_dict = {Match.PREFIX: at, Match.PRED: 'url/title', Match.MIX: 'url/title', Match.UNPRED: 'N/A'}
             # ! URL
             for ut in url_tokens[1:]:
-                match, _ = _predictability(ut, at)
+                match = _predictability(ut, at)
                 best_match = max(best_match, (match, src_dict[match]))
             # ! Title
             # src_dict = {Match.PREFIX: at, Match.PRED: 'title', Match.MIX: 'title', Match.UNPRED: 'N/A'}
             if best_match[0] < Match.PREFIX:
                 for title in titles:
-                    match, _ = _predictability(title, at)
+                    match = _predictability(title, at)
                     best_match = max(best_match, (match, src_dict[match]))
-            rules.append(best_match)
-        return (alias_tokens[0], rules)
+            dir_rules.append(best_match)
+        # * Filename
+        def _partial_rank(x):
+            """Max matched type, matched"""
+            return max([(xx[0], xx[1]) for xx in x]), sum([xx[-1] for xx in x])
+        
+        file = alias_tokens[-1]
+        best_match = [(0, 0, 0)] # * Pred/Unpred, PredType, Source, Num_tokens
+        src_dict = {Match.PRED: 'url/title', Match.MIX: 'url/title', Match.UNPRED: 'N/A'}
+        # ! URL
+        for ut in url_tokens[1:]:
+            match = _partial_predictability(ut, file)
+            best_match = max(best_match, match, key=_partial_rank)
+        # ! Title
+        # src_dict = {Match.PREFIX: at, Match.PRED: 'title', Match.MIX: 'title', Match.UNPRED: 'N/A'}
+        for title in titles:
+            match = _partial_predictability(title, file)
+            best_match = max(best_match, match, key=_partial_rank)
+        file_rules = [b[:2] for b in best_match]
+        return (alias_tokens[0], dir_rules, file_rules)
 
 class Verifier:
     def __init__(self):
@@ -359,11 +400,11 @@ class Verifier:
                     reason.remove('search:fuzzy_search')
                 ua = URLAlias(turl, tcand, {}, title=title)
                 rule = ua.transformation_rules(others_pairs=all_pairs)
-                rule = (rule[0], tuple([r for r in rule[1]]))
+                rule = (rule[0], tuple([r for r in rule[1]]), tuple([r for r in rule[2]]))
                 ua_tuple = list(ua.to_tuple())
                 ua_tuple[-1] = '+'.join(reason)
                 cluster[rule].append(ua_tuple)
-        cluster = [{'values': v, "rule": [k[0],list(k[1])]} for k, v in cluster.items()]
+        cluster = [{'values': v, "rule": [k[0],list(k[1]),list(k[2])]} for k, v in cluster.items()]
         return cluster
      
     def _rank_cluster(self, cluster):
@@ -374,8 +415,8 @@ class Verifier:
         for c in cluster:
             seen_orig_url = set()
             seen_hints = set()
-            pred = __predictability(c['rule'][1])
-            if pred <= -len(c['rule'][1]):
+            pred = __predictability(c['rule'][1]) + __predictability(c['rule'][2])
+            if pred <= -len(c['rule'][1])-len(c['rule'][2]):
                     continue 
             for url, cand, method in c['values']:
                 seen_orig_url.add(url)
@@ -392,18 +433,19 @@ class Verifier:
             """Whether r1 is more trustable than r2"""
             if r1[0] != r2[0]:
                 return False
-            r1, r2 = r1[1], r2[1]
-            if len(r1) != len(r2):
+            file_r1, file_r2 = r1[2], r2[2]
+            if max([tuple(f[:2]) for f in file_r1]) < max([tuple(f[:2]) for f in file_r2]):
                 return False
-            its = len(r1)
-            good = True
+            dir_r1, dir_r2 = r1[1], r2[1]
+            if len(dir_r1) != len(dir_r2):
+                return False
+            its = len(dir_r1)
+            dir_good = True
             for i in range(-1, -its-1, -1):
-                if r1[i][:2] == r2[i][:2]:
-                    continue
-                if r1[i][:2] < r2[i][:2]:
-                    good = False
+                if dir_r1[i][:2] < dir_r2[i][:2]:
+                    dir_good = False
                     break
-            return good
+            return dir_good
         final_clusters = [top_cluster]
         for c in cluster[1:]:
             if __more_trustable(c['rule'], top_cluster['rule']):
@@ -477,7 +519,7 @@ class Verifier:
                 if matched == ['fuzzy_search']:
                     if cand_seen[ocand] > 1:
                         continue
-                    if tuple(c['rule'][1][-1]) < (1, ""):
+                    if tuple(c['rule'][1][-1]) < (1, 0, ""):
                         continue
                 valid_cands.append((ocand, method_str))
         

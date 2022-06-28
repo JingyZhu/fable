@@ -94,7 +94,7 @@ def test_search_fuzzy_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.bankbazaar.com:80/ifsc-code/abu_dhabi_commercial_bank.html"
+        "http://gatorzone.com/story.php?html=football/news/20080324032900.html&id=13686&sport=footb"
     ]
     fuzzy = True
     for url in urls:
