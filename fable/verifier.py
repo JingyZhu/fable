@@ -1,4 +1,6 @@
 import os
+
+from sqlalchemy import alias
 from .utils import url_utils
 from collections import defaultdict
 import json, regex
@@ -10,11 +12,13 @@ VERTICAL_BAR_SET = '\u007C\u00A6\u2016\uFF5C\u2225\u01C0\u01C1\u2223\u2502\u0964
 OTHER_DELIMITER_SET = '::'
 
 def _throw_unuseful_query(url):
-    return url
+    # return url
     url = url_utils.url_norm(url)
     us = urlsplit(url)
     filename, _ = os.path.splitext(us.path.split('/')[-1])
-    if us.query and len(filename) > 5: # ? 5 enough?
+    # if us.query and len(filename) > 5: # ? 5 enough?
+    #     us = us._replace(query='')
+    if us.query and 'print' in us.query:
         us = us._replace(query='')
     return urlunsplit(us)
 
@@ -129,7 +133,7 @@ class URLAlias:
     def transformation_rules(self, others_pairs=None):
         """Return: What rule?"""
         if not others_pairs: others_pairs = self.others_pairs
-        others_pairs = [o for o in others_pairs if o.to_tuple()[:2] != self.to_tuple()[:2]]
+        others_pairs = [o for o in others_pairs if o.to_tuple()[:1] != self.to_tuple()[:1]]
         
         url_tokens = url_utils.tokenize_url(self.url, include_all=True, process=False)
         alias_tokens = url_utils.tokenize_url(self.norm_alias, include_all=True, process=False)
@@ -151,8 +155,9 @@ class URLAlias:
                 return Match.PRED, MixType.NA
             s1 = os.path.splitext(s1)[0]
             s2 = os.path.splitext(s2)[0]
-            t1s = set(url_utils.tokenize(s1, stop_words=None))
-            t2s = set(url_utils.tokenize(s2, stop_words=None))
+            t1 = url_utils.tokenize(s1, stop_words=None)
+            t2 = url_utils.tokenize(s2, stop_words=None)
+            t1s, t2s = set(t1), set(t2)
             if len(t2s) == 0 or len(t1s) == 0:
                 return Match.UNPRED, MixType.NA
             # * One of the token is length 1 and the other is not
@@ -165,16 +170,24 @@ class URLAlias:
             # * Separate tokens into digit and non-digit
             # * If there are some digit predictable, partially pred with ID
             # * Else, str partial pred needs to have majority
-            for token in itst:
-                if token.isdigit() and not self._looks_noid(token):
-                    return Match.MIX, MixType.ID
-            t1s_alpha = set([t for t in t1s if t.isalpha()])
-            t2s_alpha = set([t for t in t2s if t.isalpha()])
-            if len(t2s_alpha) > 0:
-                itst = t1s_alpha.intersection(t2s_alpha)
-                ratio2 = len(itst) / len(t2s_alpha)
-                if ratio2 > 0.6: 
-                    return Match.MIX, MixType.STR
+            ngram = min(2, len(t1s), len(t2s))
+            # for token in itst:
+            #     if token.isdigit() and not self._looks_noid(token):
+            #         return Match.MIX, MixType.ID
+            # t1s_alpha = set([t for t in t1s if t.isalpha()])
+            # t2s_alpha = set([t for t in t2s if t.isalpha()])
+            t1s_ngram = set([tuple(t1[i:i+ngram]) for i in range(len(t1s)+1-ngram)])
+            t2s_ngram = set([tuple(t2[i:i+ngram]) for i in range(len(t2s)+1-ngram)])
+            # if len(t2s_alpha) > 0:
+            #     itst = t1s_alpha.intersection(t2s_alpha)
+            #     ratio2 = len(itst) / len(t2s_alpha)
+            #     if ratio2 > 0.6: 
+                    # return Match.MIX, MixType.STR
+            itst = t1s_ngram.intersection(t2s_ngram)
+            ratio2 = len(itst) / len(t2s_ngram)
+            # print(s1, s2, len(itst), len(t2s_ngram), ratio2)
+            if ratio2 > 0.5:
+                return Match.MIX, MixType.STR
             return Match.UNPRED, MixType.NA
 
         
@@ -183,7 +196,8 @@ class URLAlias:
             titles = [' '.join(titles[:-1]), ' '.join(titles[1:])]
         
         rules = []
-        for i, at in enumerate(alias_tokens[1:]):
+        hostname, alias_tokens = alias_tokens[0], alias_tokens[1:]
+        for i, at in enumerate(alias_tokens):
             # * Check prefix from other_pairs
             best_match = (Match.UNPRED, "")
             if i != len(alias_tokens)-1 and _intersect_prefix(at, i):
@@ -200,7 +214,7 @@ class URLAlias:
                     match, _ = _predictability(title, at)
                     best_match = max(best_match, (match, src_dict[match]))
             rules.append(best_match)
-        return (alias_tokens[0], rules)
+        return (hostname, rules)
 
 class Verifier:
     def __init__(self):
@@ -227,7 +241,8 @@ class Verifier:
         return f"{reason['method']}:{reason.get('type', '')}"
 
     def _url_norm(self, url):
-        return url_utils.url_norm(url, ignore_scheme=True, trim_www=True, trim_slash=True)
+        url = url_utils.url_norm(url, ignore_scheme=True, trim_www=True, trim_slash=True)
+        return _throw_unuseful_query(url.lower())
 
     def add_aliasexample(self, aliasexmaple, clear=False):
         """
@@ -288,7 +303,7 @@ class Verifier:
         self.url_title[url] = gt_obj.get('title', '')
         # * Search
         search_aliases = gt_obj.get('search', None)
-        if search_aliases is not None:
+        if search_aliases:
             if not isinstance(search_aliases[0], list): search_aliases = [search_aliases]
             for search_alias in search_aliases:
                 if search_alias[0]:
@@ -310,6 +325,8 @@ class Verifier:
         for example in examples:
             ex_url = example[0]
             ex_cand = example[2]
+            # TODO Currently only consider the lastest candidate version. May change in the future
+            if isinstance(ex_cand, list): ex_cand = ex_cand[-1]
             ex_title = example[1][0]
             self.url_title[ex_url] = ex_title
             self.url_candidates[ex_url][ex_cand].add(self._method_str(example[3]))  
@@ -329,7 +346,6 @@ class Verifier:
         for url, cands in url_candidates.items():
             for cand, v in cands.items():
                 if len(v) > 1 or 'search:fuzzy_search' not in v:
-                    url = _throw_unuseful_query(url)
                     cand_urls[cand].add(url)
         for url, cands in url_candidates.items():
             for cand, v in cands.items():
@@ -385,9 +401,9 @@ class Verifier:
             hint_score = sum([self.valid_hints[s] for s in seen_hints])
             if hint_score > 0:
                 cluster_score.append((c, (hint_score, pred, len(seen_orig_url))))
-        return [c[0] for c in sorted(cluster_score, key=lambda x: x[1], reverse=True)]
+        return sorted(cluster_score, key=lambda x: x[1], reverse=True)
 
-    def _satisfied_cluster(self, cluster, top_cluster):
+    def _satisfied_cluster(self, cluster, top_clusters):
         def __more_trustable(r1, r2):
             """Whether r1 is more trustable than r2"""
             if r1[0] != r2[0]:
@@ -404,10 +420,12 @@ class Verifier:
                     good = False
                     break
             return good
-        final_clusters = [top_cluster]
+        final_clusters = top_clusters
         for c in cluster[1:]:
-            if __more_trustable(c['rule'], top_cluster['rule']):
-                final_clusters.append(c)
+            for top_cluster in top_clusters:
+                if __more_trustable(c['rule'], top_cluster['rule']):
+                    final_clusters.append(c)
+                    break
         return final_clusters
 
     def _valid_cluster(self, cluster, target_url):
@@ -416,15 +434,15 @@ class Verifier:
         cand_url = defaultdict(set)
         def _norm(url):
             url = _throw_unuseful_query(url)
-            return url_utils.url_norm(url.lower(), ignore_scheme=True, trim_slash=True)
+            return url_utils.url_norm(url, ignore_scheme=True, trim_slash=True)
 
         valid = False
         for url, cand, method in cluster['values']:
             # * Archive canonical considered as valid automatically
-            if url == target_url and 'archive_canonical' in method:
+            if url == target_url and ('archive_canonical' in method):
                 valid = True
             url = _norm(url)
-            cand = url_utils.url_norm(cand.lower(), ignore_scheme=True, trim_www=True, trim_slash=True)
+            cand = url_utils.url_norm(cand, ignore_scheme=True, trim_www=True, trim_slash=True)
             url_cand[url].add(cand)
             cand_url[cand].add(url)
 
@@ -455,7 +473,12 @@ class Verifier:
             self._clusters = cluster
             if len(cluster) > 0:
                 top_cluster = cluster[0]
-                self.s_clusters = self._satisfied_cluster(cluster, top_cluster)
+                top_clusters = [top_cluster[0]]
+                for c, score in cluster[1:]:
+                    if score[1] >= top_cluster[1][1]: top_clusters.append(c)
+                    else: break # TODO: Need this policy?
+                cluster = [c[0] for c in cluster[len(top_clusters):]]
+                self.s_clusters = self._satisfied_cluster(cluster, top_clusters)
             else:
                 self.s_clusters = []
         s_clusters = [s for s in self.s_clusters if self._valid_cluster(s, url)]
