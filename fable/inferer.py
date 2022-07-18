@@ -2,7 +2,7 @@ from xmlrpc.client import ServerProxy
 import pandas as pd
 import numpy as np
 import pickle
-from urllib.parse import urlsplit, parse_qsl, parse_qs
+from urllib.parse import urlsplit, parse_qsl, parse_qs, unquote
 from collections import defaultdict, OrderedDict, Counter
 import string
 import time
@@ -11,7 +11,7 @@ import os
 import regex
 import random
 
-from . import config, tools, tracer
+from . import config, tools, tracer, verifier
 from .utils import crawl, sic_transit, url_utils
 
 import logging
@@ -109,33 +109,48 @@ class Inferer:
         """
         dedup_set = set()
         new_examples = []
+        # * Dedup examples
         for example in examples:
-            url, alias = url_utils.url_norm(example[0]), url_utils.url_norm(example[2])
+            url, alias = url_utils.url_norm(example[0], ignore_scheme=True), url_utils.url_norm(example[2], ignore_scheme=True)
             if (url, alias) in dedup_set:
                 continue
             new_examples.append(example)
             dedup_set.add((url, alias))
         delta_examples = defaultdict(list)
+        # for example in new_examples:
+        #     url, alias = example[0], example[2]
+        #     diff = url_utils.url_alias_diff(url, alias)
+        #     delta_examples[diff].append(example)
+        # delta_examples = [v for v in delta_examples.values()]
+        # max_example_len = max([len(v) for v in delta_examples])
+        # if max_example_len > 1:
+        #     delta_examples = [d for d in delta_examples if len(d) > 1]
+        # delta_examples.sort(reverse=True, key=lambda x: len(x))
+        # all_examples = []
+        # # * Add examples with same delta + alias with the same netloc_dir in the front
+        # for delta_example in delta_examples:
+        #     nd_alias = defaultdict(list)
+        #     for de in delta_example:
+        #         nd = url_utils.netloc_dir(de[2])
+        #         nd_alias[nd].append(de)
+        #     nd_alias = [d for d in nd_alias.values() if len(d) > 1]
+        #     nd_alias.sort(reverse=True, key=lambda x: len(x))
+        #     all_examples += nd_alias
+        # all_examples += delta_examples
+        vr = verifier.Verifier()
         for example in new_examples:
-            url, alias = example[0], example[2]
-            diff = url_utils.url_alias_diff(url, alias)
-            delta_examples[diff].append(example)
-        delta_examples = [v for v in delta_examples.values()]
-        max_example_len = max([len(v) for v in delta_examples])
-        if max_example_len > 1:
-            delta_examples = [d for d in delta_examples if len(d) > 1]
-        delta_examples.sort(reverse=True, key=lambda x: len(x))
+            url, title, alias = example[0], example[1][0], example[2]
+            vr.add_urlalias(url, alias, title, {'type':'dummy', 'method': 'dummy'})
+        clusters = vr._gen_cluster()
         all_examples = []
-        # * Add examples with same delta + alias with the same netloc_dir in the front
-        for delta_example in delta_examples:
-            nd_alias = defaultdict(list)
-            for de in delta_example:
-                nd = url_utils.netloc_dir(de[2])
-                nd_alias[nd].append(de)
-            nd_alias = [d for d in nd_alias.values() if len(d) > 1]
-            nd_alias.sort(reverse=True, key=lambda x: len(x))
-            all_examples += nd_alias
-        all_examples += delta_examples
+        for cluster in clusters:
+            urlalias = cluster['values']
+            examples = []
+            for v in urlalias:
+                title = vr.url_title[v[0]]
+                url, alias = vr._normurl_map.get(v[0], v[0]), vr._normurl_map.get(v[1], v[1])
+                examples.append((url, (title,), alias))
+            all_examples.append(examples)
         return all_examples
 
     def infer(self, examples, urls):
@@ -163,6 +178,7 @@ class Inferer:
         
         def insert_url(sheet, row, url):
             """Insert the original (broken) URL part into the sheet"""
+            url = unquote(url)
             us = urlsplit(url)
             path_list = list(filter(lambda x: x != '', us.path.split('/')))
             url_inputs = [normal_hostname(us.netloc)] + path_list
@@ -188,6 +204,7 @@ class Inferer:
         
         def insert_reorg(sheet, row, reorg):
             """Insert alias part into the sheet"""
+            reorg = unquote(reorg)
             us_reorg = urlsplit(reorg)
             path_reorg_list = list(filter(lambda x: x != '', us_reorg.path.split('/')))
             url_reorg_inputs = [f"http://{normal_hostname(us_reorg.netloc)}"] + path_reorg_list

@@ -13,7 +13,6 @@ OTHER_DELIMITER_SET = '::'
 
 def _throw_unuseful_query(url):
     # return url
-    url = url_utils.url_norm(url)
     us = urlsplit(url)
     filename, _ = os.path.splitext(us.path.split('/')[-1])
     # if us.query and len(filename) > 5: # ? 5 enough?
@@ -38,7 +37,7 @@ class URLAlias:
     def __init__(self, url, alias, reason, title=""):
         self.url = url
         self.alias = alias
-        self.norm_alias = url_utils.url_norm(alias, trim_slash=True)
+        self.norm_alias = url_utils.url_norm(alias, ignore_scheme=True, trim_slash=True)
         self.method = reason.get('method', '')
         self.matched = reason.get('type', '')
         self.title = title
@@ -151,10 +150,17 @@ class URLAlias:
             """Return matched"""
             # * Check total predictable
             # * Exemption: 01 vs. 1
-            if s1.isdigit() and s2.isdigit() and int(s1) == int(s2):
-                return Match.PRED, MixType.NA
-            s1 = os.path.splitext(s1)[0]
-            s2 = os.path.splitext(s2)[0]
+            def _filter_ext(s):
+                ss = os.path.splitext(s)
+                if len(ss[1]) < 6:
+                    return ss[0]
+                else:
+                    return s
+            # ! TEMP Commented
+            # if s1.isdigit() and s2.isdigit() and int(s1) == int(s2):
+            #     return Match.PRED, MixType.NA
+            s1 = _filter_ext(s1)
+            s2 = _filter_ext(s2)
             t1 = url_utils.tokenize(s1, stop_words=None)
             t2 = url_utils.tokenize(s2, stop_words=None)
             t1s, t2s = set(t1), set(t2)
@@ -165,6 +171,7 @@ class URLAlias:
                 return Match.UNPRED, MixType.NA
             itst = t1s.intersection(t2s)
             ratio1 = len(itst) / len(t1s)
+            # print(s1, s2, ratio1, len(itst) / len(t2s))
             if len(itst) / len(t2s) == 1 and ratio1 > 0.5:
                 return Match.PRED, MixType.NA
             # * Separate tokens into digit and non-digit
@@ -193,7 +200,7 @@ class URLAlias:
         
         titles = regex.split(f'_| [{VERTICAL_BAR_SET}] |[{VERTICAL_BAR_SET}]| \p{{Pd}} |\p{{Pd}}| (?:{OTHER_DELIMITER_SET}) |(?:{OTHER_DELIMITER_SET})', self.title)
         if len(titles) > 1:
-            titles = [' '.join(titles[:-1]), ' '.join(titles[1:])]
+            titles = [' '.join(titles[:-1]), ' '.join(titles[1:]), ' '.join(titles)]
         
         rules = []
         hostname, alias_tokens = alias_tokens[0], alias_tokens[1:]
@@ -217,19 +224,21 @@ class URLAlias:
         return (hostname, rules)
 
 class Verifier:
-    def __init__(self):
+    def __init__(self, debug=0):
         self.url_candidates = defaultdict(lambda: defaultdict(set)) # * {url: {cand: {matched}}}
         self.url_title = {}
         self.s_clusters = None
         self._clusters = None
+        self._normurl_map = {}
         self.valid_hints = {
             'archive_canonical':10 , 
             'title':1, 'content':1, 
             'wayback_alias':2, 
             'token':0.5, 
             "anchor": 1, 
-            'redirection': 2
+            # 'redirection': 2
         }
+        self._debug = debug
 
     def clear(self):
         self.url_candidates = defaultdict(lambda: defaultdict(set)) # * {url: {cand: {matched}}}
@@ -241,8 +250,17 @@ class Verifier:
         return f"{reason['method']}:{reason.get('type', '')}"
 
     def _url_norm(self, url):
-        url = url_utils.url_norm(url, ignore_scheme=True, trim_www=True, trim_slash=True)
-        return _throw_unuseful_query(url.lower())
+        normed_url = url_utils.url_norm(url, ignore_scheme=True, trim_www=True, trim_slash=True)
+        normed_url = _throw_unuseful_query(normed_url.lower())
+        self._normurl_map[normed_url] = url
+        return normed_url
+
+    def add_urlalias(self, url, alias, title, reason):
+        url = self._url_norm(url)
+        cand = self._url_norm(alias)
+        method = self._method_str(reason)
+        self.url_candidates[url][cand].add(method)
+        self.url_title[url] = title
 
     def add_aliasexample(self, aliasexmaple, clear=False):
         """
@@ -262,7 +280,7 @@ class Verifier:
             url = self._url_norm(url)
             cand = self._url_norm(cand)
 
-            title, reason = obj[1][0], obj[3]
+            title, reason = obj[1][0], obj[3].copy()
             # * Patch for token match filters
             if reason.get('type') == "token":
                 if reason.get('value', 0) < 0.8:
@@ -270,6 +288,11 @@ class Verifier:
                 matched_token = reason['matched_token']
                 if len(matched_token.split(' ')) <= 1:
                     continue
+            if self._debug:
+                # ! TEMP For testing purpose
+                if reason['method'] != 'wayback_alias':
+                    reason['type'] = 'fuzzy_search'
+                # ! End of temp
             method = self._method_str(reason)
             self.url_candidates[url][cand].add(method)
             self.url_title[url] = title
@@ -284,10 +307,15 @@ class Verifier:
             url = self._url_norm(url)
             cand = self._url_norm(cand)
 
-            title, reason = obj[1][0], obj[3]
+            title, reason = obj[1][0], obj[3].copy()
             # * Patch for low value matched tokens
             if reason.get('type') == "token" and reason.get('value', 0) < 0.8:
                 continue
+            if self._debug:
+                # ! TEMP For testing purpose
+                if reason['method'] != 'wayback_alias':
+                    reason['type'] = 'fuzzy_search'
+                # ! End of temp
             method = self._method_str(reason)
             self.url_candidates[url][cand].add(method)
             self.url_title[url] = title
@@ -300,6 +328,7 @@ class Verifier:
         if clear:
             self.clear()
         url = gt_obj['url']
+        url = self._url_norm(url)
         self.url_title[url] = gt_obj.get('title', '')
         # * Search
         search_aliases = gt_obj.get('search', None)
@@ -308,28 +337,57 @@ class Verifier:
             for search_alias in search_aliases:
                 if search_alias[0]:
                     search_alias[1]['method'] = 'search'
-                    self.url_candidates[url][search_alias[0]].add(self._method_str(search_alias[1]))
+                    reason = search_alias[1].copy()
+                    if self._debug:
+                        # ! TEMP For testing purpose
+                        if reason['method'] != 'wayback_alias':
+                            reason['type'] = 'fuzzy_search'
+                        # ! End of temp
+                    alias = self._url_norm(search_alias[0])
+                    self.url_candidates[url][alias].add(self._method_str(reason))
         # * Backlink
         backlink_alias = gt_obj.get('backlink', None)
         if backlink_alias is not None and backlink_alias[0] is not None:
             backlink_alias[1]['method'] = 'backlink'
-            self.url_candidates[url][backlink_alias[0]].add(self._method_str(backlink_alias[1]))
+            reason = backlink_alias[1].copy()
+            if self._debug:
+                # ! TEMP For testing purpose
+                if reason['method'] != 'wayback_alias':
+                    reason['type'] = 'fuzzy_search'
+                # ! End of temp
+            alias = self._url_norm(backlink_alias[0])
+            self.url_candidates[url][alias].add(self._method_str(reason))
         # * Inference
         infer_alias = gt_obj.get('inference', None)
         if infer_alias is not None and infer_alias[0] is not None:
             infer_alias[1]['method'] = 'inference'
-            self.url_candidates[url][infer_alias[0]].add(self._method_str(infer_alias[1]))
+            reason = infer_alias[1].copy()
+            if self._debug:
+                # ! TEMP For testing purpose
+                if reason['method'] != 'wayback_alias':
+                    reason['type'] = 'fuzzy_search'
+                # ! End of temp
+            alias = self._url_norm(infer_alias[0])
+            self.url_candidates[url][alias].add(self._method_str(reason))
         
         # * Prepare for examples
         examples = gt_obj.get('examples', [])
         for example in examples:
             ex_url = example[0]
             ex_cand = example[2]
+            ex_url = self._url_norm(ex_url)
+            ex_cand = self._url_norm(ex_cand)
             # TODO Currently only consider the lastest candidate version. May change in the future
             if isinstance(ex_cand, list): ex_cand = ex_cand[-1]
             ex_title = example[1][0]
             self.url_title[ex_url] = ex_title
-            self.url_candidates[ex_url][ex_cand].add(self._method_str(example[3]))  
+            reason = example[3].copy()
+            if self._debug:
+                # ! TEMP For testing purpose
+                if reason['method'] != 'wayback_alias':
+                    reason['type'] = 'fuzzy_search'
+                # ! End of temp
+            self.url_candidates[ex_url][ex_cand].add(self._method_str(reason))  
 
     def _filter_suspicious_cands(self):
         new_url_candidates = defaultdict(lambda: defaultdict(set))
@@ -384,7 +442,11 @@ class Verifier:
      
     def _rank_cluster(self, cluster):
         def __predictability(rule):
-            pred = len([r for r in rule if r[0] == 0])
+            if self._debug:
+                length = len(rule)
+                pred = sum([(i+1)/length for i, r in enumerate(rule) if r[0] == 0])
+            else:
+                pred = len([r for r in rule if r[0] == 0])
             return -pred
         cluster_score = []
         for c in cluster:
@@ -399,8 +461,20 @@ class Verifier:
                 method = [m.split(":")[0] for m in method] + [m.split(":")[1] for m in method]
                 seen_hints.update(set(self.valid_hints.keys()).intersection(method))
             hint_score = sum([self.valid_hints[s] for s in seen_hints])
-            if hint_score > 0:
+            if self._debug:
+                # ! TEMP
+                if len(c['values']) == 1:
+                    continue
+                cand_url = defaultdict(set)
+                for url, cand, method in c['values']:
+                    cand_url[cand].add(url)
+                if max([len(v) for v in cand_url.values()]) > 1:
+                    continue
                 cluster_score.append((c, (hint_score, pred, len(seen_orig_url))))
+                # ! END OF TEMP            
+            else:
+                if hint_score > 0:
+                    cluster_score.append((c, (hint_score, pred, len(seen_orig_url))))
         return sorted(cluster_score, key=lambda x: x[1], reverse=True)
 
     def _satisfied_cluster(self, cluster, top_clusters):
@@ -502,6 +576,7 @@ class Verifier:
                         continue
                     if tuple(c['rule'][1][-1]) < (1, ""):
                         continue
+                ocand = self._normurl_map.get(ocand, ocand)
                 valid_cands.append((ocand, method_str))
         
         cred = lambda x: sum([self.valid_hints.get(xx.split(':')[1], 0) for xx in x[1]])

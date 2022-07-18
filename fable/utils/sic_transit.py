@@ -43,6 +43,7 @@ def send_request(url, timeout=15):
         return None, 'Not Allowed'
     try:
         resp = requests.get(url, headers=requests_header, timeout=timeout, stream=True)
+        # resp = requests.get(url, headers=requests_header, timeout=timeout, stream=True, verify=False)
         headers = {k.lower(): v.lower() for k, v in resp.headers.items()}
         content_type = headers['content-type'] if 'content-type' in headers else ''
         if 'html' in content_type:
