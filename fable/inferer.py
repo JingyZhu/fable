@@ -194,6 +194,8 @@ class Inferer:
 
         def insert_metadata(sheet, row, meta, expand=True):
             """Expand: Whether to expand the metadata into different form"""
+            if ' '.join(meta) == '':
+                return sheet
             for j, meta_piece in enumerate(meta):
                 if expand:
                     sheet.loc[row, f'Meta{j}'] = normal(meta_piece)
@@ -248,6 +250,8 @@ class Inferer:
         
         # * RPC formatted dataframe to FlashFill
         sheets = [sheet1, sheet2, sheet3]
+        sheets = [s for s in sheets if s.isnull().values.any()]
+        # print("SHEET LENGTH", (len(sheets)))
         sheets = [pickle.dumps({
             'sheet_name': f'Sheet{i+1}',
             'csv': sheet

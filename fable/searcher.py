@@ -40,6 +40,43 @@ class Searcher:
                             fuzzy=True: [(match, reason)]
         """
         global he
+
+        def _token_search():
+            nonlocal fuzzy_similars
+            available_tokens = tools.get_unique_token(url)
+            tracer.token(url, available_tokens)
+            search_results = []
+            for i, token in enumerate(available_tokens):
+                token = os.path.splitext(token)[0]
+                token = regex.split("[^a-zA-Z0-9]", token)
+                token = ' '.join(token)
+                if search_engine == 'bing':
+                    # * Bing
+                    search_results = search.bing_search(f'instreamset:url:{token} site:{site}', use_db=self.use_db)
+                    tracer.search_results(url, 'bing', f"token_{i}", search_results)
+                else:
+                    # * Google
+                    search_results = search.google_search(f'inurl:{token}', site_spec_url=site, use_db=self.use_db)
+                    tracer.search_results(url, 'google', f"token_{i}", search_results)
+                search_tokens = {}
+                for sr in search_results:
+                    tokens = url_utils.tokenize_url(sr, process=True)
+                    search_tokens[sr] = tokens
+                token_simi = self.similar.token_similar(url, token, search_tokens, shorttext=shorttext)[:2]
+                token_simi = [s for s in token_simi if s[0] != "" and sic_transit.broken(s[0],  html=True)[0] == False]
+                if len(token_simi) == 0:
+                    break
+                elif self.similar._separable(token_simi):
+                    top_similar = token_simi[0]
+                    top_similar_url = top_similar[0]
+                    top_similar_html, top_similar_url = self.memo.crawl(top_similar_url, final_url=True)
+                    top_similar_url = crawl.get_canonical(top_similar_url, top_similar_html)
+                    r = top_similar_url, {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
+                    if fuzzy:
+                        fuzzy_similars.append(r)
+                    else:
+                        return r
+
         if search_engine not in ['google', 'bing']:
             raise Exception("Search engine could support for google and bing")
         # TODO: Not ideal
@@ -73,8 +110,13 @@ class Searcher:
             tracer.wayback_url(url, wayback_url)
         except Exception as e:
             tracer.warn(f'Exceptions happen when loading wayback verison of url: {str(e)}') 
-            wayback_url = url_utils.constr_wayback(url, '20211231')
-            return None, {'reason': "Fail to get archive copy"}
+            r = _token_search()
+            if fuzzy and len(fuzzy_similars) > 0:
+                return fuzzy_similars
+            elif r is not None:
+                return r
+            else:
+                return None, {'reason': "Fail to get archive copy"}
         tracer.title(url, title)
         search_results, searched = [], set()
 
@@ -167,39 +209,9 @@ class Searcher:
                             return similar
         
         # * Search with token
-        available_tokens = tools.get_unique_token(url)
-        tracer.token(url, available_tokens)
-        search_results = []
-        for i, token in enumerate(available_tokens):
-            token = os.path.splitext(token)[0]
-            token = regex.split("[^a-zA-Z0-9]", token)
-            token = ' '.join(token)
-            if search_engine == 'bing':
-                # * Bing
-                search_results = search.bing_search(f'instreamset:url:{token} site:{site}', use_db=self.use_db)
-                tracer.search_results(url, 'bing', f"token_{i}", search_results)
-            else:
-                # * Google
-                search_results = search.google_search(f'inurl:{token}', site_spec_url=site, use_db=self.use_db)
-                tracer.search_results(url, 'google', f"token_{i}", search_results)
-            search_tokens = {}
-            for sr in search_results:
-                tokens = url_utils.tokenize_url(sr, process=True)
-                search_tokens[sr] = tokens
-            token_simi = self.similar.token_similar(url, token, search_tokens, shorttext=shorttext)[:2]
-            token_simi = [s for s in token_simi if s[0] != "" and sic_transit.broken(s[0],  html=True)[0] == False]
-            if len(token_simi) == 0:
-                break
-            elif self.similar._separable(token_simi):
-                top_similar = token_simi[0]
-                top_similar_url = top_similar[0]
-                top_similar_html, top_similar_url = self.memo.crawl(top_similar_url, final_url=True)
-                top_similar_url = crawl.get_canonical(top_similar_url, top_similar_html)
-                r = top_similar_url, {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
-                if fuzzy:
-                    fuzzy_similars.append(r)
-                else:
-                    return r
+        r = _token_search()
+        if not fuzzy and r is not None:
+            return r
 
         # * Search with content
         self.similar.tfidf._clear_workingset()

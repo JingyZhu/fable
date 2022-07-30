@@ -157,8 +157,8 @@ class URLAlias:
                 else:
                     return s
             # ! TEMP Commented
-            # if s1.isdigit() and s2.isdigit() and int(s1) == int(s2):
-            #     return Match.PRED, MixType.NA
+            if s1.isdigit() and s2.isdigit() and int(s1) == int(s2):
+                return Match.PRED, MixType.NA
             s1 = _filter_ext(s1)
             s2 = _filter_ext(s2)
             t1 = url_utils.tokenize(s1, stop_words=None)
@@ -343,6 +343,7 @@ class Verifier:
                         if reason['method'] != 'wayback_alias':
                             reason['type'] = 'fuzzy_search'
                         # ! End of temp
+                        pass
                     alias = self._url_norm(search_alias[0])
                     self.url_candidates[url][alias].add(self._method_str(reason))
         # * Backlink
@@ -352,9 +353,10 @@ class Verifier:
             reason = backlink_alias[1].copy()
             if self._debug:
                 # ! TEMP For testing purpose
-                if reason['method'] != 'wayback_alias':
+                if reason['method'] != 'wayback_alias' and reason['type'] != 'archive_canonical':
                     reason['type'] = 'fuzzy_search'
                 # ! End of temp
+                pass
             alias = self._url_norm(backlink_alias[0])
             self.url_candidates[url][alias].add(self._method_str(reason))
         # * Inference
@@ -367,6 +369,7 @@ class Verifier:
                 if reason['method'] != 'wayback_alias':
                     reason['type'] = 'fuzzy_search'
                 # ! End of temp
+                pass
             alias = self._url_norm(infer_alias[0])
             self.url_candidates[url][alias].add(self._method_str(reason))
         
@@ -375,18 +378,19 @@ class Verifier:
         for example in examples:
             ex_url = example[0]
             ex_cand = example[2]
-            ex_url = self._url_norm(ex_url)
-            ex_cand = self._url_norm(ex_cand)
             # TODO Currently only consider the lastest candidate version. May change in the future
             if isinstance(ex_cand, list): ex_cand = ex_cand[-1]
+            ex_url = self._url_norm(ex_url)
+            ex_cand = self._url_norm(ex_cand)
             ex_title = example[1][0]
             self.url_title[ex_url] = ex_title
             reason = example[3].copy()
             if self._debug:
-                # ! TEMP For testing purpose
-                if reason['method'] != 'wayback_alias':
-                    reason['type'] = 'fuzzy_search'
-                # ! End of temp
+                # # ! TEMP For testing purpose
+                # if reason['method'] != 'wayback_alias':
+                #     reason['type'] = 'fuzzy_search'
+                # # ! End of temp
+                pass
             self.url_candidates[ex_url][ex_cand].add(self._method_str(reason))  
 
     def _filter_suspicious_cands(self):
@@ -407,7 +411,7 @@ class Verifier:
                     cand_urls[cand].add(url)
         for url, cands in url_candidates.items():
             for cand, v in cands.items():
-                if len(cand_urls[cand]) > 1:
+                if len(cand_urls[cand]) > 2:
                     continue
                 new_url_candidates[url][cand] = v
         return new_url_candidates
@@ -429,8 +433,9 @@ class Verifier:
         for turl, tcands in url_candidates.items():
             title = self.url_title.get(turl, '')
             for tcand, reason in tcands.items():
-                if len(reason) > 1 and 'search:fuzzy_search' in reason:
-                    reason.remove('search:fuzzy_search')
+                if not self._debug:
+                    if len(reason) > 1 and 'search:fuzzy_search' in reason:
+                        reason.remove('search:fuzzy_search')
                 ua = URLAlias(turl, tcand, {}, title=title)
                 rule = ua.transformation_rules(others_pairs=all_pairs)
                 rule = (rule[0], tuple([r for r in rule[1]]))
@@ -463,13 +468,13 @@ class Verifier:
             hint_score = sum([self.valid_hints[s] for s in seen_hints])
             if self._debug:
                 # ! TEMP
-                if len(c['values']) == 1:
+                if len(c['values']) == 1 and tuple(c['rule'][1][-1]) < (1, ""):
                     continue
                 cand_url = defaultdict(set)
                 for url, cand, method in c['values']:
                     cand_url[cand].add(url)
-                if max([len(v) for v in cand_url.values()]) > 1:
-                    continue
+                # if max([len(v) for v in cand_url.values()]) > 1:
+                #     continue
                 cluster_score.append((c, (hint_score, pred, len(seen_orig_url))))
                 # ! END OF TEMP            
             else:
@@ -549,7 +554,7 @@ class Verifier:
                 top_cluster = cluster[0]
                 top_clusters = [top_cluster[0]]
                 for c, score in cluster[1:]:
-                    if score[1] >= top_cluster[1][1]: top_clusters.append(c)
+                    if len(c['rule'][1]) == len(top_cluster[0]['rule'][1]) and score[1] >= top_cluster[1][1]: top_clusters.append(c)
                     else: break # TODO: Need this policy?
                 cluster = [c[0] for c in cluster[len(top_clusters):]]
                 self.s_clusters = self._satisfied_cluster(cluster, top_clusters)
