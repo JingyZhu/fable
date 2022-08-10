@@ -552,6 +552,8 @@ class Inferer:
             #     working_aliases.append(reorg_url)
             # ? Try new version
             try:
+                if sic_transit.broken(url, html=True)[0]:
+                    raise
                 reorg_url_html, reorg_url = self.memo.crawl(reorg_url, final_url=True)
                 reorg_url = crawl.get_canonical(reorg_url, reorg_url_html)
                 working_aliases.append(reorg_url)

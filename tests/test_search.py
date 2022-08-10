@@ -94,7 +94,7 @@ def test_search_fuzzy_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://gatorzone.com/story.php?html=football/news/20080324032900.html&id=13686&sport=footb"
+        "http://developer.apple.com/itunes/?destination=adc.apple.com.16351493766"
     ]
     fuzzy = True
     for url in urls:
@@ -104,6 +104,6 @@ def test_search_fuzzy_temp():
         if alias[0] is None:
             alias = search.search(url, search_engine='google', fuzzy=fuzzy)
         tr.info(f'alias: {alias}')
-        print(search.search_results(url))
+        print("Results:", search.search_results(url))
 
 test_search_fuzzy_temp()

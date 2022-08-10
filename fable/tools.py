@@ -1001,7 +1001,7 @@ class Similar:
         """
         For each candidate, get most similar token
         Candidates_token: {url: [tokens]}
-        Return: sorted([(url, token, similarity)])
+        Return: sorted([(url, similarity, token)])
         """
         all_tokens = [target_token]
         # ? For query, only consider values
@@ -1012,19 +1012,19 @@ class Similar:
         self.tfidf.add_corpus(all_tokens)
         simi_cand = []
         for can, tokens in candidates_tokens.items():
-            max_token = (can, '', 0)
+            max_token = (can, 0, '')
             for t in tokens:
                 if shorttext:
                     simi = self.shorttext_match(target_token, t)
                 else:
                     simi = self.tfidf.similar(target_token, t)
                 tracer.debug(f'similarity title, (value/url): ({simi}/{target_token} vs. {t})')
-                if simi > max_token[2]:
-                    max_token = (can, t, simi)
+                if simi > max_token[1]:
+                    max_token = (can, simi, t)
             simi_cand.append(max_token)
         while len(simi_cand) < 2:
-            simi_cand.append(("", "", 0))
-        return sorted(simi_cand, key=lambda x: x[2], reverse=True)
+            simi_cand.append(("", 0, ""))
+        return sorted(simi_cand, key=lambda x: x[1], reverse=True)
     
     def _separable(self, simi, threshold=None):
         threshold = self.threshold if not threshold else threshold
@@ -1143,7 +1143,7 @@ def get_unique_token(url, fuzzy=False):
         'output': 'json',
         "limit": 10000,
         'collapse': 'urlkey',
-        'filter': ['statuscode:200', 'mimetype:text/html'],
+        'filter': ['statuscode:[23][0-9]*', 'mimetype:text/html'],
     }
     def _collapse_index(li):
         urls = set()

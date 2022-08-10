@@ -63,19 +63,24 @@ class Searcher:
                     tokens = url_utils.tokenize_url(sr, process=True)
                     search_tokens[sr] = tokens
                 token_simi = self.similar.token_similar(url, token, search_tokens, shorttext=shorttext)[:2]
-                token_simi = [s for s in token_simi if s[0] != "" and sic_transit.broken(s[0],  html=True)[0] == False]
+                
+                # token_simi = [s for s in token_simi if s[0] != "" and sic_transit.broken(s[0],  html=True)[0] == False]
+                token_simi = [s for s in token_simi if not url_utils.suspicious_alias(url, s[0])]
+                print("token_simi", token_simi)
                 if len(token_simi) == 0:
                     break
-                elif self.similar._separable(token_simi):
-                    top_similar = token_simi[0]
-                    top_similar_url = top_similar[0]
-                    top_similar_html, top_similar_url = self.memo.crawl(top_similar_url, final_url=True)
-                    top_similar_url = crawl.get_canonical(top_similar_url, top_similar_html)
-                    r = top_similar_url, {'type': "token", 'value': top_similar[-1], 'matched_token': top_similar[1]}
+                if len(token_simi) == 1:
+                    token_simi.append(('', 0, ''))
+                if self.similar.separable(token_simi):
+                    # top_similar = token_simi[0]
+                    # top_similar_url = top_similar[0]
+                    # top_similar_html, top_similar_url = self.memo.crawl(top_similar_url, final_url=True)
+                    # top_similar_url = crawl.get_canonical(top_similar_url, top_similar_html)
+                    rs = [(r[0], {'type': "token", 'value': r[1], 'matched_token': r[-1]}) for r in token_simi if r[0] != ""]
                     if fuzzy:
-                        fuzzy_similars.append(r)
+                        fuzzy_similars += rs
                     else:
-                        return r
+                        return rs[0]
 
         if search_engine not in ['google', 'bing']:
             raise Exception("Search engine could support for google and bing")

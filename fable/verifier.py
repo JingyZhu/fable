@@ -132,7 +132,7 @@ class URLAlias:
     def transformation_rules(self, others_pairs=None):
         """Return: What rule?"""
         if not others_pairs: others_pairs = self.others_pairs
-        others_pairs = [o for o in others_pairs if o.to_tuple()[:1] != self.to_tuple()[:1]]
+        others_pairs = [o for o in others_pairs if o.to_tuple()[0] != self.to_tuple()[0] and o.to_tuple()[1] != self.to_tuple()[1]]
         
         url_tokens = url_utils.tokenize_url(self.url, include_all=True, process=False)
         alias_tokens = url_utils.tokenize_url(self.norm_alias, include_all=True, process=False)
@@ -156,7 +156,6 @@ class URLAlias:
                     return ss[0]
                 else:
                     return s
-            # ! TEMP Commented
             if s1.isdigit() and s2.isdigit() and int(s1) == int(s2):
                 return Match.PRED, MixType.NA
             s1 = _filter_ext(s1)
@@ -172,7 +171,7 @@ class URLAlias:
             itst = t1s.intersection(t2s)
             ratio1 = len(itst) / len(t1s)
             # print(s1, s2, ratio1, len(itst) / len(t2s))
-            if len(itst) / len(t2s) == 1 and ratio1 > 0.5:
+            if len(itst) / len(t2s) == 1 and ratio1 >= 0.5:
                 return Match.PRED, MixType.NA
             # * Separate tokens into digit and non-digit
             # * If there are some digit predictable, partially pred with ID
@@ -193,7 +192,7 @@ class URLAlias:
             itst = t1s_ngram.intersection(t2s_ngram)
             ratio2 = len(itst) / len(t2s_ngram)
             # print(s1, s2, len(itst), len(t2s_ngram), ratio2)
-            if ratio2 > 0.5:
+            if ratio2 >= 0.5:
                 return Match.MIX, MixType.STR
             return Match.UNPRED, MixType.NA
 
@@ -207,8 +206,9 @@ class URLAlias:
         for i, at in enumerate(alias_tokens):
             # * Check prefix from other_pairs
             best_match = (Match.UNPRED, "")
-            if i != len(alias_tokens)-1 and _intersect_prefix(at, i):
-                best_match = (Match.PREFIX, at)
+            # ! TEMP Just commented for grount truth test
+            # if i != len(alias_tokens)-1 and _intersect_prefix(at, i):
+            #     best_match = (Match.PREFIX, at)
             src_dict = {Match.PREFIX: at, Match.PRED: 'url/title', Match.MIX: 'url/title', Match.UNPRED: 'N/A'}
             # ! URL
             for ut in url_tokens[1:]:
@@ -227,24 +227,31 @@ class Verifier:
     def __init__(self, debug=0):
         self.url_candidates = defaultdict(lambda: defaultdict(set)) # * {url: {cand: {matched}}}
         self.url_title = {}
+        self.url_alias_match = defaultdict(dict)
         self.s_clusters = None
-        self._clusters = None
+        self._g_clusters = None
+        self._r_clusters = None
         self._normurl_map = {}
         self.valid_hints = {
             'archive_canonical':10 , 
             'title':1, 'content':1, 
+            'inference': 1.5, 
             'wayback_alias':2, 
             'token':0.5, 
             "anchor": 1, 
             # 'redirection': 2
         }
         self._debug = debug
+        self._crawled = set()
 
     def clear(self):
         self.url_candidates = defaultdict(lambda: defaultdict(set)) # * {url: {cand: {matched}}}
         self.url_title = {}
+        self.url_alias_match = defaultdict(dict)
+        self._crawled = set()
         self.s_clusters = None
-        self._clusters = None
+        self._g_clusters = None
+        self._r_clusters = None
 
     def _method_str(self, reason):
         return f"{reason['method']}:{reason.get('type', '')}"
@@ -270,6 +277,7 @@ class Verifier:
         """
         if clear:
             self.clear()
+        self._src = 'rw'
         for obj in aliasexmaple['alias']:
             url, cand = obj[0], obj[2]
             if cand is None or len(cand) == 0:
@@ -284,15 +292,16 @@ class Verifier:
             # * Patch for token match filters
             if reason.get('type') == "token":
                 if reason.get('value', 0) < 0.8:
-                    continue
-                matched_token = reason['matched_token']
-                if len(matched_token.split(' ')) <= 1:
-                    continue
+                    reason['type'] = 'fuzzy_search'
+                # else:
+                # matched_token = reason['matched_token']
+                # if len(matched_token.split(' ')) <= 1:
+                #     continue
+            if reason['type'] != 'fuzzy_search':
+                self.url_alias_match[url][alias] = self._method_str(reason)
             if self._debug:
-                # ! TEMP For testing purpose
                 if reason['method'] != 'wayback_alias':
                     reason['type'] = 'fuzzy_search'
-                # ! End of temp
             method = self._method_str(reason)
             self.url_candidates[url][cand].add(method)
             self.url_title[url] = title
@@ -312,10 +321,8 @@ class Verifier:
             if reason.get('type') == "token" and reason.get('value', 0) < 0.8:
                 continue
             if self._debug:
-                # ! TEMP For testing purpose
                 if reason['method'] != 'wayback_alias':
                     reason['type'] = 'fuzzy_search'
-                # ! End of temp
             method = self._method_str(reason)
             self.url_candidates[url][cand].add(method)
             self.url_title[url] = title
@@ -327,6 +334,7 @@ class Verifier:
         """
         if clear:
             self.clear()
+        self._src = 'gt'
         url = gt_obj['url']
         url = self._url_norm(url)
         self.url_title[url] = gt_obj.get('title', '')
@@ -338,39 +346,39 @@ class Verifier:
                 if search_alias[0]:
                     search_alias[1]['method'] = 'search'
                     reason = search_alias[1].copy()
+                    alias = self._url_norm(search_alias[0])
+                    if reason['type'] != 'fuzzy_search':
+                        self.url_alias_match[url][alias] = self._method_str(reason)
                     if self._debug:
-                        # ! TEMP For testing purpose
                         if reason['method'] != 'wayback_alias':
                             reason['type'] = 'fuzzy_search'
-                        # ! End of temp
                         pass
-                    alias = self._url_norm(search_alias[0])
                     self.url_candidates[url][alias].add(self._method_str(reason))
         # * Backlink
         backlink_alias = gt_obj.get('backlink', None)
         if backlink_alias is not None and backlink_alias[0] is not None:
             backlink_alias[1]['method'] = 'backlink'
             reason = backlink_alias[1].copy()
+            alias = self._url_norm(backlink_alias[0])
+            if reason['type'] != 'fuzzy_search':
+                self.url_alias_match[url][alias] = self._method_str(reason)
             if self._debug:
-                # ! TEMP For testing purpose
                 if reason['method'] != 'wayback_alias' and reason['type'] != 'archive_canonical':
                     reason['type'] = 'fuzzy_search'
-                # ! End of temp
                 pass
-            alias = self._url_norm(backlink_alias[0])
             self.url_candidates[url][alias].add(self._method_str(reason))
         # * Inference
         infer_alias = gt_obj.get('inference', None)
         if infer_alias is not None and infer_alias[0] is not None:
             infer_alias[1]['method'] = 'inference'
             reason = infer_alias[1].copy()
-            if self._debug:
-                # ! TEMP For testing purpose
-                if reason['method'] != 'wayback_alias':
-                    reason['type'] = 'fuzzy_search'
-                # ! End of temp
-                pass
             alias = self._url_norm(infer_alias[0])
+            if reason['type'] != 'fuzzy_search':
+                self.url_alias_match[url][alias] = self._method_str(reason)
+            if self._debug:
+                if reason['method'] not in ['wayback_alias', 'inference']:
+                    reason['type'] = 'fuzzy_search'
+                pass
             self.url_candidates[url][alias].add(self._method_str(reason))
         
         # * Prepare for examples
@@ -386,10 +394,10 @@ class Verifier:
             self.url_title[ex_url] = ex_title
             reason = example[3].copy()
             if self._debug:
-                # # ! TEMP For testing purpose
                 # if reason['method'] != 'wayback_alias':
                 #     reason['type'] = 'fuzzy_search'
-                # # ! End of temp
+                if reason['method'] == 'redirection':
+                    continue
                 pass
             self.url_candidates[ex_url][ex_cand].add(self._method_str(reason))  
 
@@ -467,16 +475,18 @@ class Verifier:
                 seen_hints.update(set(self.valid_hints.keys()).intersection(method))
             hint_score = sum([self.valid_hints[s] for s in seen_hints])
             if self._debug:
-                # ! TEMP
-                if len(c['values']) == 1 and tuple(c['rule'][1][-1]) < (1, ""):
+                # ! TEMP: Diff1. Ground truth
+                if self._src == 'gt' and len(c['values']) == 1 and tuple(c['rule'][1][-1]) < (1, ""):
+                    continue
+                # ! Diff2. Real-world
+                elif self._src == 'rw' and len(c['values']) == 1:
                     continue
                 cand_url = defaultdict(set)
                 for url, cand, method in c['values']:
                     cand_url[cand].add(url)
                 # if max([len(v) for v in cand_url.values()]) > 1:
                 #     continue
-                cluster_score.append((c, (hint_score, pred, len(seen_orig_url))))
-                # ! END OF TEMP            
+                cluster_score.append((c, (hint_score, pred, len(seen_orig_url))))         
             else:
                 if hint_score > 0:
                     cluster_score.append((c, (hint_score, pred, len(seen_orig_url))))
@@ -538,6 +548,46 @@ class Verifier:
         #     return False
         return True
 
+    def _more_property_match(self, cluster, target_url):
+        """Only used when _debug=1 (all fuzzy_search). Fetch more information for title/content match when the pattern is too general"""
+        url_cand = defaultdict(set)
+        def _norm(url):
+            url = _throw_unuseful_query(url)
+            return url_utils.url_norm(url, ignore_scheme=True, trim_slash=True)
+
+        valid = False
+        for url, cand, method in cluster['values']:
+            # * Archive canonical considered as valid automatically
+            if url == target_url and ('archive_canonical' in method):
+                valid = True
+            url = _norm(url)
+            cand = url_utils.url_norm(cand, ignore_scheme=True, trim_www=True, trim_slash=True)
+            url_cand[url].add(cand)
+
+        # * Target URL matched to more than 3 candidates in the cluster
+        if not valid and len(url_cand[_norm(target_url)]) <= 3:
+            return cluster
+        
+        alias_match = self.url_alias_match[target_url]
+        new_cluster = {'values': [], 'rule': cluster['rule']}
+        new_ua_methods = {'matched': [], 'notmatched': []}
+        for v in cluster['values']:
+            if v[0] != target_url: 
+                new_cluster['values'].append(v)
+                continue
+            self._crawled.add(v[1])
+            if v[1] in alias_match:
+                v[2] = alias_match[v[1]]
+                new_ua_methods['matched'].append(v)
+            else:
+                new_ua_methods['notmatched'].append(v)
+        if len(new_ua_methods['matched']) > 0:
+            new_cluster['values'] += new_ua_methods['matched']
+        else:
+            new_cluster['values'] += new_ua_methods['notmatched']
+        return new_cluster
+
+
     def verify_url(self, url):
         """
         verify candidates for url, return [verified obj]
@@ -548,8 +598,9 @@ class Verifier:
         url = self._url_norm(url)
         if self.s_clusters is None:
             cluster = self._gen_cluster()
+            self._g_clusters = cluster
             cluster = self._rank_cluster(cluster)
-            self._clusters = cluster
+            self._r_clusters = cluster
             if len(cluster) > 0:
                 top_cluster = cluster[0]
                 top_clusters = [top_cluster[0]]
@@ -560,7 +611,10 @@ class Verifier:
                 self.s_clusters = self._satisfied_cluster(cluster, top_clusters)
             else:
                 self.s_clusters = []
-        s_clusters = [s for s in self.s_clusters if self._valid_cluster(s, url)]
+        s_clusters = [self._more_property_match(s, url) for s in self.s_clusters]
+        s_clusters = [s for s in s_clusters if self._valid_cluster(s, url)]
+
+        # s_clusters = [s for s in self.s_clusters if self._valid_cluster(s, url)]
         if len(s_clusters) == 0:
             s_clusters = [{'values': []}]
         
@@ -584,6 +638,6 @@ class Verifier:
                 ocand = self._normurl_map.get(ocand, ocand)
                 valid_cands.append((ocand, method_str))
         
-        cred = lambda x: sum([self.valid_hints.get(xx.split(':')[1], 0) for xx in x[1]])
+        cred = lambda x: sum([sum([self.valid_hints.get(xxx, 0) for xxx in set(xx.split(':'))]) for xx in x[1]])
         valid_cands.sort(reverse=True, key=cred)        
         return valid_cands
