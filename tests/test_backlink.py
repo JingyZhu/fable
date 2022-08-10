@@ -1,8 +1,9 @@
+from fable.Archive import discoverer, discoverer2
 import pytest
 import logging
 import os
 
-from fable import tools, discoverer, discoverer2, tracer, config
+from fable import tools, tracer, config
 from fable.utils import url_utils
 
 he = url_utils.HostExtractor()

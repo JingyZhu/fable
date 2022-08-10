@@ -1,7 +1,12 @@
-from fable import histredirector, searcher, inferer, verifier, tools
+from fable import histredirector, searcher, inferer, tools
+from fable.Archive import discoverer
+import pymongo
+from pymongo import MongoClient
 from urllib.parse import urlsplit, parse_qsl
 import os
+from collections import defaultdict
 import time
+import json
 import logging
 
 from . import config
@@ -12,7 +17,7 @@ db = config.DB
 he = url_utils.HostExtractor()
 
 
-class AliasFinder:
+class ReorgPageFinder:
     def __init__(self, use_db=True, db=db, memo=None, similar=None, proxies={}, tracer=None,\
                 classname='fable', logname=None, loglevel=logging.INFO):
         """
@@ -25,14 +30,16 @@ class AliasFinder:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
-        self.histredirer = histredirector.HistRedirector(memo=self.memo,  proxies=proxies)
+        self.histredirer = histredirctor.HistRedirector(memo=self.memo,  proxies=proxies)
         self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar, proxies=proxies)
+        self.discoverer = discoverer.Discoverer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.db = db
         self.site = None
         self.classname = classname
         self.logname = classname if logname is None else logname
         self.tracer = tracer if tracer is not None else self._init_tracer(loglevel=loglevel)
+        self.inference_classes = [self.classname] # * Classes looking on reorg for aliases sets
 
     def _init_tracer(self, loglevel):
         logging.setLoggerClass(tracing)
@@ -41,6 +48,8 @@ class AliasFinder:
         tracer._set_meta(self.classname, logname=self.logname, db=self.db, loglevel=loglevel)
         return tracer
     
+    def set_inferencer_classes(self, classes):
+        self.inference_classes = classes + [self.classname]
 
     def init_site(self, site, urls=[]):
         self.site = site
@@ -267,5 +276,91 @@ class AliasFinder:
             # * Inference
             if infer and searched is not None:
                 new_finds = self.infer_new(url, (title,), searched)
+                broken_urls.difference_update(new_finds)
+        return found
+    
+    def discover(self, required_urls, infer=False,):
+        """
+        infer: Infer every time when a new alias is found
+        Required urls: URLs that will be run on
+        """
+        if self.similar.site is None or self.site not in self.similar.site:
+            self.similar.clear_titles()
+            if not self.similar._init_titles(self.site):
+                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
+                return []
+
+        reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
+        reorg_checked = set([u['url'] for u in reorg_checked])
+        broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
+
+        self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
+        found = []
+        i = 0
+        while len(broken_urls) > 0:
+            url = broken_urls.pop()
+            i += 1
+            self.tracer.info(f'URL: {i} {url}')
+            method = 'discover'
+            while True: # Dummy while lloop served as goto
+                start = time.time()
+
+                # self.tracer.info("Start backpath (latest)")
+                # discovered, trace = self.discoverer.bf_find(url, policy='latest')
+                # if discovered:
+                #     method = 'backpath_latest'
+                #     break
+                
+                self.tracer.info("Start discover")
+                discovered, trace = self.discoverer.discover(url)
+                if discovered:
+                    break
+
+                break
+            
+            end = time.time()
+            self.tracer.info(f'Runtime (discover): {end - start}')
+            self.tracer.flush()
+            update_dict = {}
+            has_title = self.db.reorg.find_one({'url': url})
+            if has_title is None:
+                has_title = {'url': url, 'hostname': self.site}
+                self.db.reorg.update_one({'url': url}, {'$set': has_title}, upsert=True)
+            # * Get title of the URL (if available)
+            if 'title' not in has_title:
+                try:
+                    wayback_url = self.memo.wayback_index(url)
+                    html = self.memo.crawl(wayback_url)
+                    title = self.memo.extract_title(html, version='mine')
+                except: # No snapthost on wayback
+                    self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
+                    try: self.db.na_urls.update_one({'_id': url}, {"$set": {
+                        'url': url,
+                        'hostname': self.site,
+                        'no_snapshot': True
+                    }}, upsert=True)
+                    except: pass
+                    title = 'N/A'
+            else:
+                title = has_title['title']
+
+            if discovered is not None:
+                self.tracer.info(f'Found reorg: {discovered}')
+                found.append(url)
+                update_dict.update({'reorg_url': discovered, 'by':{
+                    "method": method
+                }})
+                by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath', 'suffice']}
+                update_dict['by'].update(by_discover)
+
+            # * Update dict correspondingly
+            try:
+                self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict, 'title': title}})
+            except Exception as e:
+                self.tracer.warn(f'Discover update DB: {str(e)}')
+            
+            # * Inference
+            if infer and discovered is not None:
+                new_finds = self.infer_new(url, (title,), discovered)
                 broken_urls.difference_update(new_finds)
         return found

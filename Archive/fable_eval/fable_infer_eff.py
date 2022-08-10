@@ -1,4 +1,4 @@
-from fable import discoverer, searcher, inferer, tools
+from fable import searcher, inferer, tools
 import pymongo
 from pymongo import MongoClient
 from urllib.parse import urlsplit, parse_qsl

@@ -13,7 +13,7 @@ from dateutil import parser as dparser
 import threading
 from statistics import median
 
-from . import config, tools, searcher, discoverer2, histredirector, inferer, tracer
+from . import config, tools, searcher, histredirector, inferer, tracer
 from fable.utils import url_utils, crawl, sic_transit
 
 he = url_utils.HostExtractor()

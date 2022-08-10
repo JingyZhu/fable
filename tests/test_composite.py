@@ -1,13 +1,14 @@
 """
 Test all three techniques at once
 """
+from fable.Archive import discoverer2
 import pytest
 import logging
 import os
 import json
 import threading
 
-from fable import tools, searcher, discoverer2, inferer, tracer, config
+from fable import tools, searcher, inferer, tracer, config
 from fable.utils import url_utils
 
 he = url_utils.HostExtractor()
