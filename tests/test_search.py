@@ -111,17 +111,13 @@ def test_search_nocompare():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.elasticsearch.org/guide/reference/index-modules/analysis/standard-analyzer.html"
+        "http://www.nepalnews.com/archive/2008/jun/jun16/news07.php"
     ]
     for url in urls:
         site = he.extract(url)
         search.similar._init_titles(site)
         alias = search.search_nocompare(url, search_engine='bing')
-        if alias[0] is None:
-            alias = []
         alias += search.search_nocompare(url, search_engine='google')
-        if alias[0] is None:
-            alias = []
         alias = {a[0]: a for a in reversed(alias)}
         alias = list(alias.values())
         

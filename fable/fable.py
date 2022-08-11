@@ -44,30 +44,6 @@ class AliasFinder:
 
     def init_site(self, site, urls=[]):
         self.site = site
-        # * Add new URLs to reorg first 
-        already_in = list(self.db.reorg.find({'hostname': site}))
-        already_in_set = set([u['url'] for u in already_in])
-        objs = []
-        for url in urls:
-            if url in already_in_set:
-                continue
-            objs.append({'url': url, 'hostname': site})
-        try:
-            self.db.reorg.insert_many(objs, ordered=False)
-        except: pass
-        # * Initialize Inferer
-        self.inferer.init_site(site)
-        site_reorg_urls = self.db.reorg.find({'hostname': site})
-        # ? Whether to infer on all classes, all only one? 
-        # ? reorg_urls = [reorg for reorg in reorg_urls if len(set(reorg.keys()).intersection(reorg_keys)) > 0]
-        for reorg_url in list(site_reorg_urls):
-            # reorg_tech = []
-            for iclass in self.inference_classes:
-                title = reorg_url['title'] if 'title' in reorg_url and isinstance(reorg_url['title'], str) else ''
-                if len(reorg_url.get(iclass, {})) > 0:
-                    self.inferer.add_url_alias(reorg_url['url'], (title,), reorg_url[iclass]['reorg_url'])
-                else:
-                    self.inferer.add_url(reorg_url['url'], (title,))
         # * Initialized tracer
         if len(self.tracer.handlers) > 2:
             self.tracer.handlers.pop()
@@ -193,79 +169,52 @@ class AliasFinder:
         return found
 
 
-    def search(self, required_urls, infer=False, title=True):
+    def search(self, url, nocompare=True, fuzzy=True):
         """
-        infer: Infer every time when a new alias is found
-        Required urls: URLs that will be run on (no checked)
-        title: Whether title comparison is taken into consideration
+        Search for a single URL
+        nocompare: True: run search_nocompare, False: search
+        fuzzy: if nocompare=False, fuzzy argument for search
+
+        Return: [ [url, [title,], alias, reason] ]
         """
-        if not title:
-            self.similar.clear_titles()
-        elif self.similar.site is None or self.site not in self.similar.site:
-            self.similar.clear_titles()
-            if not self.similar._init_titles(self.site):
-                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
-                return []
-        # !_search
-        reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
-        reorg_checked = set([u['url'] for u in reorg_checked])
-        broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
+        site = he.extract(url)
+        if self.similar.site is None or site not in self.similar.site:
+            self.similar._init_titles(site)
+        
+        # * Get title
+        title = ''
+        try:
+            print(url)
+            wayback_url = self.memo.wayback_index(url)
+            if wayback_url:
+                trials += 1
+                wayback_html = self.memo.crawl(wayback_url)
+                title = self.memo.extract_title(wayback_html)
+        except: pass
 
-        self.tracer.info(f'Search SITE: {self.site} #URLS: {len(broken_urls)}')
-        found = []
-        i = 0
-        while len(broken_urls) > 0:
-            url = broken_urls.pop()
-            i += 1
-            self.tracer.info(f'URL: {i} {url}')
-            start = time.time()
-            searched = None
-            searched = self.searcher.search(url, search_engine='bing')
-            if searched[0] is None and 'google_search_key' in config.var_dict:
-                searched = self.searcher.search(url, search_engine='google')
-            end = time.time()
-            self.tracer.info(f'Runtime (Search): {end - start}')
-            update_dict = {}
-            has_title = self.db.reorg.find_one({'url': url})
-            if has_title is None:
-                has_title = {'url': url, 'hostname': self.site}
-                self.db.reorg.update_one({'url': url}, {'$set': has_title}, upsert=True)
-            if 'title' not in has_title:
-                try:
-                    wayback_url = self.memo.wayback_index(url)
-                    html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(html, version='mine')
-                except: # No snapthost on wayback
-                    self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
-                    try:
-                        self.db.na_urls.update_one({'_id': url}, {"$set": {
-                            'url': url,
-                            'hostname': self.site,
-                            'no_snapshot': True
-                        }}, upsert=True)
-                    except: pass
-                    title = 'N/A'
-            else:
-                title = has_title['title']
+        # * Search
+        if nocompare:
+            aliases = self.searcher.search_nocompare(url, search_engine='bing')
+            aliases += self.searcher.search_nocompare(url, search_engine='google')
+            aliases = {a[0]: a for a in reversed(aliases)}
+            aliases = list(aliases.values())
+        else:
+            aliases = self.searcher.search(url, search_engine='bing', fuzzy=fuzzy)
+            if aliases[0] is None:
+                aliases = self.searcher.search(url, search_engine='google', fuzzy=fuzzy)
+        
+        # * Merge results
+        seen = set()
+        search_aliases = []
+        if len(aliases) > 0 and aliases[0]:
+            for a in aliases:
+                reason = a[1]
+                seen.add(a[0])
+                search_aliases.append([url, [title,], a[0], reason])
 
-            self.tracer.flush()
-
-            if searched[0] is not None:
-                searched, trace = searched
-                self.tracer.info(f"HIT: {searched}")
-                found.append(url)
-                update_dict.update({'reorg_url': searched, 'by':{
-                    "method": "search"
-                }})
-                update_dict['by'].update(trace)
-
-            try:
-                self.db.reorg.update_one({'url': url}, {"$set": {self.classname: update_dict, "title": title}} ) 
-            except Exception as e:
-                self.tracer.warn(f'Search update DB: {str(e)}')
-
-            # * Inference
-            if infer and searched is not None:
-                new_finds = self.infer_new(url, (title,), searched)
-                broken_urls.difference_update(new_finds)
-        return found
+        all_search = self.searcher.search_results(url)
+        for ase in all_search:
+            if ase in seen: continue
+            seen.add(ase)
+            search_aliases.append([url, [title,], ase, {'method': 'search', 'type': 'fuzzy_search'}])
+        return search_aliases
