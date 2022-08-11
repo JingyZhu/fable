@@ -25,7 +25,7 @@ class AliasFinder:
         self.memo = memo if memo is not None else tools.Memoizer()
         self.similar = similar if similar is not None else tools.Similar()
         self.PS = crawl.ProxySelector(proxies)
-        self.histredirer = histredirector.HistRedirector(memo=self.memo,  proxies=proxies)
+        self.histredirector = histredirector.HistRedirector(memo=self.memo,  proxies=proxies)
         self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar, proxies=proxies)
         self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.db = db
@@ -104,117 +104,80 @@ class AliasFinder:
             any_added = any_added or added
         self.tracer.flush()
 
-    def hist_redir(self, required_urls):
+    def hist_redir(self, urls):
         """
-        Required urls: URLs that will be run on
+        Return: [ [url, [title,], [aliases (w/ history)], reason] ]
         """
-        if self.similar.site is None or self.site not in self.similar.site:
-            self.similar.clear_titles()
-            if not self.similar._init_titles(self.site):
-                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
-                return []
+        hist_aliases = []
+        aliases = self.histredirector.wayback_alias_batch_history(urls)
 
-        reorg_checked = list(self.db.reorg.find({"hostname": self.site, self.classname: {"$exists": True}}))
-        reorg_checked = set([u['url'] for u in reorg_checked])
-        broken_urls = set([ru for ru in required_urls if ru not in reorg_checked])
-
-        self.tracer.info(f'Discover SITE: {self.site} #URLS: {len(broken_urls)}')
-        found = []
-        i = 0
-        while len(broken_urls) > 0:
-            url = broken_urls.pop()
-            i += 1
-            self.tracer.info(f'URL: {i} {url}')
-            method = 'wayback_alias'
-            self.tracer.info("Start wayback alias")
-            start = time.time()
-            discovered = self.histredirer.wayback_alias(url, require_neighbor=True, homepage_redir=False)
-            if discovered:
-                trace = {'type': 'wayback_alias', 'value': None}
-
-            end = time.time()
-            self.tracer.info(f'Runtime (historical redirection): {end - start}')
-            self.tracer.flush()
-            update_dict = {}
-            has_title = self.db.reorg.find_one({'url': url})
-            if has_title is None:
-                has_title = {'url': url, 'hostname': self.site}
-                self.db.reorg.update_one({'url': url}, {'$set': has_title}, upsert=True)
-            # * Get title of the URL (if available)
-            if 'title' not in has_title:
-                try:
-                    wayback_url = self.memo.wayback_index(url)
-                    html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(html, version='mine')
-                except: # No snapthost on wayback
-                    self.tracer.error(f'WB_Error {url}: Fail to get data from wayback')
-                    title = 'N/A'
-            else:
-                title = has_title['title']
-
-            if discovered is not None:
-                self.tracer.info(f'Found reorg: {discovered}')
-                found.append(url)
-                update_dict.update({'reorg_url': discovered, 'by':{
-                    "method": method
-                }})
-                by_discover = {k: v for k, v in trace.items() if k not in ['trace', 'backpath']}
-                update_dict['by'].update(by_discover)
-
-            # * Update dict correspondingly
+        for url, r in aliases.items():
+            title = ''
+            reason = {}
             try:
-                self.db.reorg.update_one({'url': url}, {'$set': {self.classname: update_dict, 'title': title}})
-            except Exception as e:
-                self.tracer.warn(f'Discover update DB: {str(e)}')
-        return found
+                wayback_url = self.memo.wayback_index(url)
+                if wayback_url: 
+                    wayback_html = self.memo.crawl(wayback_url)
+                    title = self.memo.extract_title(wayback_html)
+            except: pass
+            if r:
+                reason = {"method": "wayback_alias", "type": "wayback_alias"}
+                hist_aliases.append([
+                    url,
+                    [title],
+                    r,
+                    reason
+                ])
+        return hist_aliases
 
 
-    def search(self, url, nocompare=True, fuzzy=True):
+    def search(self, urls, nocompare=True, fuzzy=True):
         """
-        Search for a single URL
+        Search for a set of similar URLs (similar URLs: URLs under the same directory)
         nocompare: True: run search_nocompare, False: search
         fuzzy: if nocompare=False, fuzzy argument for search
 
         Return: [ [url, [title,], alias, reason] ]
         """
-        site = he.extract(url)
+        if isinstance(urls, str): urls = [urls]
+        first_url = urls[0]
+        site = he.extract(first_url)
         if self.similar.site is None or site not in self.similar.site:
             self.similar._init_titles(site)
         
-        # * Get title
-        title = ''
-        try:
-            print(url)
-            wayback_url = self.memo.wayback_index(url)
-            if wayback_url:
-                trials += 1
-                wayback_html = self.memo.crawl(wayback_url)
-                title = self.memo.extract_title(wayback_html)
-        except: pass
-
-        # * Search
-        if nocompare:
-            aliases = self.searcher.search_nocompare(url, search_engine='bing')
-            aliases += self.searcher.search_nocompare(url, search_engine='google')
-            aliases = {a[0]: a for a in reversed(aliases)}
-            aliases = list(aliases.values())
-        else:
-            aliases = self.searcher.search(url, search_engine='bing', fuzzy=fuzzy)
-            if aliases[0] is None:
-                aliases = self.searcher.search(url, search_engine='google', fuzzy=fuzzy)
-        
-        # * Merge results
-        seen = set()
         search_aliases = []
-        if len(aliases) > 0 and aliases[0]:
-            for a in aliases:
-                reason = a[1]
-                seen.add(a[0])
-                search_aliases.append([url, [title,], a[0], reason])
+        for url in urls:
+            # * Get title
+            title = ''
+            try:
+                wayback_url = self.memo.wayback_index(url)
+                if wayback_url:
+                    wayback_html = self.memo.crawl(wayback_url)
+                    title = self.memo.extract_title(wayback_html)
+            except: pass
 
-        all_search = self.searcher.search_results(url)
-        for ase in all_search:
-            if ase in seen: continue
-            seen.add(ase)
-            search_aliases.append([url, [title,], ase, {'method': 'search', 'type': 'fuzzy_search'}])
+            # * Search
+            if nocompare:
+                aliases = self.searcher.search_nocompare(url, search_engine='bing')
+                aliases += self.searcher.search_nocompare(url, search_engine='google')
+                aliases = {a[0]: a for a in reversed(aliases)}
+                aliases = list(aliases.values())
+            else:
+                aliases = self.searcher.search(url, search_engine='bing', fuzzy=fuzzy)
+                if aliases[0] is None:
+                    aliases = self.searcher.search(url, search_engine='google', fuzzy=fuzzy)
+            
+            # * Merge results
+            seen = set()
+            if len(aliases) > 0 and aliases[0]:
+                for a in aliases:
+                    reason = a[1]
+                    seen.add(a[0])
+                    search_aliases.append([url, [title,], a[0], reason])
+
+            all_search = self.searcher.search_results(url)
+            for ase in all_search:
+                if ase in seen: continue
+                seen.add(ase)
+                search_aliases.append([url, [title,], ase, {'method': 'search', 'type': 'fuzzy_search'}])
         return search_aliases

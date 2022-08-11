@@ -33,11 +33,24 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "https://thewisesloth.com/2012/11/17/the-injustice-of-employee-contracts/"
+        "https://thewisesloth.com/2012/11/17/the-injustice-of-employee-contracts/",
+        "https://thewisesloth.com/2010/09/19/voting-never-has-and-never-will-save-america/"
     ]
-    for url in urls:
-        aliases = alias_finder.search(url)
+    aliases = alias_finder.search(urls)
 
-        print(f'alias: {json.dumps(aliases, indent=2)}')
+    print(f'alias: {json.dumps(aliases, indent=2)}')
 
-test_search_temp()
+
+def test_hist_redir_temp():
+    """Temporary test to avoid long waiting for other tests"""
+    _init_large_obj()
+    urls = [
+        "http://www.foxnews.com/politics/2010/03/18/cornhusker-kickback-gets-boot-health",
+        "http://www.foxnews.com/politics/2009/03/23/fusion-centers-expand-criteria-identify-militia-members/",
+        "http://www.foxnews.com/politics/2011/01/19/christie-expands-number-charter-schools-new-jersey"
+    ]
+    aliases = alias_finder.hist_redir(urls)
+
+    print(f'alias: {json.dumps(aliases, indent=2)}')
+
+test_hist_redir_temp()
