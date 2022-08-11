@@ -106,4 +106,27 @@ def test_search_fuzzy_temp():
         tr.info(f'alias: {alias}')
         print("Results:", search.search_results(url))
 
-test_search_fuzzy_temp()
+
+def test_search_nocompare():
+    """Temporary test to avoid long waiting for other tests"""
+    _init_large_obj()
+    urls = [
+        "http://www.elasticsearch.org/guide/reference/index-modules/analysis/standard-analyzer.html"
+    ]
+    for url in urls:
+        site = he.extract(url)
+        search.similar._init_titles(site)
+        alias = search.search_nocompare(url, search_engine='bing')
+        if alias[0] is None:
+            alias = []
+        alias += search.search_nocompare(url, search_engine='google')
+        if alias[0] is None:
+            alias = []
+        alias = {a[0]: a for a in reversed(alias)}
+        alias = list(alias.values())
+        
+        print(f'alias: {json.dumps(alias, indent=2)}')
+        print("Results:", search.search_results(url))
+
+# test_search_fuzzy_temp()
+test_search_nocompare()
