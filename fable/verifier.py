@@ -224,7 +224,8 @@ class URLAlias:
         return (hostname, rules)
 
 class Verifier:
-    def __init__(self, debug=0):
+    def __init__(self, fuzzy=0):
+        """fuzzy: Whether candidates are found by fuzzy search"""
         self.url_candidates = defaultdict(lambda: defaultdict(set)) # * {url: {cand: {matched}}}
         self.url_title = {}
         self.url_alias_match = defaultdict(dict)
@@ -241,7 +242,8 @@ class Verifier:
             "anchor": 1, 
             # 'redirection': 2
         }
-        self._debug = debug
+        self._fuzzy = fuzzy
+        self._debug = fuzzy
         self._crawled = set()
 
     def clear(self):
@@ -441,7 +443,7 @@ class Verifier:
         for turl, tcands in url_candidates.items():
             title = self.url_title.get(turl, '')
             for tcand, reason in tcands.items():
-                if not self._debug:
+                if not self._fuzzy:
                     if len(reason) > 1 and 'search:fuzzy_search' in reason:
                         reason.remove('search:fuzzy_search')
                 ua = URLAlias(turl, tcand, {}, title=title)
@@ -455,7 +457,7 @@ class Verifier:
      
     def _rank_cluster(self, cluster):
         def __predictability(rule):
-            if self._debug:
+            if self._fuzzy:
                 length = len(rule)
                 pred = sum([(i+1)/length for i, r in enumerate(rule) if r[0] == 0])
             else:
@@ -474,7 +476,7 @@ class Verifier:
                 method = [m.split(":")[0] for m in method] + [m.split(":")[1] for m in method]
                 seen_hints.update(set(self.valid_hints.keys()).intersection(method))
             hint_score = sum([self.valid_hints[s] for s in seen_hints])
-            if self._debug:
+            if self._fuzzy:
                 # ! TEMP: Diff1. Ground truth
                 if self._src == 'gt' and len(c['values']) == 1 and tuple(c['rule'][1][-1]) < (1, ""):
                     continue
@@ -549,7 +551,7 @@ class Verifier:
         return True
 
     def _more_property_match(self, cluster, target_url):
-        """Only used when _debug=1 (all fuzzy_search). Fetch more information for title/content match when the pattern is too general"""
+        """Only used when _fuzzy=1 (all fuzzy_search). Fetch more information for title/content match when the pattern is too general"""
         url_cand = defaultdict(set)
         def _norm(url):
             url = _throw_unuseful_query(url)

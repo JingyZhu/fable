@@ -53,4 +53,20 @@ def test_hist_redir_temp():
 
     print(f'alias: {json.dumps(aliases, indent=2)}')
 
-test_hist_redir_temp()
+
+def test_verify_temp():
+    """Temporary test to avoid long waiting for other tests"""
+    _init_large_obj()
+    urls = [
+        "http://www.foxnews.com/politics/2010/03/18/cornhusker-kickback-gets-boot-health",
+        "http://www.foxnews.com/politics/2009/03/23/fusion-centers-expand-criteria-identify-militia-members/",
+        "http://www.foxnews.com/politics/2011/01/19/christie-expands-number-charter-schools-new-jersey"
+    ]
+    hr_cands = alias_finder.hist_redir(urls)
+    se_cands = alias_finder.search(urls)
+    cands = se_cands + hr_cands
+    aliases = alias_finder.verify(urls, cands)
+
+    print(f'alias: {json.dumps(aliases, indent=2)}')
+
+test_verify_temp()

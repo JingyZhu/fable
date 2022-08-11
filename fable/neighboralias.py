@@ -25,8 +25,7 @@ class NeighborAlias:
         self.similar2 = tools.Similar(threshold=0.7)
         self.histredirector = histredirector.HistRedirector()
         self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar)
-        self.discoverer = discoverer2.Discoverer(memo=self.memo, similar=self.similar2)
-
+        
     def __detect_str_alnum(self, string):
         """Detect whether string has alpha and/or numeric char"""
         typee = ''
@@ -86,8 +85,8 @@ class NeighborAlias:
         """
         speed (if no spec_method): level of speed. 
         0: Only hist redir, 
-        1: Not whole backlink, 
-        2: Everything
+        1: Hist redir + search
+        2: TODO
 
         spec_method: specified method. speed will be abandoned
                         use: wayback_alias, search, backlink_basic, backlink
@@ -95,15 +94,13 @@ class NeighborAlias:
         site = he.extract(url)
         self.similar._init_titles(site)
         self.similar2._init_titles(site)    
-        results = {'hist_redir': (None, {}), 'hist_redir_any': (None, {}), 'search': (None, {}), 'backlink': (None, {})}
+        results = {'hist_redir': (None, {}), 'hist_redir_any': (None, {}), 'search': (None, {})}
         # * Decide what to run based on speed or spec_method
         run_dict = {
             "hist_redir": False, 
             "hist_redir_any": False, 
             'search': False, 
-            "search_fuzzy": False, 
-            "backlink_basic": False, 
-            "backlink": False
+            "search_fuzzy": False
         }
         if len(spec_method) > 0:
             for sm in spec_method: run_dict[sm] = True
@@ -111,9 +108,6 @@ class NeighborAlias:
             run_dict['hist_redir'] = True
             if speed > 0: 
                 run_dict['search'] = True
-                run_dict['backlink_basic'] = True
-            if speed > 1:
-                run_dict['backlink'] = True
 
         def _wayback_alias(url):
             if not run_dict['hist_redir']:
@@ -151,23 +145,8 @@ class NeighborAlias:
                     search_aliases.append([ase, {'method': 'search', 'type': 'fuzzy_search'}])
                 if len(search_aliases) > 0:
                     results['search'] = search_aliases
-        def _backlink(url):
-            if run_dict['backlink_basic']:
-                try:
-                    wayback_url = self.memo.wayback_index(url, policy='latest-rep')
-                    html, wayback_url = self.memo.crawl(wayback_url, final_url=True)
-                    alias = self.discoverer._check_archive_canonical(wayback_url, html)
-                    alias = alias, {'method': 'backlink', 'type': 'archive_canonincal'}
-                    results['backlink'] = alias
-                except:
-                    pass
-            if run_dict['backlink']:
-                alias = self.discoverer.discover(url)
-                alias[1].update({'method': 'backlink'})
-                results['backlink'] = alias
         threads = []
         threads.append(threading.Thread(target=_wayback_alias, args=(url,)))
-        threads.append(threading.Thread(target=_backlink, args=(url,)))
         threads.append(threading.Thread(target=_search, args=(url,)))
         for i in range(len(threads)):
             threads[i].start()

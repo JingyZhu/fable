@@ -28,8 +28,10 @@ class AliasFinder:
         self.histredirector = histredirector.HistRedirector(memo=self.memo,  proxies=proxies)
         self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar, proxies=proxies)
         self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
+        self.verifier = verifier.Verifier(fuzzy=1)
         self.db = db
         self.site = None
+        self.url_title = {}
         self.classname = classname
         self.logname = classname if logname is None else logname
         self.tracer = tracer if tracer is not None else self._init_tracer(loglevel=loglevel)
@@ -59,34 +61,24 @@ class AliasFinder:
         self.pattern_dict = None
         self.seen_reorg_pairs = None
         self.tracer.handlers.pop()
+    
+    def _get_title(self, url):
+        if url in self.url_title:
+            return self.url_title[url]
+        wayback_url = self.memo.wayback_index(url)
+        if wayback_url:
+            wayback_html = self.memo.crawl(wayback_url)
+            title = self.memo.extract_title(wayback_html)
+        else:
+            title = ""
+        self.url_title[url] = title
+        return title
 
-    def infer_on_example(self, url, meta, alias):
+    def infer(self, urls, verified_cands):
         """
-        Called whenever search/discover found new aliases
-        Return: [URLs found aliases through inference]
-        """
-        new_finds = []
-        self.inferer.add_url_alias(url, meta, alias)
-        example = (url, meta, alias)
-        found_aliases = self.inferer.infer_on_example(example)
-        any_added = False
-        for infer_url, (infer_alias, reason) in found_aliases.items():
-            reorg_title = self.db.reorg.find_one({'url': infer_url})
-            title = reorg_title['title'] if 'title' in reorg_title and isinstance(reorg_title['title'], str) else ''
-            update_dict = {"reorg_url": infer_alias, "by": {"method": "infer"}}
-            update_dict['by'].update(reason)
-            self.db.reorg.update_one({'url': infer_url}, {'$set': {self.classname:update_dict}})
-            added = self.inferer.add_url_alias(infer_url, (title,), infer_alias)
-            any_added = any_added or added
-            new_finds.append(infer_url)
-        # if not any_added: 
-        #     break
-        # examples = success
-        # found_aliases = self.inferer.infer_new(examples)
-        return new_finds
+        urls: URLs to infer
 
-    def infer(self):
-        """TODO: What needs to be logged?"""
+        """
         if self.similar.site is None or self.site not in self.similar.site:
             self.similar.clear_titles()
             if not self.similar._init_titles(self.site):
@@ -112,14 +104,8 @@ class AliasFinder:
         aliases = self.histredirector.wayback_alias_batch_history(urls)
 
         for url, r in aliases.items():
-            title = ''
+            title = self._get_title(url)
             reason = {}
-            try:
-                wayback_url = self.memo.wayback_index(url)
-                if wayback_url: 
-                    wayback_html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(wayback_html)
-            except: pass
             if r:
                 reason = {"method": "wayback_alias", "type": "wayback_alias"}
                 hist_aliases.append([
@@ -129,7 +115,6 @@ class AliasFinder:
                     reason
                 ])
         return hist_aliases
-
 
     def search(self, urls, nocompare=True, fuzzy=True):
         """
@@ -147,15 +132,8 @@ class AliasFinder:
         
         search_aliases = []
         for url in urls:
-            # * Get title
-            title = ''
-            try:
-                wayback_url = self.memo.wayback_index(url)
-                if wayback_url:
-                    wayback_html = self.memo.crawl(wayback_url)
-                    title = self.memo.extract_title(wayback_html)
-            except: pass
-
+            title = self._get_title(url)
+            
             # * Search
             if nocompare:
                 aliases = self.searcher.search_nocompare(url, search_engine='bing')
@@ -181,3 +159,27 @@ class AliasFinder:
                 seen.add(ase)
                 search_aliases.append([url, [title,], ase, {'method': 'search', 'type': 'fuzzy_search'}])
         return search_aliases
+    
+    def verify(self, urls, candidates):
+        """
+        Verify the candidates found for urls
+        candidates: [ [url, [title,], alias, reason] ]
+
+        Return: verified [ [url, [title,], alias, reason] ]
+        """
+        # * Form candidates for verifier
+        netloc = url_utils.netloc_dir(urls[0], exclude_index=True)
+        cand_obj = {'netloc_dir': netloc, 'alias': [], 'examples': []}
+        for cand in candidates:
+            if cand[0] in urls:
+                cand_obj['alias'].append(cand)
+        
+        # * Verify candidates for aliases
+        aliases = []
+        self.verifier.add_aliasexample(cand_obj, clear=True)
+        for url in urls:
+            alias = self.verifier.verify_url(url)
+            title = self._get_title(url)
+            for a, r in alias:
+                aliases.append([url, [title,], a, r])
+        return aliases
