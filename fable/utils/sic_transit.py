@@ -12,7 +12,7 @@ from math import ceil
 from bs4 import BeautifulSoup
 
 from fable import config
-from . import text_utils, url_utils
+from . import text_utils, url_utils, crawl
 from .crawl import rp 
 import logging
 logger = logging.getLogger('logger')
@@ -256,9 +256,9 @@ def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False
     # Ignore Homepages
     if urlsplit(url).path in ['', '/']:
         return False, "Homepage (no Soft-404 detection)"
+    final_url = crawl.get_canonical(url, resp.text)
     # Non home to home 
     if redir_home:
-        final_url = resp.url
         if urlsplit(url).path not in ['', '/'] and urlsplit(final_url).path in ['', '/']:
             return True, "Non homepage to homepage"
     try:

@@ -3,7 +3,7 @@ import logging
 import os
 import json
 
-from fable import tools, fable, tracer, config
+from fable import tools, fable, tracer, config, verifier
 from fable.utils import url_utils
 
 he = url_utils.HostExtractor()
@@ -19,17 +19,12 @@ def _init_large_obj():
         try:
             os.remove(os.path.basename(__file__).split(".")[0] + '.log')
         except: pass
-        logging.setLoggerClass(tracer.tracer)
-        tr = logging.getLogger('logger')
-        logging.setLoggerClass(logging.Logger)
-        tr._unset_meta()
-        tr._set_meta(os.path.basename(__file__).split(".")[0], db=db, loglevel=logging.DEBUG)
     if simi is None:
         simi = tools.Similar()
     if alias_finder is None:
-        alias_finder = fable.AliasFinder(similar=simi)
+        alias_finder = fable.AliasFinder(similar=simi, classname='test_fable', loglevel=logging.DEBUG)
 
-def test_search_temp():
+def test_search():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
@@ -41,20 +36,20 @@ def test_search_temp():
     print(f'alias: {json.dumps(aliases, indent=2)}')
 
 
-def test_hist_redir_temp():
+def test_hist_redir():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
         "http://www.foxnews.com/politics/2010/03/18/cornhusker-kickback-gets-boot-health",
-        "http://www.foxnews.com/politics/2009/03/23/fusion-centers-expand-criteria-identify-militia-members/",
-        "http://www.foxnews.com/politics/2011/01/19/christie-expands-number-charter-schools-new-jersey"
+        # "http://www.foxnews.com/politics/2009/03/23/fusion-centers-expand-criteria-identify-militia-members/",
+        # "http://www.foxnews.com/politics/2011/01/19/christie-expands-number-charter-schools-new-jersey"
     ]
     aliases = alias_finder.hist_redir(urls)
 
     print(f'alias: {json.dumps(aliases, indent=2)}')
 
 
-def test_verify_temp():
+def test_verify():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
@@ -69,4 +64,76 @@ def test_verify_temp():
 
     print(f'alias: {json.dumps(aliases, indent=2)}')
 
-test_verify_temp()
+
+def test_neighbor_alias():
+    _init_large_obj()
+    urls = [
+        "http://www.foxnews.com/politics/2010/03/18/cornhusker-kickback-gets-boot-health",
+    ]
+    hr_cands = alias_finder.hist_redir(urls)
+    se_cands = alias_finder.search(urls)
+    neighbor_urls, neighbor_aliases = alias_finder.get_neighbors(urls)
+    cands = se_cands + hr_cands
+    
+    neighbor_cands = neighbor_aliases
+    neighbor_cands += alias_finder.hist_redir(neighbor_urls)
+    neighbor_cands += alias_finder.search(neighbor_urls)
+    
+    aliases = alias_finder.verify(urls, cands, neighbor_cands)
+
+    print(f'alias: {json.dumps(aliases, indent=2)}')
+
+
+def test_inference():
+    _init_large_obj()
+
+    urls = [
+        "http://www.foxnews.com/politics/2009/12/26/lawmakers-attempted-airline-attack-disturbing-pledge-hold-hearings/",
+    ]
+    verified_cands = [
+        [
+        "http://www.foxnews.com/politics/2009/03/23/fusion-centers-expand-criteria-identify-militia-members/",
+        [
+          "'Fusion Centers' Expand Criteria to Identify Militia Members | Fox News"
+        ],
+        "https://www.foxnews.com/politics/fusion-centers-expand-criteria-to-identify-militia-members",
+        {
+          "method": "search",
+          "type": "title",
+          "value": 0.9062792647796163
+        }
+      ],
+      [
+        "http://www.foxnews.com/politics/2010/03/18/cornhusker-kickback-gets-boot-health",
+        [
+          "'Cornhusker' Out, More Deals In: Health Care Bill Gives Special Treatment | Fox News"
+        ],
+        "https://www.foxnews.com/politics/cornhusker-out-more-deals-in-health-care-bill-gives-special-treatment",
+        {
+          "method": "search",
+          "type": "title",
+          "value": 0.8857167321259989
+        }
+      ],
+      [
+        "http://www.foxnews.com/politics/2009/06/08/clinton-invites-controversial-muslim-leader-conference/",
+        [
+          "Clinton Invites Controversial Muslim Leader on Conference Call | Fox News"
+        ],
+        "https://www.foxnews.com/politics/clinton-invites-controversial-muslim-leader-on-conference-call",
+        {
+          "method": "search",
+          "type": "title",
+          "value": 0.8953564472540547
+        }
+      ]
+    ]
+
+    aliases = alias_finder.infer(urls, verified_cands)
+    print(f'alias: {json.dumps(aliases, indent=2)}')
+
+
+
+# test_hist_redir()
+# test_neighbor_alias_temp()
+test_inference()

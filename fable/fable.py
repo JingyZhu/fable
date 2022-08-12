@@ -1,7 +1,5 @@
-from fable import histredirector, searcher, inferer, verifier, tools
-from urllib.parse import urlsplit, parse_qsl
+from fable import histredirector, searcher, inferer, verifier, tools, neighboralias
 import os
-import time
 import logging
 
 from . import config
@@ -29,6 +27,7 @@ class AliasFinder:
         self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar, proxies=proxies)
         self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
         self.verifier = verifier.Verifier(fuzzy=1)
+        self.nba = neighboralias.NeighborAlias()
         self.db = db
         self.site = None
         self.url_title = {}
@@ -78,23 +77,37 @@ class AliasFinder:
         """
         urls: URLs to infer
 
+        Return: [ [url, [title,], [aliases (w/ history)], reason] ]
         """
-        if self.similar.site is None or self.site not in self.similar.site:
-            self.similar.clear_titles()
-            if not self.similar._init_titles(self.site):
-                self.tracer.warn(f"Similar._init_titles: Fail to get homepage of {self.site}")
-                return
-        found_aliases = self.inferer.infer_all()
-        any_added = False
-        for infer_url, (infer_alias, reason) in found_aliases.items():
-            reorg_title = self.db.reorg.find_one({'url': infer_url})
-            title = reorg_title['title'] if 'title' in reorg_title and isinstance(reorg_title['title'], str) else ''
-            update_dict = {"reorg_url": infer_alias, "by": {"method": "infer"}}
-            update_dict['by'].update(reason)
-            self.db.reorg.update_one({'url': infer_url}, {'$set': {self.classname: update_dict}})
-            added = self.inferer.add_url_alias(infer_url, (title,), infer_alias)
-            any_added = any_added or added
-        self.tracer.flush()
+        first_url = urls[0]
+        site = he.extract(first_url)
+        if self.similar.site is None or site not in self.similar.site:
+            self.similar._init_titles(site)
+            self.inferer.init_site(site)
+
+        urlmeta = [[u, [self._get_title(u)]] for u in urls]
+        inferexample = []
+        for example in verified_cands:
+            if not isinstance(example[2], list): example[2] = [example[2]]
+            for a in example[2]:
+                inferexample.append(example[:2]+[a])
+        examples_list = self.inferer.cluster_examples(inferexample)
+        alias, reason = None, {}
+        urlmeta_dict = {u[0]: u for u in urlmeta}
+        url_infer = []
+        seen_urls = set()
+        for examples in examples_list:
+            poss_infer = self.inferer.infer_shards(examples, urlmeta, split=100)
+            poss_infer = self.inferer._filter_multicast(examples, poss_infer)
+            for url, poss_aliases in poss_infer.items():
+                print("POSS ALIAS", poss_aliases)
+                alias, reason = self.inferer._verify_alias(url, poss_aliases, compare=False)
+                print(alias, reason)
+                if alias and url not in seen_urls:
+                    seen_urls.add(url)
+                    um = urlmeta_dict[url] + [alias, reason]
+                    url_infer.append(um)
+        return url_infer
 
     def hist_redir(self, urls):
         """
@@ -160,10 +173,10 @@ class AliasFinder:
                 search_aliases.append([url, [title,], ase, {'method': 'search', 'type': 'fuzzy_search'}])
         return search_aliases
     
-    def verify(self, urls, candidates):
+    def verify(self, urls, candidates, neighbor_candididates=[]):
         """
         Verify the candidates found for urls
-        candidates: [ [url, [title,], alias, reason] ]
+        candidates & neighbor_candidates: [url, [title,], alias, reason] ]
 
         Return: verified [ [url, [title,], alias, reason] ]
         """
@@ -173,6 +186,8 @@ class AliasFinder:
         for cand in candidates:
             if cand[0] in urls:
                 cand_obj['alias'].append(cand)
+        for cand in neighbor_candididates:
+            cand_obj['examples'].append(cand)
         
         # * Verify candidates for aliases
         aliases = []
@@ -182,4 +197,61 @@ class AliasFinder:
             title = self._get_title(url)
             for a, r in alias:
                 aliases.append([url, [title,], a, r])
+        return aliases
+    
+    def get_neighbors(self, urls, tss=[], status_filter='23', \
+                        max_collect=5):
+        """
+        Find aliases for urls neighbors using search and/or hist_redir
+        urls: str/list. If list, randomly pick 5 (most) and look for their closed neighbors all together
+        tss: Timestamps specified to pick closest similar URLs being archived
+        max_keep: Max aliases to keep per each URL
+
+        Return: ([broken neighbors], [redirected neighbor URLs with their 'alias'])
+        """
+        if isinstance(urls, str):
+            urls = [urls]
+        # * Get neighbor URLs
+        ordered_w = self.nba.get_neighbors(urls, tss=tss, status_filter=status_filter)
+        ordered_w = ordered_w[:min(len(ordered_w), max_collect)]
+        
+        neighbors, aliases = [], []
+        # * Collect URLs for finding aliases
+        for _, orig_url, _ in ordered_w:
+            broken, reason = sic_transit.broken(orig_url, html=True, redir_home=True)
+            title = self._get_title(orig_url)
+            if broken != True:
+                print(f"URL not broken: {orig_url} {reason}")
+                alias = self.nba._non_broken_alias(orig_url)
+                if alias and not url_utils.url_match(orig_url, alias):
+                    print(f"redirect alias: {orig_url} --> {alias}")
+                    trace = {"method": "redirection", "type": "redirection"}
+                    aliases.append((orig_url, (title,), alias, trace))
+                continue
+            neighbors.append(orig_url)
+        return neighbors, aliases
+    
+    def run_order(self, netloc, urls):
+        """
+        Main workflow func: Combine all techniques in order
+        
+        """
+        site = he.extract(f"http://{netloc}")
+        self.similar._init_titles(site)
+
+        neighbor_urls = []
+        if len(urls) < 5:
+            neighbor_urls, neighbor_aliases = self.get_neighbors(urls)
+        
+        cands, neighbor_cands = [], neighbor_aliases
+        cands += self.hist_redir(urls)
+        cands += self.search(urls)
+        neighbor_cands += self.hist_redir(neighbor_urls)
+        neighbor_cands += self.search(neighbor_urls)
+
+        aliases = self.verify(urls, cands, neighbor_cands)
+        eurls = set([u[0] for u in aliases])
+        iurls = [u for u in urls if u not in eurls]
+        infer_aliases = self.infer(iurls, aliases)
+        aliases += infer_aliases
         return aliases
