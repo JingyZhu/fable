@@ -139,7 +139,7 @@ def test_inference():
 def test_run_order():
     _init_large_obj()
     urls = [
-        "http://vids.myspace.com/index.cfm?fuseaction=vids.individual&videoid=6017017"
+      "http://www.philstar.com/Article.aspx?articleId=205668"
     ]
     netloc = url_utils.netloc_dir(urls[0], exclude_index=True)
     netloc = netloc[0] + netloc[1]

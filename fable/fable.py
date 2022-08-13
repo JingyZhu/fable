@@ -219,11 +219,13 @@ class AliasFinder:
             urls = [urls]
         # * Get neighbor URLs
         ordered_w = self.nba.get_neighbors(urls, tss=tss, status_filter=status_filter)
-        ordered_w = ordered_w[:min(len(ordered_w), max_collect)]
+        # ordered_w = ordered_w[:min(len(ordered_w), max_collect)]
         
         neighbors, aliases = [], []
         # * Collect URLs for finding aliases
         for _, orig_url, _ in ordered_w:
+            if len(aliases) > 2 * max_collect:
+                break
             broken, reason = sic_transit.broken(orig_url, html=True, redir_home=True)
             title = self._get_title(orig_url)
             if broken != True:
@@ -235,6 +237,10 @@ class AliasFinder:
                     aliases.append((orig_url, (title,), alias, trace))
                 continue
             neighbors.append(orig_url)
+            if len(neighbors) >= max_collect:
+                break
+        nd = url_utils.netloc_dir(urls[0], exclude_index=True)
+        self._candidate_cache[nd[0]+nd[1]]['redirection'] += aliases
         return neighbors, aliases
     
     def run_order(self, netloc, urls):
@@ -246,6 +252,7 @@ class AliasFinder:
         self.similar._init_titles(site)
 
         neighbor_urls = []
+        neighbor_aliases = []
         if len(urls) < 5:
             neighbor_urls, neighbor_aliases = self.get_neighbors(urls)
         

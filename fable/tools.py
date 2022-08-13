@@ -1172,6 +1172,24 @@ def get_unique_token(url, fuzzy=False):
             for _, v in liq:
                 q_count[v] += 1
         return [q for q in qs if q_count.get(q) <= 1 or _is_id(q)]
+    def _split_token(s):
+        """Split a token into id and the remaining"""
+        splitted = []
+        st = regex.split("[^a-zA-Z0-9]", s)
+        if _is_id(st[0]): 
+            splitted.append(st[0])
+            st = st[1:]
+        if _is_id(st[-1]): 
+            splitted.append(st[-1])
+            st = st[:-1]
+        splitted.append(' '.join(st).strip())
+        return splitted
+    def _good_token(s):
+        """Token not differentiable if too short"""
+        if not _is_id(s) and len(regex.split("[^a-zA-Z0-9]", s)) <= 1:
+            if len(s) <= 5:
+                return False
+        return True
     # * Check for unique token in the path
     for i in range(len(path)-1, 0, -1):
         sub_path = '/'.join(path[:i+1])
@@ -1184,9 +1202,11 @@ def get_unique_token(url, fuzzy=False):
         if len(query):
             available_tokens += _unique_query(wayback_index, query)
         if len(wayback_index) <= 1:
-            available_tokens.append(path[i])
+            available_tokens  += _split_token(path[i])
         else:
             break
-    
+    available_tokens = list(set(available_tokens))
+    available_tokens = [a for a in available_tokens if _good_token(a)]
+    available_tokens.sort(reverse=True, key=lambda x: len(x))
     return available_tokens
     
