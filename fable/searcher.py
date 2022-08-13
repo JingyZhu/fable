@@ -31,6 +31,23 @@ class Searcher:
         self.similar = similar if similar is not None else tools.Similar()
         self.searched_results = {} # * URL: {title: {}, content: {}}
 
+    def _check_archive_canonical(self, url, html):
+        """
+        Check whether archive has the working canonical
+        url: wayback form
+        html: wayback html
+
+        Return: alias if found, else None
+        """
+        canonical = crawl.get_canonical(url, html)
+        if not url_utils.url_match(url, canonical, wayback=True):
+            canonical = url_utils.filter_wayback(canonical)
+            if sic_transit.broken(canonical)[0] is False:
+                live_canonical = crawl.requests_crawl(canonical, raw=True)
+                live_canonical = crawl.get_canonical(live_canonical.url, live_canonical.text)
+                return live_canonical
+        return
+
     def search(self, url, search_engine='bing', fuzzy=False):
         """
         fuzzy: If there will be no separable check for similar
@@ -122,6 +139,18 @@ class Searcher:
                 return r
             else:
                 return None, {'reason': "Fail to get archive copy"}
+        
+        # * Archive canonical
+        canonical_alias = self._check_archive_canonical(wayback_url, html)
+        tracer.debug(f'_check_archive_canonical: {canonical_alias}')
+        if canonical_alias:
+            simi_tup = (canonical_alias, \
+                    {'method': 'archive_canonical', 'type': 'archive_canonical', 'value': 'N/A'})
+            if fuzzy:
+                fuzzy_similars.append(simi_tup)
+            else:
+                return simi_tup
+
         tracer.title(url, title)
         search_results, searched = [], set()
 
@@ -330,6 +359,14 @@ class Searcher:
                 return fuzzy_similars
             else:
                 return []
+        
+        # * Archive canonical
+        canonical_alias = self._check_archive_canonical(wayback_url, html)
+        tracer.debug(f'_check_archive_canonical: {canonical_alias}')
+        if canonical_alias:
+            fuzzy_similars.append((canonical_alias, \
+                {'method': 'archive_canonical', 'type': 'archive_canonical', 'value': 'N/A'}))
+
         tracer.title(url, title)
         search_results, searched = [], set()
 

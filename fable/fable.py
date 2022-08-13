@@ -1,6 +1,8 @@
+from email.policy import default
 from fable import histredirector, searcher, inferer, verifier, tools, neighboralias
 import os
 import logging
+from collections import defaultdict
 
 from . import config
 from .tracer import tracer as tracing
@@ -26,7 +28,7 @@ class AliasFinder:
         self.histredirector = histredirector.HistRedirector(memo=self.memo,  proxies=proxies)
         self.searcher = searcher.Searcher(memo=self.memo, similar=self.similar, proxies=proxies)
         self.inferer = inferer.Inferer(memo=self.memo, similar=self.similar, proxies=proxies)
-        self.verifier = verifier.Verifier(fuzzy=1)
+        self.verifier = verifier.Verifier(fuzzy=1, memo=self.memo, similar=self.similar)
         self.nba = neighboralias.NeighborAlias()
         self.db = db
         self.site = None
@@ -34,6 +36,7 @@ class AliasFinder:
         self.classname = classname
         self.logname = classname if logname is None else logname
         self.tracer = tracer if tracer is not None else self._init_tracer(loglevel=loglevel)
+        self._candidate_cache = defaultdict(lambda: defaultdict(list)) # * {netloc: {'search/hist_redir': [candidates]}}
 
     def _init_tracer(self, loglevel):
         logging.setLoggerClass(tracing)
@@ -41,7 +44,6 @@ class AliasFinder:
         logging.setLoggerClass(logging.Logger)
         tracer._set_meta(self.classname, logname=self.logname, db=self.db, loglevel=loglevel)
         return tracer
-    
 
     def init_site(self, site, urls=[]):
         self.site = site
@@ -127,6 +129,8 @@ class AliasFinder:
                     r,
                     reason
                 ])
+        nd = url_utils.netloc_dir(urls[0], exclude_index=True)
+        self._candidate_cache[nd[0]+nd[1]]['hist_redir'] += hist_aliases
         return hist_aliases
 
     def search(self, urls, nocompare=True, fuzzy=True):
@@ -171,6 +175,8 @@ class AliasFinder:
                 if ase in seen: continue
                 seen.add(ase)
                 search_aliases.append([url, [title,], ase, {'method': 'search', 'type': 'fuzzy_search'}])
+        nd = url_utils.netloc_dir(first_url, exclude_index=True)
+        self._candidate_cache[nd[0]+nd[1]]['search'] += search_aliases
         return search_aliases
     
     def verify(self, urls, candidates, neighbor_candididates=[]):
@@ -246,12 +252,16 @@ class AliasFinder:
         cands, neighbor_cands = [], neighbor_aliases
         cands += self.hist_redir(urls)
         cands += self.search(urls)
-        neighbor_cands += self.hist_redir(neighbor_urls)
-        neighbor_cands += self.search(neighbor_urls)
+        if len(neighbor_urls) > 0:
+            neighbor_cands += self.hist_redir(neighbor_urls)
+            neighbor_cands += self.search(neighbor_urls)
 
         aliases = self.verify(urls, cands, neighbor_cands)
         eurls = set([u[0] for u in aliases])
         iurls = [u for u in urls if u not in eurls]
-        infer_aliases = self.infer(iurls, aliases)
-        aliases += infer_aliases
+        if len(iurls) > 0:
+            infer_aliases = self.infer(iurls, aliases)
+            aliases += infer_aliases
+        nd = url_utils.netloc_dir(urls[0], exclude_index=True)
+        self._candidate_cache[nd[0]+nd[1]]['inference'] += aliases
         return aliases

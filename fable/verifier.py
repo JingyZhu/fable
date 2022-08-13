@@ -1,7 +1,5 @@
 import os
-
-from sqlalchemy import alias
-from .utils import url_utils
+from .utils import url_utils, sic_transit, crawl
 from collections import defaultdict
 import json, regex
 import re
@@ -129,8 +127,10 @@ class URLAlias:
                     max_overlap = (same, diff)
         return max_overlap 
 
-    def transformation_rules(self, others_pairs=None):
-        """Return: What rule?"""
+    def transformation_rules(self, others_pairs=None, common_prefix=False):
+        """
+        common_prefix: Whether commonp prefix is considered
+        """
         if not others_pairs: others_pairs = self.others_pairs
         others_pairs = [o for o in others_pairs if o.to_tuple()[0] != self.to_tuple()[0] and o.to_tuple()[1] != self.to_tuple()[1]]
         
@@ -206,9 +206,9 @@ class URLAlias:
         for i, at in enumerate(alias_tokens):
             # * Check prefix from other_pairs
             best_match = (Match.UNPRED, "")
-            # ! TEMP Just commented for grount truth test
-            # if i != len(alias_tokens)-1 and _intersect_prefix(at, i):
-            #     best_match = (Match.PREFIX, at)
+            if common_prefix:
+                if i != len(alias_tokens)-1 and _intersect_prefix(at, i):
+                    best_match = (Match.PREFIX, at)
             src_dict = {Match.PREFIX: at, Match.PRED: 'url/title', Match.MIX: 'url/title', Match.UNPRED: 'N/A'}
             # ! URL
             for ut in url_tokens[1:]:
@@ -224,11 +224,11 @@ class URLAlias:
         return (hostname, rules)
 
 class Verifier:
-    def __init__(self, fuzzy=0):
+    def __init__(self, fuzzy=0, debug=0, memo=None, similar=None):
         """fuzzy: Whether candidates are found by fuzzy search"""
         self.url_candidates = defaultdict(lambda: defaultdict(set)) # * {url: {cand: {matched}}}
         self.url_title = {}
-        self.url_alias_match = defaultdict(dict)
+        self._url_alias_match = defaultdict(dict)
         self.s_clusters = None
         self._g_clusters = None
         self._r_clusters = None
@@ -243,13 +243,15 @@ class Verifier:
             # 'redirection': 2
         }
         self._fuzzy = fuzzy
-        self._debug = fuzzy
+        self._debug = debug
         self._crawled = set()
+        self.memo = memo
+        self.similar = similar
 
     def clear(self):
         self.url_candidates = defaultdict(lambda: defaultdict(set)) # * {url: {cand: {matched}}}
         self.url_title = {}
-        self.url_alias_match = defaultdict(dict)
+        self._url_alias_match = defaultdict(dict)
         self._crawled = set()
         self.s_clusters = None
         self._g_clusters = None
@@ -263,6 +265,52 @@ class Verifier:
         normed_url = _throw_unuseful_query(normed_url.lower())
         self._normurl_map[normed_url] = url
         return normed_url
+
+    def _alias_match(self, target_url, url_cand):
+        """
+        If no self.memo or self.similar, don't do any comparison
+        Return: {alias: matched}
+        """
+        alias_match = self._url_alias_match[target_url]
+        if self.memo is None or self.similar is None:
+            return alias_match
+        try:
+            wayback_url = self.memo.wayback_index(target_url)
+            if wayback_url:
+                wayback_html = self.memo.crawl(wayback_url)
+                title, content = self.memo.extract_title_content(wayback_html)
+            else:
+                return alias_match
+        except:
+            return alias_match
+        
+        self.similar.separable = lambda x: x[0][1] >= self.similar.threshold
+        cands_contents = {}
+        cands_titles = {}
+        cands = [c[1] for c in url_cand if url_utils.url_match(target_url, c[0])]
+        cands_htmls = {}
+        for cand in cands:
+            if cand in alias_match and 'fuzzy_search' not in alias_match[cand]:
+                continue
+        
+            # # * Sanity check (SE could also got broken pages)
+            # if sic_transit.broken(cand, html=True)[0] != False:
+            #     continue
+            cand_html = self.memo.crawl(cand)
+            if cand_html is None: continue
+            cands_htmls[cand] = cand_html
+            cands_contents[cand] = self.memo.extract_content(cand_html)
+            cands_titles[cand] = self.memo.extract_title(cand_html)
+        similars = self.similar.similar(wayback_url, title, content, cands_titles, cands_contents,
+                                                cands_htmls, shorttext=False)
+        if similars[0][0]:
+            # * Pre filter suspicous cands
+            similars = [(s[0], {"method": "search", "type": fromm, 'value': s[1]}) for s, fromm in similars\
+                             if not url_utils.suspicious_alias(target_url, s[0])]
+            for a, r in similars:
+                self._url_alias_match[target_url][a] = self._method_str(r)
+        return self._url_alias_match[target_url]
+    
 
     def add_urlalias(self, url, alias, title, reason):
         url = self._url_norm(url)
@@ -300,7 +348,7 @@ class Verifier:
                 # if len(matched_token.split(' ')) <= 1:
                 #     continue
             if reason['type'] != 'fuzzy_search':
-                self.url_alias_match[url][alias] = self._method_str(reason)
+                self._url_alias_match[url][cand] = self._method_str(reason)
             if self._debug:
                 if reason['method'] != 'wayback_alias':
                     reason['type'] = 'fuzzy_search'
@@ -350,7 +398,7 @@ class Verifier:
                     reason = search_alias[1].copy()
                     alias = self._url_norm(search_alias[0])
                     if reason['type'] != 'fuzzy_search':
-                        self.url_alias_match[url][alias] = self._method_str(reason)
+                        self._url_alias_match[url][alias] = self._method_str(reason)
                     if self._debug:
                         if reason['method'] != 'wayback_alias':
                             reason['type'] = 'fuzzy_search'
@@ -363,7 +411,7 @@ class Verifier:
             reason = backlink_alias[1].copy()
             alias = self._url_norm(backlink_alias[0])
             if reason['type'] != 'fuzzy_search':
-                self.url_alias_match[url][alias] = self._method_str(reason)
+                self._url_alias_match[url][alias] = self._method_str(reason)
             if self._debug:
                 if reason['method'] != 'wayback_alias' and reason['type'] != 'archive_canonical':
                     reason['type'] = 'fuzzy_search'
@@ -376,7 +424,7 @@ class Verifier:
             reason = infer_alias[1].copy()
             alias = self._url_norm(infer_alias[0])
             if reason['type'] != 'fuzzy_search':
-                self.url_alias_match[url][alias] = self._method_str(reason)
+                self._url_alias_match[url][alias] = self._method_str(reason)
             if self._debug:
                 if reason['method'] not in ['wayback_alias', 'inference']:
                     reason['type'] = 'fuzzy_search'
@@ -396,8 +444,8 @@ class Verifier:
             self.url_title[ex_url] = ex_title
             reason = example[3].copy()
             if self._debug:
-                # if reason['method'] != 'wayback_alias':
-                #     reason['type'] = 'fuzzy_search'
+                if reason['method'] != 'wayback_alias':
+                    reason['type'] = 'fuzzy_search'
                 if reason['method'] == 'redirection':
                     continue
                 pass
@@ -477,7 +525,7 @@ class Verifier:
                 seen_hints.update(set(self.valid_hints.keys()).intersection(method))
             hint_score = sum([self.valid_hints[s] for s in seen_hints])
             if self._fuzzy:
-                # ! TEMP: Diff1. Ground truth
+                # ! Diff1. Ground truth
                 if self._src == 'gt' and len(c['values']) == 1 and tuple(c['rule'][1][-1]) < (1, ""):
                     continue
                 # ! Diff2. Real-world
@@ -570,7 +618,7 @@ class Verifier:
         if not valid and len(url_cand[_norm(target_url)]) <= 3:
             return cluster
         
-        alias_match = self.url_alias_match[target_url]
+        alias_match = self._alias_match(target_url, cluster['values'])
         new_cluster = {'values': [], 'rule': cluster['rule']}
         new_ua_methods = {'matched': [], 'notmatched': []}
         for v in cluster['values']:

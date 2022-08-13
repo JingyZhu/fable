@@ -22,7 +22,7 @@ def _init_large_obj():
     if simi is None:
         simi = tools.Similar()
     if alias_finder is None:
-        alias_finder = fable.AliasFinder(similar=simi, classname='test_fable', loglevel=logging.DEBUG)
+        alias_finder = fable.AliasFinder(similar=simi, classname='test_fable', loglevel=logging.INFO)
 
 def test_search():
     """Temporary test to avoid long waiting for other tests"""
@@ -68,9 +68,10 @@ def test_verify():
 def test_neighbor_alias():
     _init_large_obj()
     urls = [
-        "http://www.foxnews.com/politics/2010/03/18/cornhusker-kickback-gets-boot-health",
+        "https://www.voanews.com/2020-usa-votes/officials-seek-answers-why-security-failed-us-capitol-wednesday",
     ]
-    hr_cands = alias_finder.hist_redir(urls)
+    # hr_cands = alias_finder.hist_redir(urls)
+    hr_cands = []
     se_cands = alias_finder.search(urls)
     neighbor_urls, neighbor_aliases = alias_finder.get_neighbors(urls)
     cands = se_cands + hr_cands
@@ -80,6 +81,7 @@ def test_neighbor_alias():
     neighbor_cands += alias_finder.search(neighbor_urls)
     
     aliases = alias_finder.verify(urls, cands, neighbor_cands)
+    json.dump(alias_finder._candidate_cache, open('.test_fable.json', 'w+'), indent=2)
 
     print(f'alias: {json.dumps(aliases, indent=2)}')
 
@@ -134,6 +136,19 @@ def test_inference():
 
 
 
+def test_run_order():
+    _init_large_obj()
+    urls = [
+        "http://vids.myspace.com/index.cfm?fuseaction=vids.individual&videoid=6017017"
+    ]
+    netloc = url_utils.netloc_dir(urls[0], exclude_index=True)
+    netloc = netloc[0] + netloc[1]
+    aliases = alias_finder.run_order(netloc, urls)
+
+    json.dump(alias_finder._candidate_cache, open('.test_fable.json', 'w+'), indent=2)
+    print(f'alias: {json.dumps(aliases, indent=2)}')
+
 # test_hist_redir()
-# test_neighbor_alias_temp()
-test_inference()
+# test_neighbor_alias()
+# test_inference()
+test_run_order()
