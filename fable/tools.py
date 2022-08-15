@@ -1176,12 +1176,16 @@ def get_unique_token(url, fuzzy=False):
         """Split a token into id and the remaining"""
         splitted = []
         st = regex.split("[^a-zA-Z0-9]", s)
+        if len(st) < 0:
+            return s
+        start, end = 0,len(st)
         if _is_id(st[0]): 
             splitted.append(st[0])
-            st = st[1:]
+            start+=1
         if _is_id(st[-1]): 
             splitted.append(st[-1])
-            st = st[:-1]
+            end-=1
+        st = st[start:end]
         splitted.append(' '.join(st).strip())
         return splitted
     def _good_token(s):

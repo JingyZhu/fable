@@ -222,15 +222,17 @@ class AliasFinder:
         # ordered_w = ordered_w[:min(len(ordered_w), max_collect)]
         
         neighbors, aliases = [], []
+        tries = 0
         # * Collect URLs for finding aliases
         for _, orig_url, _ in ordered_w:
-            if len(aliases) > 2 * max_collect:
+            if tries > 2 * max_collect:
                 break
             broken, reason = sic_transit.broken(orig_url, html=True, redir_home=True)
             title = self._get_title(orig_url)
             if broken != True:
                 print(f"URL not broken: {orig_url} {reason}")
                 alias = self.nba._non_broken_alias(orig_url)
+                tries += 1
                 if alias and not url_utils.url_match(orig_url, alias):
                     print(f"redirect alias: {orig_url} --> {alias}")
                     trace = {"method": "redirection", "type": "redirection"}
