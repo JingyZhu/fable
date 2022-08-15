@@ -139,11 +139,11 @@ def test_inference():
 def test_run_order():
     _init_large_obj()
     urls = [
-    "http://www.couchgenweb.com/civilwar/35thcof.html",
-    "http://www.couchgenweb.com/civilwar/dobbingk.htm",
-    "http://www.couchgenweb.com/civilwar/21stcoa.html",
-    "http://www.couchgenweb.com/civilwar/21stcoihtml"
-  ]
+      "http://www.eurosport.yahoo.com/30122009/58/premier-league-bolton-axe-megson.html",
+      "http://eurosport.yahoo.com/11092011/58/selby-exploits-williams-error-win-shanghai.html",
+      "http://eurosport.yahoo.com/13092009/58/o-sullivan-triumphs-shanghai.html",
+      "http://www.eurosport.yahoo.com/07072007/58/ligue-1-lyon-sign-grosso.html"
+    ]
     netloc = url_utils.netloc_dir(urls[0], exclude_index=True)
     netloc = netloc[0] + netloc[1]
     aliases = alias_finder.run_order(netloc, urls)

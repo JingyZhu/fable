@@ -155,7 +155,7 @@ class AliasFinder:
             if nocompare:
                 aliases = self.searcher.search_nocompare(url, search_engine='bing')
                 aliases += self.searcher.search_nocompare(url, search_engine='google')
-                aliases = {a[0]: a for a in reversed(aliases)}
+                aliases = {a[0]: a for a in reversed(aliases) if a[0] is not None}
                 aliases = list(aliases.values())
             else:
                 aliases = self.searcher.search(url, search_engine='bing', fuzzy=fuzzy)

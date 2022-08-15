@@ -286,7 +286,7 @@ class Searcher:
         """
         No comparison version of search. Search results are directly poped out as candidates
 
-        Return: If exception: None, reason
+        Return: If exception: [(None, reason)]
                 Else: [(match, reason)]
         """
         global he
@@ -332,7 +332,7 @@ class Searcher:
             self.searched_results = {}
         
         if url_utils.na_url(url):
-            return None, {'reason': "Not applicable URL"}
+            return [(None, {'reason': "Not applicable URL"})]
         if url not in self.searched_results:
             self.searched_results[url] ={'title': {}, 'content': {}, 'html': {}}
         
