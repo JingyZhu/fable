@@ -43,9 +43,12 @@ class Searcher:
         if not url_utils.url_match(url, canonical, wayback=True):
             canonical = url_utils.filter_wayback(canonical)
             if sic_transit.broken(canonical)[0] is False:
-                live_canonical = crawl.requests_crawl(canonical, raw=True)
-                live_canonical = crawl.get_canonical(live_canonical.url, live_canonical.text)
-                return live_canonical
+                try:
+                    live_canonical = crawl.requests_crawl(canonical, raw=True)
+                    live_canonical = crawl.get_canonical(live_canonical.url, live_canonical.text)
+                    return live_canonical
+                except:
+                    pass
         return
 
     def search(self, url, search_engine='bing', fuzzy=False):

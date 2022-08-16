@@ -22,7 +22,7 @@ def _init_large_obj():
     if simi is None:
         simi = tools.Similar()
     if alias_finder is None:
-        alias_finder = fable.AliasFinder(similar=simi, classname='test_fable', loglevel=logging.INFO)
+        alias_finder = fable.AliasFinder(similar=simi, classname='test_fable', loglevel=logging.DEBUG)
 
 def test_search():
     """Temporary test to avoid long waiting for other tests"""
@@ -139,10 +139,9 @@ def test_inference():
 def test_run_order():
     _init_large_obj()
     urls = [
-      "http://www.eurosport.yahoo.com/30122009/58/premier-league-bolton-axe-megson.html",
-      "http://eurosport.yahoo.com/11092011/58/selby-exploits-williams-error-win-shanghai.html",
-      "http://eurosport.yahoo.com/13092009/58/o-sullivan-triumphs-shanghai.html",
-      "http://www.eurosport.yahoo.com/07072007/58/ligue-1-lyon-sign-grosso.html"
+      "http://www.motocrossplanet.com/worldwide/50597/Herlings-wins-in-Thailand-on-Saturday,-injury-for-Ferrandis",
+      "http://www.motocrossplanet.com/worldwide/50847/MXGP,-MX2-and-WMX-Entry-Lists-for-the-MXGP-of-Europe",
+      "http://www.motocrossplanet.com/worldwide/50424/Evgeny-Bobryshev-wins-the-MXGP-qualifying-heat-in-Qatar"
     ]
     netloc = url_utils.netloc_dir(urls[0], exclude_index=True)
     netloc = netloc[0] + netloc[1]
