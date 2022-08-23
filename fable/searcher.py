@@ -344,7 +344,8 @@ class Searcher:
         fuzzy_similars = []
 
         site = he.extract(url)
-        if not site: return None, {'reason': "Fail to get site of URL (non http URL)"}
+        if not site: 
+            return [(None, {'reason': "Fail to get site of URL (non http URL)"})]
         if '://' not in site: site = f'http://{site}'
         _, final_url = self.memo.crawl(site, final_url=True)
         if final_url is not None:
@@ -374,8 +375,6 @@ class Searcher:
         search_results, searched = [], set()
 
         def search_once(search_results, typee):
-            """Incremental Search"""
-            global he
             """Incremental Search"""
             global he
             nonlocal url, title, content, html, searched, search_engine

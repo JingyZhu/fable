@@ -1,6 +1,7 @@
 """
 Implementation of detection of broken pages from sic transit 
 """
+from lib2to3.pgen2 import token
 import requests
 from urllib.request import urlopen, Request
 import re
@@ -179,6 +180,7 @@ def construct_rand_urls(url):
         random_url += '?' + q
         random_urls.append(random_url)
     else:
+        random_urls = []
         for idx, qkv in enumerate(ql):
             qv = similar_pattern(qkv[1])
             query_cp = ql.copy()
@@ -306,14 +308,21 @@ def broken(url, html=False, ignore_soft_404=False, ignore_soft_404_content=False
             except Exception as e:
                 url_content = resp.text
             # ? Try to filter case for js oriented page loading
-            if len(text_norm(url_content).split(' ')) < 10:
+            tokenized_content = text_norm(url_content).split(' ')
+            broken_keywords = ['login', 'subscription', 'error', 'notfound', '404', 'badpage', 'not found']
+            if len(tokenized_content) < 10:
+                for k in broken_keywords:
+                    if k in url_content:
+                        broken_decision.append(True)
+                        reasons.append("short content with broken keywords")
+                        return True, reasons
                 broken_decision.append(False)
                 reasons.append("no features match")
                 continue
             try:
                 random_content = BeautifulSoup(random_resp.text, 'lxml').get_text(separator=' ')
             except: random_content = random_resp.text
-            if text_utils.k_shingling(text_norm(url_content), text_norm(random_content)) >= 0.95:
+            if text_utils.k_shingling(text_norm(url_content), text_norm(random_content)) >= 0.9:
                 # print(text_norm(url_content), text_norm(random_content))
                 broken_decision.append(True)
                 reasons.append("Similar soft 404 content")

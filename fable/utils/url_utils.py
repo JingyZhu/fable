@@ -784,7 +784,7 @@ def order_neighbors(target_url, neighbors, urlgetter=None,
 
 def na_url(url):
     """Check whether the URL (either broken or alias) is n/a for study (including unwanted keywords)"""
-    keywords = ['login', 'subscription', 'error', 'notfound', '404', 'badpage']
+    keywords = ['login', 'subscription', 'error', 'notfound', '404', 'badpage', 'errorpath']
     path = urlsplit(url).path
     if path not in ["/", ""] and path[-1] == "/": path = path[:-1]
     filename = path.split("/")[-1]
@@ -795,6 +795,8 @@ def na_url(url):
     return False
 
 def suspicious_alias(url, alias):
+    if na_url(alias):
+        return True
     alias_us = urlsplit(alias)
     is_home = lambda u: urlsplit(u).path in ['', '/']
     # * Non home to home page

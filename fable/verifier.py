@@ -337,11 +337,10 @@ class Verifier:
                 cand = cand[-1]
             url = self._url_norm(url)
             cand = self._url_norm(cand)
-
             title, reason = obj[1][0], obj[3].copy()
             # * Patch for token match filters
             if reason.get('type') == "token":
-                if reason.get('value', 0) < 0.8:
+                if reason.get('value', 0) < 1:
                     reason['type'] = 'fuzzy_search'
                 # else:
                 # matched_token = reason['matched_token']
@@ -650,6 +649,9 @@ class Verifier:
             cluster = self._gen_cluster()
             self._g_clusters = cluster
             cluster = self._rank_cluster(cluster)
+            if len(cluster) > 1:
+                if cluster[0][1][1] == cluster[1][1][1]:
+                    print('\033[92m', "AHA", '\033[0m')
             self._r_clusters = cluster
             if len(cluster) > 0:
                 top_cluster = cluster[0]
