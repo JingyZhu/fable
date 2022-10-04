@@ -144,7 +144,7 @@ def preprocess(urls, filter_sites=None):
     if filter_sites:
         netloc_urls = _apply_filter_sites(netloc_urls, filter_sites)
     netloc_urls = _apply_filter_url(netloc_urls)
-    sites = get_sites(netloc_urls)
-    site_map = gen_sites_info(sites, num_workers=30)
-    netloc_urls = urls_working_site(netloc_urls, language_set={"en", "de", "fr"}, site_map=site_map)
+    # sites = get_sites(netloc_urls)
+    # site_map = gen_sites_info(sites, num_workers=30)
+    # netloc_urls = urls_working_site(netloc_urls, language_set={"en", "de", "fr"}, site_map=site_map)
     return netloc_urls
