@@ -137,7 +137,7 @@ class Inferer:
         #     nd_alias.sort(reverse=True, key=lambda x: len(x))
         #     all_examples += nd_alias
         # all_examples += delta_examples
-        vr = verifier.Verifier()
+        vr = verifier.Verifier(common_prefix=True)
         for example in new_examples:
             url, title, alias = example[0], example[1][0], example[2]
             vr.add_urlalias(url, alias, title, {'type':'dummy', 'method': 'dummy'})

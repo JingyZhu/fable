@@ -224,7 +224,7 @@ class URLAlias:
         return (hostname, rules)
 
 class Verifier:
-    def __init__(self, fuzzy=0, debug=0, memo=None, similar=None):
+    def __init__(self, fuzzy=0, debug=0, common_prefix=False, memo=None, similar=None):
         """fuzzy: Whether candidates are found by fuzzy search"""
         self.url_candidates = defaultdict(lambda: defaultdict(set)) # * {url: {cand: {matched}}}
         self.url_title = {}
@@ -244,6 +244,7 @@ class Verifier:
         }
         self._fuzzy = fuzzy
         self._debug = debug
+        self._common_prefix = common_prefix
         self._crawled = set()
         self.memo = memo
         self.similar = similar
@@ -494,7 +495,7 @@ class Verifier:
                     if len(reason) > 1 and 'search:fuzzy_search' in reason:
                         reason.remove('search:fuzzy_search')
                 ua = URLAlias(turl, tcand, {}, title=title)
-                rule = ua.transformation_rules(others_pairs=all_pairs)
+                rule = ua.transformation_rules(common_prefix=self._common_prefix, others_pairs=all_pairs)
                 rule = (rule[0], tuple([r for r in rule[1]]))
                 ua_tuple = list(ua.to_tuple())
                 ua_tuple[-1] = '+'.join(reason)
@@ -649,9 +650,6 @@ class Verifier:
             cluster = self._gen_cluster()
             self._g_clusters = cluster
             cluster = self._rank_cluster(cluster)
-            if len(cluster) > 1:
-                if cluster[0][1][1] == cluster[1][1][1]:
-                    print('\033[92m', "AHA", '\033[0m')
             self._r_clusters = cluster
             if len(cluster) > 0:
                 top_cluster = cluster[0]
