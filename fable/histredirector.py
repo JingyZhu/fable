@@ -146,6 +146,7 @@ class HistRedirector:
                     "filter": ['statuscode:3[0-9]*', 'mimetype:text/html'],
                     # 'limit': 1000
                 }
+                # TODO: Make this supported by cache_index
                 neighbor, _ = crawl.wayback_index(url_prefix_str, param_dict=param_dict, total_link=True)
                 tracer.debug(f'Search for neighbors with query & year: {url_prefix_str} {ts_year}. Count: {len(neighbor)}')
                 self.prefix_wayback_300s[url_prefix_str] = neighbor
@@ -342,22 +343,22 @@ class HistRedirector:
         self.crawl_cache = {}
 
         # * Query all 300 archives once
-        self.wayback_index_cache = defaultdict(list)
-        cur_prefix = max(urls, key=lambda x: len(x))
-        param_dict = {
-            'filter': ['mimetype:text/html'],
-            'output': 'json'
-        }
-        for url in urls:
-            url_prefix = url_utils.netloc_dir(url, exclude_index=True)
-            if len(url_prefix) < len(cur_prefix):
-                cur_prefix = url_prefix
-        cur_prefix = cur_prefix[0] + cur_prefix[1]
-        tracer.debug(f"batch_history: wayback index with prefix: {cur_prefix + '/*'}")
-        waybacks, _ = crawl.wayback_index(cur_prefix + '/*', param_dict=param_dict, total_link=True)
-        for wayback in waybacks:
-            target_url = url_utils.filter_wayback(wayback[1])
-            self.wayback_index_cache[url_utils.url_norm(target_url)].append(wayback)
+        if len(self.wayback_index_cache) == 0:
+            cur_prefix = max(urls, key=lambda x: len(x))
+            param_dict = {
+                'filter': ['mimetype:text/html'],
+                'output': 'json'
+            }
+            for url in urls:
+                url_prefix = url_utils.netloc_dir(url, exclude_index=True)
+                if len(url_prefix) < len(cur_prefix):
+                    cur_prefix = url_prefix
+            cur_prefix = cur_prefix[0] + cur_prefix[1]
+            tracer.debug(f"batch_history: wayback index with prefix: {cur_prefix + '/*'}")
+            waybacks, _ = crawl.wayback_index(cur_prefix + '/*', param_dict=param_dict, total_link=True)
+            for wayback in waybacks:
+                target_url = url_utils.filter_wayback(wayback[1])
+                self.wayback_index_cache[url_utils.url_norm(target_url)].append(wayback)
 
         url_history = {}
         for url in urls:
@@ -394,22 +395,22 @@ class HistRedirector:
         self.crawl_cache = {}
 
         # * Query all 300 archives once
-        self.wayback_index_cache = defaultdict(list)
-        cur_prefix = max(urls, key=lambda x: len(x))
-        param_dict = {
-            'filter': ['mimetype:text/html'],
-            'output': 'json'
-        }
-        for url in urls:
-            url_prefix = url_utils.netloc_dir(url, exclude_index=True)
-            if len(url_prefix) < len(cur_prefix):
-                cur_prefix = url_prefix
-        cur_prefix = cur_prefix[0] + cur_prefix[1]
-        tracer.debug(f"batch_history: wayback index with prefix: {cur_prefix + '/*'}")
-        waybacks, _ = crawl.wayback_index(cur_prefix + '/*', param_dict=param_dict, total_link=True)
-        for wayback in waybacks:
-            target_url = url_utils.filter_wayback(wayback[1])
-            self.wayback_index_cache[url_utils.url_norm(target_url)].append(wayback)
+        if len(self.wayback_index_cache) == 0:
+            cur_prefix = max(urls, key=lambda x: len(x))
+            param_dict = {
+                'filter': ['mimetype:text/html'],
+                'output': 'json'
+            }
+            for url in urls:
+                url_prefix = url_utils.netloc_dir(url, exclude_index=True)
+                if len(url_prefix) < len(cur_prefix):
+                    cur_prefix = url_prefix
+            cur_prefix = cur_prefix[0] + cur_prefix[1]
+            tracer.debug(f"batch_history: wayback index with prefix: {cur_prefix + '/*'}")
+            waybacks, _ = crawl.wayback_index(cur_prefix + '/*', param_dict=param_dict, total_link=True)
+            for wayback in waybacks:
+                target_url = url_utils.filter_wayback(wayback[1])
+                self.wayback_index_cache[url_utils.url_norm(target_url)].append(wayback)
 
         url_any_history = {}
         for url in urls:

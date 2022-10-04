@@ -3,6 +3,7 @@ from fable import histredirector, searcher, inferer, verifier, tools, neighboral
 import os
 import logging
 from collections import defaultdict
+import math
 
 from . import config
 from .tracer import tracer as tracing
@@ -85,7 +86,7 @@ class AliasFinder:
         site = he.extract(first_url)
         if self.similar.site is None or site not in self.similar.site:
             self.similar._init_titles(site)
-            self.inferer.init_site(site)
+        self.inferer.init_site(site)
 
         urlmeta = [[u, [self._get_title(u)]] for u in urls]
         inferexample = []
@@ -109,6 +110,8 @@ class AliasFinder:
                     seen_urls.add(url)
                     um = urlmeta_dict[url] + [alias, reason]
                     url_infer.append(um)
+        nd = url_utils.netloc_dir(urls[0], exclude_index=True)
+        self._candidate_cache[nd[0]+nd[1]]['inference'] += url_infer
         return url_infer
 
     def hist_redir(self, urls):
@@ -245,9 +248,9 @@ class AliasFinder:
         self._candidate_cache[nd[0]+nd[1]]['redirection'] += aliases
         return neighbors, aliases
     
-    def run_order(self, netloc, urls):
+    def run_all(self, netloc, urls):
         """
-        Main workflow func: Combine all techniques in order
+        Main workflow func: Combine all techniques
         
         """
         site = he.extract(f"http://{netloc}")
@@ -265,12 +268,79 @@ class AliasFinder:
             neighbor_cands += self.hist_redir(neighbor_urls)
             neighbor_cands += self.search(neighbor_urls)
 
-        aliases = self.verify(urls, cands, neighbor_cands)
+        aliases = self.verify(urls+neighbor_urls, cands, neighbor_cands)
         eurls = set([u[0] for u in aliases])
         iurls = [u for u in urls if u not in eurls]
         if len(iurls) > 0:
             infer_aliases = self.infer(iurls, aliases)
             aliases += infer_aliases
-        nd = url_utils.netloc_dir(urls[0], exclude_index=True)
-        self._candidate_cache[nd[0]+nd[1]]['inference'] += aliases
+        return aliases
+    
+    def _early_skip(self):
+        """
+        Decide whether early escape for the cluster is necessary
+        return: Whether need to early_skip
+        self.verifier needs to be added with examples
+        """
+        def _inferrable(rule):
+            rule = rule[1]
+            for r in reversed(rule[-1:]):
+                if r[0] < verifier.Match.MIX: return False
+            return True
+        for c in self.verifier._g_clusters:
+            if not _inferrable(c['rule']):
+                continue
+            return False
+        self.tracer.info(f"_early_skip: Decide to skip")
+        return True
+
+    def run_order(self, netloc, urls):
+        """
+        Main workflow func: Combine all techniques and run in order
+        Return: verified [ [url, [title,], alias, reason] ]
+        """
+        site = he.extract(f"http://{netloc}")
+        self.similar._init_titles(site)
+        self.histredirector.wayback_index_cache = defaultdict(list)
+
+        cands = []
+        # * Get neighbors
+        neighbor_urls = []
+        neighbor_cands = []
+        if len(urls) < 5:
+            neighbor_urls, neighbor_cands = self.get_neighbors(urls)
+        
+        all_urls = set(urls + neighbor_urls)
+        url_archived = {}
+        for url in all_urls:
+            wi = db.wayback_index.find_one({'url': url})
+            url_archived[url] = wi and len(wi.get('ts', []))
+        url_warchive = [u for u in all_urls if url_archived[u]]
+        url_woarchive = [u for u in all_urls if not url_archived[u]]
+        all_urls = url_warchive + url_woarchive
+        touched_urls = set()
+        while len(touched_urls) < len(all_urls):
+            untouched_urls = [u for u in all_urls if u not in touched_urls]
+            new_url = untouched_urls[0]
+            self.tracer.info(f"Test URL: {new_url}")
+            new_cands = self.hist_redir([new_url])
+            new_cands += self.search([new_url])
+            if new_url in urls:
+                cands += new_cands
+            elif new_url in neighbor_urls:
+                neighbor_cands += new_cands
+            touched_urls.add(new_url)
+            aliases = self.verify(list(touched_urls), cands, neighbor_cands)
+            # * Skip check
+            N = min(max(2, math.ceil(len(all_urls)*0.4)), len(all_urls))
+            if len(aliases) == 0 and len(touched_urls) >= N:
+                if self._early_skip():
+                    break
+            # * Inference
+            urls_seen_aliases = set([a[0] for a in aliases])
+            toinfer_urls = [u for u in all_urls if u not in urls_seen_aliases]
+            if len(toinfer_urls) > 0 and len(urls_seen_aliases) > 1:
+                infer_aliases = self.infer(toinfer_urls, aliases)
+                touched_urls.update([u[0] for u in infer_aliases])
+                aliases += infer_aliases
         return aliases
