@@ -41,8 +41,11 @@ RUN git clone https://github.com/misja/python-boilerpipe.git deps/python-boilerp
 RUN pip install -e deps/python-boilerpipe
 
 # ? USER fable
-WORKDIR /home
-ENTRYPOINT /bin/sh -c /bin/bash
+
+ENTRYPOINT python3
+# WORKDIR /home 
+# ENTRYPOINT /bin/sh -c /bin/bash
+
 
 # # To run: sudo docker run --rm -it --mount type=bind,src=/mnt/fable-files,target=/mnt/fable-files --name fable fable 
 # # Copy config.yml: sudo docker cp config.yml CONTAINER:/home/fable/fable/

@@ -614,7 +614,7 @@ class Verifier:
             cand = url_utils.url_norm(cand, ignore_scheme=True, trim_www=True, trim_slash=True)
             url_cand[url].add(cand)
 
-        # * Target URL matched to more than 3 candidates in the cluster
+        # * Target URL matched to less equal than 3 candidates in the cluster (pattern already selective enough)
         if not valid and len(url_cand[_norm(target_url)]) <= 3:
             return cluster
         

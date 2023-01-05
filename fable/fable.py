@@ -343,4 +343,8 @@ class AliasFinder:
                 infer_aliases = self.infer(toinfer_urls, aliases)
                 touched_urls.update([u[0] for u in infer_aliases])
                 aliases += infer_aliases
+        url_aliases = defaultdict(list)
+        for a in aliases:
+            url_aliases[a[0]].append(a)
+        aliases = [v[0] for v in url_aliases.values()]
         return aliases

@@ -92,6 +92,9 @@ def test_inference():
     urls = [
         "http://www.foxnews.com/politics/2009/12/26/lawmakers-attempted-airline-attack-disturbing-pledge-hold-hearings/",
     ]
+    urls = [
+      "http://www.sup.org:80/book.cgi?id=10015"
+    ]
     verified_cands = [
         [
         "http://www.foxnews.com/politics/2009/03/23/fusion-centers-expand-criteria-identify-militia-members/",
@@ -131,6 +134,81 @@ def test_inference():
       ]
     ]
 
+    verified_cands = [
+      [
+        'http://www.sup.org/book.cgi?id=22655', 
+        [
+          ' Chinese Money in Global Context: Historic Junctures Between 600 BCE and 2012 - Niv Horesh '
+        ], 
+        'https://www.sup.org/books/title/?id=22655', 
+        ['search:fuzzy_search', 'wayback_alias:wayback_alias']
+      ], 
+      [
+        'http://www.sup.org/book.cgi?id=22655', 
+        [
+          ' Chinese Money in Global Context: Historic Junctures Between 600 BCE and 2012 - Niv Horesh '
+        ], 
+        'https://www.sup.org/books/rec/?id=22655', 
+        ['search:token']
+      ], 
+      [
+        'http://www.sup.org/book.cgi?id=22655', 
+        [
+          ' Chinese Money in Global Context: Historic Junctures Between 600 BCE and 2012 - Niv Horesh '
+        ], 
+        'https://www.sup.org/books/cite/?id=22655', 
+        ['search:fuzzy_search']
+      ], 
+      [
+        'http://www.sup.org/book.cgi?id=7994', 
+        [
+          ' The Week the World Stood Still: Inside the Secret Cuban Missile Crisis - Sheldon M. Stern '
+        ], 
+        'https://www.sup.org/books/title/?id=7994', 
+        ['search:fuzzy_search', 'wayback_alias:wayback_alias']
+      ], 
+      [
+        'http://www.sup.org/book.cgi?id=7994', 
+        [
+          ' The Week the World Stood Still: Inside the Secret Cuban Missile Crisis - Sheldon M. Stern '
+        ], 
+        'https://www.sup.org/books/cite/?id=7994', 
+        ['search:fuzzy_search']
+      ], 
+      [
+        'http://www.sup.org/book.cgi?id=7994', 
+        [
+          ' The Week the World Stood Still: Inside the Secret Cuban Missile Crisis - Sheldon M. Stern '
+        ], 
+        'https://www.sup.org/books/comp/?id=7994', 
+        ['search:fuzzy_search']
+      ], 
+      [
+        'http://www.sup.org/book.cgi?id=21682', 
+        [
+          ' After the Revolution: Youth, Democracy, and the Politics of Disappointment in Serbia - Jessica Greenberg '
+        ], 
+        'https://www.sup.org/books/title/?id=21682', 
+        ['search:fuzzy_search', 'wayback_alias:wayback_alias']
+      ], 
+      [
+        'http://www.sup.org/book.cgi?id=21682', 
+        [
+          ' After the Revolution: Youth, Democracy, and the Politics of Disappointment in Serbia - Jessica Greenberg '
+        ], 
+        'https://www.sup.org/books/cite/?id=21682', 
+        ['search:token']
+      ], 
+      [
+        'http://www.sup.org/book.cgi?id=21682', 
+        [
+          ' After the Revolution: Youth, Democracy, and the Politics of Disappointment in Serbia - Jessica Greenberg '
+        ], 
+        'https://www.sup.org/books/comp/?id=21682', 
+        ['search:fuzzy_search']
+      ]
+    ]
+
     aliases = alias_finder.infer(urls, verified_cands)
     print(f'alias: {json.dumps(aliases, indent=2)}')
 
@@ -139,9 +217,9 @@ def test_inference():
 def test_run_order():
     _init_large_obj()
     urls = [
-      "http://www.motocrossplanet.com/worldwide/50597/Herlings-wins-in-Thailand-on-Saturday,-injury-for-Ferrandis",
-      "http://www.motocrossplanet.com/worldwide/50847/MXGP,-MX2-and-WMX-Entry-Lists-for-the-MXGP-of-Europe",
-      "http://www.motocrossplanet.com/worldwide/50424/Evgeny-Bobryshev-wins-the-MXGP-qualifying-heat-in-Qatar"
+      "http://www.sup.org/book.cgi?id=22655",
+      "http://www.sup.org/book.cgi?id=21682",
+      "http://www.sup.org/book.cgi?id=7994"
     ]
     netloc = url_utils.netloc_dir(urls[0], exclude_index=True)
     netloc = netloc[0] + netloc[1]
