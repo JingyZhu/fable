@@ -555,7 +555,7 @@ stemmer = None
 lemmatizer = None
 stem_cache = {}
 
-def tokenize(texts, stop_words='english', stemming=True):
+def tokenize(texts, stop_words='english', nonstop_words=[], stemming=True):
     """
     Simple function for tokenizing a text. Extracted from sklearn src code
     
@@ -566,6 +566,9 @@ def tokenize(texts, stop_words='english', stemming=True):
         stemmer = SnowballStemmer('english')
         lemmatizer = WordNetLemmatizer()
     texts = texts.replace('_', ' ')
+    # * Merge nonstop words
+    for nsw in nonstop_words:
+        texts = texts.replace(nsw, '')
     # # ? Tokenize: Scikit-Learn version
     cv = CountVectorizer(stop_words=stop_words, token_pattern=r"(?u)\b\w+\b") # TODO: Not necessary english
     analyze = cv.build_analyzer()

@@ -307,7 +307,7 @@ class AliasFinder:
         # * Get neighbors
         neighbor_urls = []
         neighbor_cands = []
-        if len(urls) < 5:
+        if len(urls) < 10:
             neighbor_urls, neighbor_cands = self.get_neighbors(urls)
         
         all_urls = set(urls + neighbor_urls)
@@ -335,7 +335,8 @@ class AliasFinder:
             N = min(max(2, math.ceil(len(all_urls)*0.4)), len(all_urls))
             if len(aliases) == 0 and len(touched_urls) >= N:
                 if self._early_skip():
-                    break
+                    pass
+                    # break
             # * Inference
             urls_seen_aliases = set([a[0] for a in aliases])
             toinfer_urls = [u for u in all_urls if u not in urls_seen_aliases]

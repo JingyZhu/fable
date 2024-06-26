@@ -480,10 +480,11 @@ def domdistiller_extract(html, lang=None):
         try:
             call(['node', join(dirname(abspath(__file__)), 'run_content.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=15)
             break
-        except:
+        except Exception as e:
+            print("dom extract", str(e))
             os.remove(html_file)
             time.sleep(5)
-        print('DomDistiller Failed')
+        print('DomDistiller Failed (domdistiller_extract)')
         return ""
     content = open(html_file, 'r').read()
     os.remove(html_file)
@@ -647,10 +648,11 @@ def domdistiller_title_extract(html, lang=None):
         try:
             call(['node', join(dirname(abspath(__file__)), 'run_title.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=15)
             break
-        except:
+        except Exception as e:
+            print("dom extract", str(e))
             os.remove(html_file)
             time.sleep(5)
-        print('DomDistiller Failed')
+        print('DomDistiller Failed (domdistiller_title_extract)')
         return ""
     title = open(html_file, 'r').read()
     os.remove(html_file)
@@ -741,10 +743,11 @@ def domdistiller_title_body_extract(html, lang=None):
         try:
             call(['node', join(dirname(abspath(__file__)), 'run_title_content.js'), url, '--filename', html_file, '--timeout', str(10)], timeout=15)
             break
-        except:
+        except Exception as e:
+            print("dom extract", str(e))
             os.remove(html_file)
             time.sleep(5)
-        print('DomDistiller Failed')
+        print('DomDistiller Failed (domdistiller_title_body_extract)')
         return "", ""
     title_content = open(html_file, 'r').read()
     title_content = title_content.split('\n')
