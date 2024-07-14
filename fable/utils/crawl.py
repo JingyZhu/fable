@@ -117,7 +117,7 @@ class RobotParser:
 rp = RobotParser()
 
 
-def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
+def chrome_crawl(url, timeout=120, screenshot=False, ID='', proxy=None):
     """
     Use chrome to load the page. Directly return the HTML text
     ID: If multi-threaded, should give ID for each thread to differentiate temp file
@@ -125,10 +125,14 @@ def chrome_crawl(url, timeout=120, screenshot=False, ID=''):
     try:
         cur = str(int(time.time())) + '_' + str(os.getpid()) + ID
         file = cur + '.html'
-        cmd = ['node', join(dirname(abspath(__file__)), 'run.js'), url, '--filename', cur]
+        cmd = ['node', join(dirname(abspath(__file__)), 'run.js'), f'"{url}"', '--filename', cur]
+        if proxy:
+            cmd.insert(0, f"https_proxy={proxy}")
+            cmd.insert(0, f"http_proxy={proxy}")
         if screenshot:
             cmd.append('--screenshot')
-        call(cmd, timeout=timeout)
+        cmd = ' '.join(cmd)
+        call(cmd, timeout=timeout, shell=True)
     except Exception as e:
         print(str(e))
         pid = open(file, 'r').read()

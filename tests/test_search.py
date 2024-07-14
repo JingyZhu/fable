@@ -75,7 +75,7 @@ def test_search_temp():
     """Temporary test to avoid long waiting for other tests"""
     _init_large_obj()
     urls = [
-        "http://www.chanel.com:80/de_DE/parfum-schonheit/make-up/teint/teint-grundierungen.html"
+        "http://www.adweek.com:80/aw/content_display/news/media/e3if52b9a5b28d70b335ffe8f533c42b814?pn=1"
     ]
     results = []
     fuzzy = True
@@ -124,5 +124,7 @@ def test_search_nocompare():
         print(f'alias: {json.dumps(alias, indent=2)}')
         print("Results:", search.search_results(url))
 
+test_search_withalias()
+# test_search_temp()
 # test_search_fuzzy_temp()
-test_search_nocompare()
+# test_search_nocompare()
