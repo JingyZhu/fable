@@ -8,7 +8,7 @@ package-lock.json
 logs/
 *.html
 *.json
-*/json/
+!dataset/**/*.json
 
 temp.py
 test.py
