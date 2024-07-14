@@ -188,16 +188,17 @@ class Searcher:
             self.searched_results[url]['html'].update(searched_htmls)
             similars = self.similar.similar(wayback_url, title, content, self.searched_results[url]['title'], self.searched_results[url]['content'],
                                                     self.searched_results[url]['html'], shorttext=shorttext)
-            if similars[0][0]:
-                # * Pre filter suspicous cands
-                similars = [(s[0], {"method": "search", "type": fromm, 'value': s[1]}) for s, fromm in similars if not url_utils.suspicious_alias(url, s[0])]
-                if len(similars) == 0:
-                    return 
-                if fuzzy:
-                    return similars
-                else:
-                    return similars[0]
-            return
+            if similars[0][0] is None:
+                similars = []
+            # * Pre filter suspicous cands
+            similars = [(s[0], {"method": "search", "type": fromm, 'value': s[1]}) for s, fromm in similars if not url_utils.suspicious_alias(url, s[0])]
+            if fuzzy:
+                seen_similar = set([s[0] for s in similars])
+                similars += [(s, {"method": "search", "type": 'fuzzy_search', 'value': "N/A"}) for s in search_cand \
+                        if not url_utils.suspicious_alias(url, s) and s not in seen_similar]
+                return similars
+            else:
+                return similars[0] if len(similars) > 0 else None
 
         # * Search with title
         if title != '' and site:

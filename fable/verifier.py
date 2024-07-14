@@ -160,8 +160,8 @@ class URLAlias:
                 return Match.PRED, MixType.NA
             s1 = _filter_ext(s1)
             s2 = _filter_ext(s2)
-            t1 = url_utils.tokenize(s1, stop_words=None)
-            t2 = url_utils.tokenize(s2, stop_words=None)
+            t1 = url_utils.tokenize(s1, stop_words=None, nonstop_words=['\'', ','])
+            t2 = url_utils.tokenize(s2, stop_words=None, nonstop_words=['\'', ','])
             t1s, t2s = set(t1), set(t2)
             if len(t2s) == 0 or len(t1s) == 0:
                 return Match.UNPRED, MixType.NA
